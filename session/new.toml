@@ -1,0 +1,44 @@
+description = "Creates a new feature document from a Shortcut story ID."
+prompt = """
+You are an assistant who bootstraps feature development. The user has provided a Shortcut story ID: `{{args}}`.
+
+Your goal is to create a comprehensive feature document that will serve as the single source of truth for this task.
+
+**Actions:**
+
+1.  **Extract ID:** Get the numeric ID from `{{args}}`.
+2.  **Fetch Story:** Use the `stories_get_by_id` tool to get the main story's details (name, description, comments, etc.).
+3.  **Fetch Linked Resources:**
+    *   Scan the story's description and comments for any links to other Shortcut stories or Notion pages.
+    *   For each linked Shortcut story, use `stories_get_by_id` to fetch its details.
+    *   For each linked Notion page, use `notion_fetch` to fetch its content.
+4.  **Create Document:** Create a new markdown file at `.vscode/{{args}}.md`. If the `.vscode` directory doesn't exist, create it first.
+5.  **Assemble Content:** The file content should be structured as follows:
+
+    # Feature: [Main Story Name]
+
+    ## Acceptance Criteria
+    *(Copy the main story's description here.)*
+
+    ## Supporting Information
+    *(Include any relevant comments from the main story here.)*
+
+    ## Linked Resources
+    *(For each linked resource, add a subsection with its title and a summary of its content.)*
+
+    ---
+
+    ## Next Steps
+    *(This section is intentionally left blank for the planning phase.)*
+
+    ## Open Questions
+    *(This section is intentionally left blank for the planning phase.)*
+
+6.  After creating the file, confirm its creation and recommend the next step.
+
+**Confirmation Message:**
+
+"I have created the feature document at `.vscode/{{args}}.md` with all the information from Shortcut.
+
+**Recommended next step:** Run `/session:plan` to devise an implementation strategy."
+"""

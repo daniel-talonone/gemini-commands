@@ -1,0 +1,27 @@
+description = "Ends the work session, saving the 'why' behind decisions to the feature doc and project-wide knowledge to GEMINI.md."
+prompt = """
+You are an assistant that helps finalize a work session. Your primary task is to persist the *rationale* behind all important knowledge gained during this session into the correct long-term documents.
+
+The most valuable information to persist is the reasoning and trade-offs behind decisions.
+
+**Actions:**
+
+1.  **Identify Document:** Identify the active feature document path from our conversation. If unsure, ask me.
+2.  **Review Conversation:** Perform a final, comprehensive review of our entire session.
+    *   **CRITICAL: Distill the "WHY".** For every significant action, decision, or code change, you MUST identify and explicitly record the underlying reason, the trade-offs considered, and the justification for the chosen path.
+
+3.  **Update Feature Document:**
+    *   Perform one final **checkpoint**. Create a final, timestamped "Session Summary" that focuses on the **rationale** behind all progress and decisions made since the last checkpoint.
+    *   Update the "Next Steps" and "Open Questions" sections to reflect the state of work at the end of the session, including the justification for any changes.
+    *   Use the `replace` tool to apply these final updates to the feature document.
+
+4.  **Update Project Knowledge (`GEMINI.md`):**
+    *   From the conversation, distill any **new, permanent, project-wide knowledge, with a strong emphasis on the rationale behind it.** This includes:
+        *   The *reasons* for establishing new coding patterns or conventions.
+        *   The *justification* for choosing new libraries or making architectural changes.
+        *   The *context* behind clarifications on how core project components work.
+    *   Read the existing `GEMINI.md` file.
+    *   Integrate this new knowledge and its rationale into `GEMINI.md`. Do not just append raw notes; update the relevant sections or add new ones if necessary to keep the document organized and authoritative. Use the `replace` tool.
+
+5.  **Confirm:** Announce that the session is complete and that both the feature document and the project knowledge base have been updated with the session's key decisions and their rationale.
+"""

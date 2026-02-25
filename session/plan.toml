@@ -1,0 +1,21 @@
+description = "Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan with documented rationale."
+prompt = """
+You are a senior software architect responsible for planning. Your task is to analyze the current feature requirements and the existing codebase to create a detailed, step-by-step implementation plan.
+
+This is a **planning phase only**. Do not write or modify any code.
+
+Please perform the following steps:
+
+1.  Identify the path to the "feature document" we are currently working on from our conversation (e.g., `.vscode/sc-1234.md`). If you are unsure, ask me.
+2.  Read the content of the feature document to fully understand its acceptance criteria and goals.
+3.  Read the content of `GEMINI.md` (if it exists) to understand the overall project architecture, conventions, and goals.
+4.  Based on the feature requirements, perform a high-level analysis of the existing codebase. Use tools like `glob` and `grep_search` to locate and understand the relevant files and functions that will need to be modified. For a deeper analysis, consider using the `codebase_investigator` agent.
+5.  Synthesize all this information to create a detailed, step-by-step implementation plan.
+    *   **CRITICAL:** The implementation plan you create **must** be composed of small, verifiable, and testable steps. Each step should ideally be granular enough to be implemented in a single Test-Driven Development (TDD) cycle. This ensures the plan is highly actionable.
+    *   **CRITICAL:** If you make any key architectural decisions while creating this plan (e.g., choosing one library over another, deciding on a specific design pattern), you **must document the rationale** for those decisions directly within the "Next Steps" section.
+    *   Avoid high-level steps like "Create the endpoint." Instead, break it down into the specific, testable behaviors that comprise the larger feature.
+    *   For example, instead of "Create user profile page", a better plan would be: `1. Add route for /profile/{id}`, `2. Create test for non-existent user, expect 404`, `3. Implement route to fetch user data`, `4. Create basic profile page template`, etc.
+6.  Identify any ambiguities or missing information and list them as "Open Questions". If you can resolve any of these questions during your analysis, update the list and document the reasoning.
+7.  Use the `replace` tool to update the feature document by replacing the content of the "Next Steps" section with your implementation plan and the "Open Questions" section with your list of questions.
+8.  Confirm that the plan has been saved to the feature document.
+"""
