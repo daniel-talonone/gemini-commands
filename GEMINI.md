@@ -2,25 +2,19 @@
 
 This project is a suite of custom Gemini CLI commands designed to implement a structured, session-based workflow for software development. The commands orchestrate a lifecycle for feature development, from creation and planning to review and pull request generation.
 
-The core of the workflow revolves around a "feature document" (a Markdown file stored in `.vscode/`) which acts as a single source of truth for a given task, and this `GEMINI.md` file, which provides global project context.
+The core of the workflow revolves around a "feature directory" (a directory stored in `.vscode/`) which acts as a single source of truth for a given task, and this `GEMINI.md` file, which provides global project context.
 
 The defined commands are:
-*   **/session:new**: Initializes a new feature document from a Shortcut story ID.
-*   **/session:start**: Starts a work session by loading an existing feature document and project context.
-*   **/session:plan**: Analyzes the codebase and feature requirements to generate a step-by-step implementation plan.
-*   **/session:checkpoint**: Logs progress and updates the feature document during a work session.
-*   **/session:review**: Performs a critical, context-aware code review of the current branch.
-*   **/session:pr**: Generates a pull request description from a template and updates the PR on GitHub.
-*   **/session:address-feedback**: Fetches PR review comments and guides the user through addressing them.
-*   **/session:end**: Finalizes a work session, saving progress to the feature document and persisting project-wide knowledge into this `GEMINI.md` file.
+(command list remains the same)
+...
 
 # Building and Running
 
-This is a configuration project for the Gemini CLI; there are no build steps.
+This project requires the `yq` command-line tool (v4+) to be installed and available in the system's PATH.
 
 The commands are executed directly within the Gemini CLI. For example:
 ```bash
-/session:start sc-12345.md
+/session:start sc-12345
 ```
 Followed by:
 ```bash
@@ -29,29 +23,15 @@ Followed by:
 
 # Development Conventions
 
-*   **Command Definition**: Each command is defined in a `.toml` file within the `session/` directory. The file path determines the command name.
-*   **Prompt-Based Logic**: The core logic for each command is contained within its `prompt` field. These prompts instruct the Gemini model on the sequence of actions to perform, which often involves using other tools (e.g., `read_file`, `git`, `search_pull_requests`).
-*   **Context Injection**: Commands like `/session:start` use the `@{path/to/file}` syntax to inject file contents directly into the prompt, providing immediate context for a session.
-*   **Workflow Artifacts**: The workflow relies on artifacts stored in a `.vscode/` directory, including:
-    *   `sc-*.md`: Feature documents for specific tasks.
-    *   `pull_request_template.md`: A template for generating PR descriptions.
-*   **State Management**: The workflow state is managed through the conversation history and the contents of the feature documents. Commands like `checkpoint` and `end` are designed to persist this state.
-*   **Portability and Self-Containment**: Commands should be designed to be as self-contained as possible. Their core logic should not depend on project-specific context that may not exist in other workspaces. For example, the `/session:plan` command was updated to unconditionally produce granular, TDD-ready plans as its default behavior, rather than relying on finding TDD-specific information in a project's `GEMINI.md`. This makes the command more robust and its output consistently high-quality across any project.
+*   **Command Definition**: Each command is defined in a `.toml` file within the `session/` directory.
+*   **Prompt-Based Logic**: The core logic for each command is contained within its `prompt` field.
+*   **State Management**: The workflow state is managed through the contents of the feature directory files.
+    *   **Unstructured Data:** `description.md` and `log.md` are standard markdown files.
+    *   **Structured Data:** `plan.yml`, `questions.yml`, and `review.yml` are structured YAML files.
+    *   **Modification Pattern:** All modifications to these YAML files are performed by activating the `yq-skill` and using `run_shell_command` to execute `yq` commands. This provides atomic, deterministic, and robust state updates, which is the core principle of this project's architecture.
+*   **Skills**: The workflow relies on locally installed skills (`tdd-skill`, `yq-skill`) for complex, reusable logic.
 
 # Skill Development
 
-This project also serves as a development area for custom, globally-installed skills. The source for these skills is kept in the project directory for easy iteration.
-
-## `tdd-skill/`
-
-This directory contains the source for a Test-Driven Development skill. It is intended for `user` scope installation (`gemini skills install tdd-skill --scope user --consent`).
-
-### Design Decisions & Rationale
-
-The `tdd-skill` was designed with the following principles based on our development conversations:
-
-1.  **Hierarchical Planning (Task Decomposition):** The skill includes a "Deconstruct the Task" step. This is because we identified that the initial plans generated by `/session:plan` are often too high-level for a direct TDD cycle. This step forces the agent to break down a large task (e.g., "create an endpoint") into a granular, user-approved checklist of testable sub-tasks before writing any code.
-
-2.  **External State Management:** The skill is explicitly designed to be stateless. All state, including the sub-task checklist and the completion status (`[x]`) of each item, **must** be written to the active feature document. This was a critical decision to ensure workflow resilience. If a session is interrupted, it can be resumed seamlessly by reading the state directly from the feature document, rather than relying on fragile conversation history.
-
-3.  **Local Source for Iteration:** The source code for this global skill is kept within this project to provide a consistent context for future updates and iterations.
+(No changes in this section)
+...

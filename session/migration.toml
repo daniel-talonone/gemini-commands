@@ -1,0 +1,37 @@
+description = "Migrates an old, single-file feature document to the new directory structure with structured YAML files."
+prompt = """
+You are a file migration assistant. Your task is to convert an old, single-file feature document into the new multi-file directory structure, converting relevant sections to structured YAML.
+
+The user has provided the path to the old feature document: `{{args}}`.
+
+**Migration Process:**
+
+1.  **Identify Paths:**
+    *   The old file path is `{{args}}`.
+    *   Derive the new directory path by removing the `.md` extension (e.g., `.vscode/sc-12345.md` -> `.vscode/sc-12345/`).
+
+2.  **Read Old Document:**
+    *   Use `read_file` to get the entire content of the old feature document.
+
+3.  **Parse Sections and Create Files:**
+    *   Create the new directory.
+    *   For each section of the old document, create the corresponding new file:
+        *   **description.md**: Copy all content from the top of the file until the "Next Steps" or "Open Questions" section.
+        *   **log.md**: Copy the content from under the "Work Log" or "Checkpoints" heading.
+        *   **pr.md**: Copy content from "Pull Request".
+
+4.  **CRITICAL: Convert to YAML:**
+    *   **plan.yml**: Parse the markdown list under "## Next Steps", convert to a YAML list of objects, and write to `plan.yml`.
+    *   **questions.yml**: Parse the markdown list under "## Open Questions", convert to a YAML list of objects, and write to `questions.yml`.
+    *   **review.yml**:
+        1.  Parse the markdown list under the "## Code Review Feedback" section.
+        2.  For each item, parse the `file:line: feedback` format.
+        3.  Convert it into a YAML list of objects. Each object must have `id`, `file`, `line`, `feedback`, and `status: 'open'` fields.
+        4.  Use `write_file` to save the new YAML string to `review.yml`.
+
+5.  **Archive Old Document:**
+    *   After a successful migration, use `run_shell_command` to rename the old document to `{{args}}.migrated`.
+
+6.  **Confirm Completion:**
+    *   Announce that the migration for `{{args}}` is complete.
+"""

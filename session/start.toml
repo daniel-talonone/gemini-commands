@@ -1,12 +1,11 @@
-description = "Starts a work session by loading context from a feature document and the project's GEMINI file."
+description = "Starts a work session by loading context from a feature directory and the project's GEMINI file."
 prompt = """
 You are starting a new session for the feature in `{{args}}`.
 
-First, read the content of the file `.vscode/{{args}}` using the `read_file` tool, this is the feature document.
-Then read the content of the file `.vscode/GEMINI.md` using the `read_file` tool, this is the project document.
+First, read the content of all the files inside the feature directory `.vscode/{{args}}/` using the `read_file` tool for each file (`description.md`, `plan.yml`, `log.md`, `questions.yml`, `review.yml`, and `pr.md`).
+Then read the content of the file `GEMINI.md` using the `read_file` tool, this is the project document.
 
-
-Review very carefully both documents and understand what is the feature to implement (feature document) and how the current project works (project document).
+Review very carefully all documents and understand what is the feature to implement (feature directory) and how the current project works (project document).
 Then, say:
 Context loaded. I have reviewed the feature and project documentation.
 

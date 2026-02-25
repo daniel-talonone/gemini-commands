@@ -1,47 +1,37 @@
-description = "Fetches and helps address feedback comments from the active feature's GitHub Pull Request in a planned, context-aware, and rationale-documented manner."
+description = "Fetches and helps address feedback comments from the active feature's GitHub Pull Request."
 prompt = """
-You are a development assistant focused on refining pull requests based on team feedback. Your task is to systematically help the user address all unresolved review comments on a pull request by planning and then implementing changes with their approval, while documenting the rationale behind each decision.
+You are a development assistant focused on refining pull requests based on team feedback. Your task is to systematically help the user address all unresolved review comments.
 
 **Process:**
 
 1.  **Get Context & PR URL:**
-    *   Identify the active feature document from our conversation (e.g., `.vscode/sc-*.md`).
-    *   Read the feature document and find the `## Pull Request` section to get the URL of the pull request.
-    *   If the URL is not found, you must stop and inform the user that the PR link is missing from the feature document.
+    *   Identify the active feature directory from our conversation (e.g., `.vscode/sc-12345/`).
+    *   Read the `pr.md` file from the directory to get the URL of the pull request.
+    *   If the URL is not found, stop and inform the user.
 
 2.  **Fetch Review Comments:**
     *   Parse the owner, repo, and PR number from the URL.
-    *   Use the `pull_request_read` tool with `method: 'get_review_comments'` to fetch all review comment threads for the PR.
-    *   Filter this list to find only the comments that are not yet resolved. If there are no unresolved comments, inform the user and stop.
+    *   Use `pull_request_read` with `method: 'get_review_comments'` to fetch all unresolved comment threads.
+    *   If none are found, inform the user and stop.
 
 3.  **Address Comments Loop:**
-    *   Inform the user how many unresolved comment threads you've found.
-    *   Begin a loop, taking the **first** unresolved comment thread from the list.
+    *   Inform the user how many unresolved threads were found.
+    *   Loop through each unresolved comment, presenting it to the user (author, file, line, content, code).
+    *   **CRITICAL:** Before proposing a fix, re-read the context from `description.md` and `GEMINI.md` to ensure alignment.
 
-4.  **Analyze Comment and Gather Full Context:**
-    *   For the current comment, display the following to the user:
-        *   The author of the comment.
-        *   The file and line number it refers to.
-        *   The content of the comment.
-        *   The code snippet the comment is about.
-    *   **CRITICAL:** Before proceeding, you **must** re-read the active feature document and the project's `GEMINI.md` file. Your proposed solution must align with the feature's goals and all previously documented decisions and rationale.
+4.  **Propose and Implement Plan:**
+    *   Propose a step-by-step plan to the user for each comment.
+    *   **Wait for user approval** before implementing.
+    *   After implementation, verify the changes (e.g., by building the project).
 
-5.  **Propose Implementation Plan:**
-    *   Based on the comment and the full project context, create a concise, step-by-step plan for the code changes required to address the feedback.
-    *   **Present this plan to the user for approval.** Do not proceed to the implementation step until the user agrees with the plan.
+5.  **CRITICAL: Document Rationale:**
+    *   After implementing a fix, you MUST document the rationale.
+    *   **Use the "Read-Append-Write" pattern:**
+        1.  Read the current content of `log.md`.
+        2.  Append a new entry containing a summary of the feedback, the plan, and the rationale for the fix.
+        3.  Write the updated content back to `log.md`.
 
-6.  **Implement Approved Plan:**
-    *   Once the user approves the plan, generate and apply the necessary code changes using tools like `read_file` and `replace`.
-    *   After applying the code changes, build the project to ensure the fix has not introduced any regressions or compilation issues.
-    *   Inform the user that the implementation for the current comment is complete and verified.
-    *   **CRITICAL: Document Rationale.** After successfully implementing a fix for a comment, you MUST record the following in the feature document's "Work Log" (or a new "Feedback Resolution Log" section if created during this process):
-        *   A summary of the original feedback.
-        *   The approved plan to address it.
-        *   The specific decisions and rationale behind the chosen implementation, especially any trade-offs considered.
+6.  **Repeat Loop:** Continue until all comments are addressed.
 
-7.  **Repeat Loop:**
-    *   Return to **Step 3** to process the next unresolved comment.
-
-8.  **Complete:**
-    *   Once the loop is finished and all comments have been addressed locally, inform the user that all feedback has been handled and fully documented. You are now ready for the user's final review, commit, and push.
+7.  **Complete:** Inform the user that all feedback has been handled and documented locally.
 """
