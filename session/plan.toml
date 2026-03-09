@@ -12,22 +12,22 @@ Please perform the following steps:
 4.  **Generate Plan:**
     *   Create a detailed, step-by-step implementation plan. The plan must be composed of small, verifiable, and testable steps.
     *   **Format the plan as a YAML list of objects.** Each object must have the following fields:
-        *   `id`: A short, unique identifier (e.g., 'p1', 'p2').
+        *   `id`: A short, human-readable, unique identifier in 'kebab-case' derived from the task description. Must be unique within the file. (e.g., 'add-profile-route').
         *   `task`: A description of the task.
         *   `status`: The initial status, which should always be 'todo'.
     *   Example `plan.yml`:
         ```yaml
-        - id: 'p1'
+        - id: 'add-profile-route'
           task: 'Add route for /profile/{id}'
           status: 'todo'
-        - id: 'p2'
+        - id: 'test-non-existent-user'
           task: 'Create test for non-existent user, expect 404'
           status: 'todo'
         ```
 5.  **Generate Questions:**
     *   Identify any ambiguities or missing information.
     *   **Format the questions as a YAML list of objects.** Each object must have the following fields:
-        *   `id`: A short, unique identifier (e.g., 'q1', 'q2').
+        *   `id`: A short, human-readable, unique identifier in 'kebab-case' derived from the question. Must be unique within the file. (e.g., 'handle-null-user-input').
         *   `question`: The question text.
         *   `status`: The initial status, which should always be 'open'.
         *   `answer`: The initial value, which should always be `null`.

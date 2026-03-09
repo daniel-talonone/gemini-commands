@@ -11,12 +11,12 @@ You are an assistant that helps log work-in-progress and update the session stat
 
 4.  **Update Plan (`plan.yml`):**
     *   For each task that was completed, construct and execute the appropriate `yq` command to update its `status` field to 'done'.
-    *   Example: `yq -i '(.[] | select(.id == "p1")).status = "done"' plan.yml`
+    *   Example: `yq -i '(.[] | select(.id == "add-route")).status = "done"' plan.yml`
     *   Use `run_shell_command` to execute the command(s).
 
 5.  **Update Questions (`questions.yml`):**
     *   For each question that was answered, construct and execute the `yq` command(s) to set its `status` to 'resolved' and fill in the `answer`.
-    *   Example: `yq -i '(.[] | select(.id == "q1")).status = "resolved" | .[] | select(.id == "q1").answer = "The answer is..."' questions.yml`
+    *   Example: `yq -i '(.[] | select(.id == "clarify-api-endpoint")).status = "resolved" | .[] | select(.id == "clarify-api-endpoint").answer = "The answer is..."' questions.yml`
     *   Use `run_shell_command` to execute the command(s).
 
 6.  **Update Log (`log.md`):**

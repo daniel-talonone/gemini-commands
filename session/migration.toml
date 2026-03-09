@@ -21,8 +21,10 @@ The user has provided the path to the old feature document: `{{args}}`.
         *   **pr.md**: Copy content from "Pull Request".
 
 4.  **CRITICAL: Convert to YAML:**
-    *   **plan.yml**: Parse the markdown list under "## Next Steps", convert to a YAML list of objects, and write to `plan.yml`.
-    *   **questions.yml**: Parse the markdown list under "## Open Questions", convert to a YAML list of objects, and write to `questions.yml`.
+    For each of the YAML files below, generate a short, human-readable, unique identifier in 'kebab-case' for each item. The ID should be derived from the item's content (task, question, or feedback) and must be unique within the file.
+
+    *   **plan.yml**: Parse the markdown list under "## Next Steps". For each item, create a YAML object with `id`, `task`, and `status: 'todo'`. Write the list to `plan.yml`.
+    *   **questions.yml**: Parse the markdown list under "## Open Questions". For each item, create a YAML object with `id`, `question`, `status: 'open'`, and `answer: null`. Write the list to `questions.yml`.
     *   **review.yml**:
         1.  Parse the markdown list under the "## Code Review Feedback" section.
         2.  For each item, parse the `file:line: feedback` format.

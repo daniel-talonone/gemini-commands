@@ -30,6 +30,7 @@ Followed by:
     *   **Structured Data:** `plan.yml`, `questions.yml`, and `review.yml` are structured YAML files.
     *   **Modification Pattern:** All modifications to these YAML files are performed by activating the `yq-skill` and using `run_shell_command` to execute `yq` commands. This provides atomic, deterministic, and robust state updates, which is the core principle of this project's architecture.
 *   **Skills**: The workflow relies on locally installed skills (`tdd-skill`, `yq-skill`) for complex, reusable logic.
+*   **Helper Scripts for Procedural Logic:** For deterministic, procedural actions (like file system operations), create a dedicated helper script in the `scripts/` directory. The LLM prompt should then execute this script using the reliable pathing pattern (`$HOME/.gemini/commands/...`), rather than performing the steps itself. This improves command reliability. See the `session/README.md` for the full architectural rationale.
 
 # Skill Development
 

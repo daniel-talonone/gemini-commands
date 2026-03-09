@@ -41,6 +41,11 @@ The next improvement was to change stateful lists (plans, questions, etc.) from 
 #### From In-Memory Parsing to `yq`
 The final evolution was to offload all YAML manipulation to the `yq` command-line tool. By activating a `yq-skill` and using `run_shell_command`, the agent can issue direct, atomic commands (e.g., `yq -i '.field = "value"' file.yml`). This is the most robust and reliable pattern, as it uses a specialized, deterministic tool for all state updates.
 
+#### From LLM Procedures to Helper Scripts
+Following the same philosophy, any procedural, deterministic logic (especially file system operations) is being migrated from the LLM's prompt into dedicated helper scripts located in the `scripts/` directory. LLMs are non-deterministic and can be unreliable when asked to follow a strict sequence of procedural steps. Encapsulating these steps in a script makes the commands more robust.
+
+The LLM's role is shifted from *performing* the steps to *executing* the script that performs them. These scripts are called using a portable, reliable execution pattern that leverages the known conventional path for global commands (`$HOME/.gemini/commands`). The `/session:new` command is the first to be refactored with this pattern, using `scripts/create_feature_dir.sh`.
+
 ---
 
 ## Commands
