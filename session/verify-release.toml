@@ -1,0 +1,26 @@
+name = "/session/verify-release"
+description = "Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found."
+prompt = """
+You are a release verification expert. Your task is to run a verification script and provide a semantic analysis of its findings to ensure the integrity of a release branch.
+
+The user has provided the following arguments for the verification: `{{.Args}}`
+
+Here is the step-by-step process you must follow:
+
+1.  **Execute Verification Script**:
+    -   Use `run_shell_command` to execute the `$HOME/.gemini/commands/scripts/verify-release.sh` script, passing the user's arguments to it. This script compares original commits to the cherry-picked commits on the current release branch.
+
+2.  **Analyze the Output**:
+    -   The script's output will either indicate success or report one or more differences. You must intelligently parse and act on this output.
+    -   **If the script output contains "VERIFICATION SUCCESSFUL"**: Your job is done. Report this success to the user and conclude your work.
+    -   **If the script output contains "VERIFICATION FAILED"**: This means discrepancies were found. You must not show the raw script output to the user. Instead, you must parse the errors and present a clear, analyzed report. Your report should cover:
+        -   **Extra Commits**: If the script reported commits on the release branch that were not cherry-picks, list them clearly.
+        -   **Missing Commits**: If the script reported expected commits that were not found, list them clearly.
+        -   **Changed Commits**: For each commit that was changed during cherry-picking, the script will have produced a `diff` of the original and new patches. For each of these, provide a concise summary that answers:
+            1.  **What was the nature of the change?** (e.g., "A variable was renamed," "A null check was added," "The arguments to a function were reordered.")
+            2.  **Why did it likely change?** (e.g., "This appears to be a standard resolution for a merge conflict in this part of the code.")
+            3.  **What is the risk assessment?** (Rate it Low, Medium, or High, and briefly justify why.)
+
+3.  **Present Final Report**: Combine your findings into a single, well-structured report for the user. Do not output raw `diff`s from the script.
+"""
+

@@ -46,6 +46,16 @@ Following the same philosophy, any procedural, deterministic logic (especially f
 
 The LLM's role is shifted from *performing* the steps to *executing* the script that performs them. These scripts are called using a portable, reliable execution pattern that leverages the known conventional path for global commands (`$HOME/.gemini/commands`). The `/session:new` command is the first to be refactored with this pattern, using `scripts/create_feature_dir.sh`.
 
+#### From Helper Scripts to Hybrid Orchestrators
+The latest and most powerful evolution of this architecture is the **hybrid orchestrator** pattern. This pattern resolves a key limitation: a command's `prompt` can either be a non-interactive shell script OR a flexible LLM prompt, but not both. The hybrid model provides the best of both worlds.
+
+The pattern is as follows:
+1.  The command's `prompt` is defined as a **high-level LLM prompt**, not a shell script. This prompt acts as an "orchestrator" for the entire command workflow.
+2.  This orchestrator agent uses the `run_shell_command` tool to execute small, deterministic, single-purpose **helper scripts** for predictable steps where precision is critical (e.g., generating a filename with a specific timestamp format).
+3.  The orchestrator agent then handles the complex, stateful, or interactive parts of the workflow itself. This can include loops, conditional logic, and calling other tools like `read_file` or `replace`.
+
+This architecture allows a single, self-contained command to have a complex, interactive, AI-powered workflow. The `/session:prepare-release` command is the canonical example of this pattern. It uses a helper script to reliably create a release branch, then the main orchestrator agent manages the complex loop of cherry-picking commits and handling potential merge conflicts by analyzing them and asking the user for approval on proposed fixes. This balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones.
+
 ---
 
 ## Commands

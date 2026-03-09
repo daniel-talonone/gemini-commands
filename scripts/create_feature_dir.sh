@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Usage: ./create_feature_dir.sh <base-dir> <story-id>
 # Example: ./create_feature_dir.sh .vscode sc-12345
 

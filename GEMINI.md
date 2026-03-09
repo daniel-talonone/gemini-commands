@@ -30,7 +30,10 @@ Followed by:
     *   **Structured Data:** `plan.yml`, `questions.yml`, and `review.yml` are structured YAML files.
     *   **Modification Pattern:** All modifications to these YAML files are performed by activating the `yq-skill` and using `run_shell_command` to execute `yq` commands. This provides atomic, deterministic, and robust state updates, which is the core principle of this project's architecture.
 *   **Skills**: The workflow relies on locally installed skills (`tdd-skill`, `yq-skill`) for complex, reusable logic.
-*   **Helper Scripts for Procedural Logic:** For deterministic, procedural actions (like file system operations), create a dedicated helper script in the `scripts/` directory. The LLM prompt should then execute this script using the reliable pathing pattern (`$HOME/.gemini/commands/...`), rather than performing the steps itself. This improves command reliability. See the `session/README.md` for the full architectural rationale.
+*   **Command Prompt Design**: Commands can be implemented in two main ways:
+    *   **Shell Script Prompt**: For simple, deterministic, non-interactive tasks, the `prompt` can be a `#!/bin/bash` script.
+    *   **LLM Orchestrator Prompt**: For complex workflows that require loops, conditional logic, error handling, or AI-powered analysis, the `prompt` should be a natural language set of instructions for the agent, which then uses tools to execute the steps.
+*   **Hybrid Pattern (Preferred)**: The most robust pattern is to use an **LLM Orchestrator Prompt** as the main entry point for a command. This orchestrator should then call small, single-purpose **helper scripts** (located in `scripts/`) for any procedural or deterministic steps where precision is critical (e.g., generating a timestamped file name). This balances the reliability of scripts for predictable tasks with the flexibility of the LLM for complex, interactive ones. The `/session:prepare-release` command is the canonical example of this pattern. See the `session/README.md` for the full architectural rationale.
 
 # Skill Development
 

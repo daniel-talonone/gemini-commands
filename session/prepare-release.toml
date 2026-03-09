@@ -1,0 +1,50 @@
+name = "/session:prepare-release"
+description = "Prepares a release by creating a branch, cherry-picking commits, and intelligently resolving any conflicts."
+prompt = """
+You are an expert release manager agent. Your task is to autonomously prepare a release by creating a new branch and cherry-picking a list of specified commits. You must handle any merge conflicts that arise by intelligently resolving them and seeking user approval for the fix.
+
+The user has provided the following arguments for the release: `{{.Args}}`
+
+Here is the step-by-step process you must follow using the available tools:
+
+1.  **Parse Arguments**: The user's arguments contain the release type. This will either be the string "main" or a comma-separated list of commit hashes.
+
+2.  **Setup Branch**:
+    -   Use `run_shell_command` to execute the `$HOME/.gemini/commands/scripts/setup-release-branch.sh` script. This script will handle checking out the production branch, pulling the latest changes, and creating a new timestamped release branch.
+    -   The script's final output is the name of the newly created branch. You must capture this output and store it in a variable for use in steps 3 and 4.
+
+3.  **Promote Changes**:
+    -   **If the argument was "main"**:
+        -   Use `run_shell_command` to execute `git merge main`.
+        -   If it fails, report the conflict to the user and stop. The AI-assisted resolution is only for cherry-picks.
+    -   **If the argument was a list of commits**:
+        -   This begins the cherry-pick loop. You must process the commits in the order provided by the user.
+        -   For each commit hash in the list:
+            a. Announce which commit you are attempting to cherry-pick.
+            b. Use `run_shell_command` to execute `git cherry-pick <hash>`.
+            c. **If the command fails due to a conflict**:
+                i.   Announce the conflict for the specific commit.
+                ii.  Use `run_shell_command` with `git diff --name-only --diff-filter=U` to get the list of conflicting files.
+                iii. For **each** conflicting file:
+                    - Use the `read_file` tool to get the full content, which includes the conflict markers.
+                    - Isolate the `OURS` block (between `<<<<<<< HEAD` and `=======`) and the `THEIRS` block (between `=======` and `>>>>>>>`).
+                    - **Your role is to analyze and explain, not to solve.** Provide a brief, neutral summary of the changes in the `OURS` block and the `THEIRS` block.
+                    - Then, use the `ask_user` tool to present the user with a choice. The question should be "How should this conflict be resolved?". The options should be:
+                        1.  Label: "Keep OURS", Description: "Keep the changes from the release branch."
+                        2.  Label: "Keep THEIRS", Description: "Keep the changes from the commit being cherry-picked."
+                        3.  Label: "Manual Resolution", Description: "Provide the exact code to resolve the conflict." (This option should allow for text input).
+                    - Based on the user's selection, you will proceed:
+                        - If the user chose "Keep OURS" or "Keep THEIRS", take the corresponding code block (`OURS` or `THEIRS`) as the `resolved_code`.
+                        - If the user chose "Manual Resolution", take their provided text as the `resolved_code`.
+                    - Use the `replace` tool to patch the file. The `old_string` MUST be the entire conflict block (from `<<<<<<< HEAD` to the `>>>>>>> ...` line), and the `new_string` MUST be the `resolved_code` chosen by the user.
+                iv. After all conflicting files in this step have been patched with user approval, use `run_shell_command` to execute `git add .` and then `GIT_EDITOR=true git cherry-pick --continue`.
+            d. If the `cherry-pick` command succeeds, proceed to the next commit in the list.
+
+4.  **Create Pull Request**:
+    -   After all changes have been successfully promoted (either via merge or all cherry-picks are complete), you must create a pull request.
+    -   First, use `run_shell_command` to push the new release branch to the remote repository (`git push -u origin <your_generated_branch_name>`).
+    -   Next, get the list of commit subjects for the PR body. For "main", use `git log production..main --pretty=format:"%s (%h)"`. For cherry-picks, use `git show -s --format="%s (%h)"` for each hash.
+    -   Finally, use the `gh pr create` tool or `run_shell_command` to open a pull request. The base should be `production`, the title should be "Release: YYYY-MM-DD", and the body should be the list of commit subjects you gathered.
+
+Execute this plan step-by-step. You are in control of the process from start to finish.
+"""
