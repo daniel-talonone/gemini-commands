@@ -44,7 +44,11 @@ The final evolution was to offload all YAML manipulation to the `yq` command-lin
 #### From LLM Procedures to Helper Scripts
 Following the same philosophy, any procedural, deterministic logic (especially file system operations) is being migrated from the LLM's prompt into dedicated helper scripts located in the `scripts/` directory. LLMs are non-deterministic and can be unreliable when asked to follow a strict sequence of procedural steps. Encapsulating these steps in a script makes the commands more robust.
 
-The LLM's role is shifted from *performing* the steps to *executing* the script that performs them. These scripts are called using a portable, reliable execution pattern that leverages the known conventional path for global commands (`$HOME/.gemini/commands`). The `/session:new` command is the first to be refactored with this pattern, using `scripts/create_feature_dir.sh`.
+The LLM's role is shifted from *performing* the steps to *executing* the script that performs them. These scripts are called using a portable, reliable execution pattern that leverages the known conventional path for global commands (`$HOME/.gemini/commands`). This refactoring effort is ongoing.
+
+Examples include:
+- The `/session:new` command, which uses `scripts/create_feature_dir.sh` to scaffold the feature directory.
+- The `/session:checkpoint` command, which uses `scripts/append_to_log.sh` to add a timestamped entry to the log file, ensuring consistent formatting and avoiding file corruption.
 
 #### From Helper Scripts to Hybrid Orchestrators
 The latest and most powerful evolution of this architecture is the **hybrid orchestrator** pattern. This pattern resolves a key limitation: a command's `prompt` can either be a non-interactive shell script OR a flexible LLM prompt, but not both. The hybrid model provides the best of both worlds.

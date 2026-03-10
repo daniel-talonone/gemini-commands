@@ -19,8 +19,20 @@ You are an assistant that helps log work-in-progress and update the session stat
     *   Example: `yq -i '(.[] | select(.id == "clarify-api-endpoint")).status = "resolved" | .[] | select(.id == "clarify-api-endpoint").answer = "The answer is..."' questions.yml`
     *   Use `run_shell_command` to execute the command(s).
 
-6.  **Update Log (`log.md`):**
-    *   Perform a "Read-Append-Write" operation to add a new timestamped log entry summarizing the work done.
+6.  **Generate Log Summary:**
+    *   Based on the completed tasks and resolved questions, generate a concise Markdown summary of the work done for the log file.
 
-7.  **Confirm:** State that the checkpoint has been saved using the `yq` tool.
+7.  **Update Log (`log.md`):**
+    *   Call the `append_to_log.sh` helper script to add the timestamped summary to the log.
+    *   Use `run_shell_command` to execute it, passing the path to the feature directory's `log.md` and the generated summary.
+    *   Use the established script execution pattern:
+    ```bash
+    #!/bin/bash
+    COMMANDS_DIR="$HOME/.gemini/commands"
+    FEATURE_DIR_PATH="./.vscode/sc-XXXXX" # Identify this from context
+    LOG_SUMMARY="Synthesized summary of work." # Generate this
+    "$COMMANDS_DIR/scripts/append_to_log.sh" "$FEATURE_DIR_PATH/log.md" "$LOG_SUMMARY"
+    ```
+
+8.  **Confirm:** State that the checkpoint has been saved.
 """
