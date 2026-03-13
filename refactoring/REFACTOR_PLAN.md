@@ -111,3 +111,56 @@ The following commands have been identified as candidates for future refactoring
     -   **Current Logic:** The LLM generates content for `plan.yml` and `questions.yml` and then uses two separate `write_file` calls to save them.
     -   **Proposed Script:** `scripts/write_plan_files.sh`.
     -   **Implementation:** A script could take the feature directory path and the content for both files as arguments, ensuring they are written in a single, atomic operation from the LLM's perspective.
+
+## Architectural Pattern: The "Focused Task" Sub-Session (or "Gemini Inception")
+
+Beyond simple script migration, a more advanced architectural pattern has been identified for improving the efficiency and reliability of commands. This pattern moves away from a single, monolithic session context and towards a main **orchestrator** session that can spawn temporary, isolated **sub-sessions** for specific tasks.
+
+### Core Principle
+
+The main session should not perform every task itself. For tasks that do not require the full conversation history or session context (like summarizing a file or generating a description from specific inputs), the main session's role is to:
+
+1.  **Prepare a minimal, focused context** required for that single task.
+2.  **Delegate the task** to an isolated sub-session by piping this minimal context into a `gemini query "..."` command.
+3.  **Use the result** from the sub-session, which then terminates, freeing its memory and context.
+
+This prevents the main session's context from being polluted with large, one-off data blobs (like a `git diff`) and significantly reduces token consumption by ensuring only the necessary information is sent for each step.
+
+### Example: A Token-Efficient `/session:pr` command
+
+Instead of using the main session, the command's prompt would be a script that orchestrates a sub-session:
+
+```bash
+#!/bin/bash
+
+# 1. The orchestrator gathers the PRECISE context needed.
+DIFF_JSON=$(sh "$HOME/.gemini/commands/scripts/get_git_context.sh")
+DESCRIPTION=$(cat .vscode/{{args}}/description.md)
+PLAN=$(cat .vscode/{{args}}/plan.yml)
+
+# 2. It prepares a focused, one-shot prompt for the sub-session.
+FOCUSED_PROMPT="""
+Write a standard pull request body based on the following plan, feature description, and code diff.
+PLAN:
+$PLAN
+
+DESCRIPTION:
+$DESCRIPTION
+
+DIFF:
+$(echo "$DIFF_JSON" | jq -r '.diff' | base64 --decode)
+"""
+
+# 3. It spawns the "Inception" session to do one job.
+PR_BODY=$(echo "$FOCUSED_PROMPT" | gemini query)
+
+# 4. The main session uses the result to create the PR.
+# The sub-session and its large context (diff, etc.) are gone.
+gh pr create --title "feat({{args}}): Implement feature" --body "$PR_BODY"
+```
+
+### Candidates for this Pattern
+
+-   **/session:review_changes (New)**: A new command to summarize the current git diff without adding it to the main context.
+-   **/session:log-research**: The web fetching and summarizing can be done in an isolated sub-session that is only given the article's content.
+-   **/session:pr** & **/session:pr_from_branch**: Can use this pattern to generate the PR body with a precisely controlled context, as shown in the example.
