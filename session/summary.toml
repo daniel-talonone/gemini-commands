@@ -1,0 +1,38 @@
+description = "Generates a human-readable Markdown summary of the feature's state using a helper script."
+prompt = """
+#!/bin/bash
+set -e
+COMMANDS_DIR="$HOME/.gemini/commands"
+SCRIPT_PATH="$COMMANDS_DIR/scripts/load_context_files.sh"
+FEATURE_DIR=".vscode/{{args}}"
+
+# Ensure the helper script is executable
+chmod +x "$SCRIPT_PATH"
+
+# Call the script to get all context in one efficient operation.
+CONTEXT=$("$SCRIPT_PATH" "$FEATURE_DIR")
+
+# Pipe the consolidated context into a focused sub-session for summarization.
+gemini query "You are a reporting assistant. Your task is to synthesize the state of the feature in the '{{args}}' directory from all its constituent files into a single, human-readable Markdown document.
+
+All the necessary context files have been loaded and concatenated below, separated by '--- FILE: [filename] ---' delimiters.
+
+**Process:**
+
+1.  **Synthesize Markdown Report:**
+    *   In memory, construct a single Markdown string that consolidates all the information you have read.
+    *   **CRITICAL:** You must convert the structured YAML data into human-readable Markdown.
+        *   For `plan.yml`, create a checklist. An item with `status: 'done'` should be `- [x] Task description`. An item with any other status should be `- [ ] Task description`.
+        *   For `questions.yml`, create a Q&A list. Clearly display the question, its status, and the answer if it exists.
+        *   For `review.yml`, create a list of feedback items.
+    *   Organize the final document with clear headings for each section (e.g., `## Plan`, `## Open Questions`, `## Work Log`).
+
+2.  **Write Summary File:**
+    *   Use the `write_file` tool to save the complete Markdown string to a file named `_SUMMARY.md` inside the '$FEATURE_DIR' directory.
+    *   **This command must always overwrite the file if it exists.** Do not attempt to use `replace` or modify a previous summary.
+
+3.  **Confirm:** Announce that the summary file has been created/updated for '{{args}}'.
+
+---
+$CONTEXT"
+"""

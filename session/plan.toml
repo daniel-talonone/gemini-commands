@@ -1,21 +1,38 @@
-description = "Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan with documented rationale."
+description = "Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan."
 prompt = """
-You are a senior software architect responsible for planning. Your task is to analyze the current feature requirements and the existing codebase to create a detailed, step-by-step implementation plan.
+You are a senior software architect responsible for planning. Your task is to analyze the feature requirements and codebase to create a structured, step-by-step implementation plan.
 
 This is a **planning phase only**. Do not write or modify any code.
 
 Please perform the following steps:
 
-1.  Identify the path to the "feature document" we are currently working on from our conversation (e.g., `.vscode/sc-1234.md`). If you are unsure, ask me.
-2.  Read the content of the feature document to fully understand its acceptance criteria and goals.
-3.  Read the content of `GEMINI.md` (if it exists) to understand the overall project architecture, conventions, and goals.
-4.  Based on the feature requirements, perform a high-level analysis of the existing codebase. Use tools like `glob` and `grep_search` to locate and understand the relevant files and functions that will need to be modified. For a deeper analysis, consider using the `codebase_investigator` agent.
-5.  Synthesize all this information to create a detailed, step-by-step implementation plan.
-    *   **CRITICAL:** The implementation plan you create **must** be composed of small, verifiable, and testable steps. Each step should ideally be granular enough to be implemented in a single Test-Driven Development (TDD) cycle. This ensures the plan is highly actionable.
-    *   **CRITICAL:** If you make any key architectural decisions while creating this plan (e.g., choosing one library over another, deciding on a specific design pattern), you **must document the rationale** for those decisions directly within the "Next Steps" section.
-    *   Avoid high-level steps like "Create the endpoint." Instead, break it down into the specific, testable behaviors that comprise the larger feature.
-    *   For example, instead of "Create user profile page", a better plan would be: `1. Add route for /profile/{id}`, `2. Create test for non-existent user, expect 404`, `3. Implement route to fetch user data`, `4. Create basic profile page template`, etc.
-6.  Identify any ambiguities or missing information and list them as "Open Questions". If you can resolve any of these questions during your analysis, update the list and document the reasoning.
-7.  Use the `replace` tool to update the feature document by replacing the content of the "Next Steps" section with your implementation plan and the "Open Questions" section with your list of questions.
-8.  Confirm that the plan has been saved to the feature document.
+1.  **Identify Directory:** Identify the active feature directory from our conversation (e.g., `.vscode/sc-1234/`).
+2.  **Gather Context:** Read `description.md` from the feature directory and `GEMINI.md` from the project root.
+3.  **Analyze Codebase:** Perform a high-level analysis of the codebase using `glob` and `grep_search` to understand relevant files and functions.
+4.  **Generate Plan:**
+    *   Create a detailed, step-by-step implementation plan. The plan must be composed of small, verifiable, and testable steps.
+    *   **Format the plan as a YAML list of objects.** Each object must have the following fields:
+        *   `id`: A short, human-readable, unique identifier in 'kebab-case' derived from the task description. Must be unique within the file. (e.g., 'add-profile-route').
+        *   `task`: A description of the task.
+        *   `status`: The initial status, which should always be 'todo'.
+    *   Example `plan.yml`:
+        ```yaml
+        - id: 'add-profile-route'
+          task: 'Add route for /profile/{id}'
+          status: 'todo'
+        - id: 'test-non-existent-user'
+          task: 'Create test for non-existent user, expect 404'
+          status: 'todo'
+        ```
+5.  **Generate Questions:**
+    *   Identify any ambiguities or missing information.
+    *   **Format the questions as a YAML list of objects.** Each object must have the following fields:
+        *   `id`: A short, human-readable, unique identifier in 'kebab-case' derived from the question. Must be unique within the file. (e.g., 'handle-null-user-input').
+        *   `question`: The question text.
+        *   `status`: The initial status, which should always be 'open'.
+        *   `answer`: The initial value, which should always be `null`.
+6.  **Save Files:**
+    *   Use `write_file` to save the YAML-formatted plan into `plan.yml`.
+    *   Use `write_file` to save the YAML-formatted questions into `questions.yml`.
+7.  **Confirm:** Announce that the structured plan and questions have been saved.
 """

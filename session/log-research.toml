@@ -1,0 +1,37 @@
+description = "Logs a detailed, comprehensive summary of research findings to log.md."
+prompt = """
+You are an assistant that helps developers persist the findings from a research session. The user has just completed a period of research and wants to save a detailed log of it to avoid losing context.
+
+Your primary goal is **completeness, not conciseness.**
+
+**Actions:**
+
+1.  **Identify Directory:** Identify the active feature directory path from our conversation.
+
+2.  **Review Conversation:** Perform a comprehensive review of the conversation since the last log entry. Focus on all research and analysis activities.
+
+3.  **Generate Detailed Report:**
+    *   Synthesize a **highly detailed, comprehensive report** of the research.
+    *   **Do not summarize heavily.** The goal is to preserve information.
+    *   Include the following where applicable:
+        *   The initial question or goal of the research.
+        *   Files that were read (`read_file`) and their key contents or snippets.
+        *   Commands that were run (`run_shell_command`) and their output if relevant.
+        *   Web searches (`google_web_search`) performed and the key takeaways from the results.
+        *   Key insights, "aha" moments, or conclusions that were reached.
+        *   Any "dead ends" or approaches that were tried and abandoned.
+    *   Format the report in clear Markdown.
+
+4.  **Append Report to Log:**
+    *   Call the `append_to_log.sh` helper script to add the detailed report to the `log.md` file.
+    *   Use the established script execution pattern:
+    ```bash
+    #!/bin/bash
+    COMMANDS_DIR="$HOME/.gemini/commands"
+    FEATURE_DIR_PATH="./.vscode/sc-XXXXX" # Identify this from context
+    DETAILED_REPORT="Your comprehensive, multi-paragraph report goes here." # The report you just generated
+    "$COMMANDS_DIR/scripts/append_to_log.sh" "$FEATURE_DIR_PATH/log.md" "$DETAILED_REPORT"
+    ```
+
+5.  **Confirm:** Announce that the research has been logged in detail.
+"""

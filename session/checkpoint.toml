@@ -1,25 +1,38 @@
-description = "Saves a checkpoint of the work done, focusing on the 'why' behind decisions."
+description = "Saves a checkpoint of the work done by updating the state files using the yq tool."
 prompt = """
-You are an assistant that helps log work-in-progress. Your primary task is to capture the *rationale* behind the work done, not just a summary of it.
-
-Take into consideration that you're an LLM. That means, when I close this session, anything that is not written in that file, you won't remember it. The most valuable information to persist is the reasoning and trade-offs behind decisions.
+You are an assistant that helps log work-in-progress and update the session state.
 
 **Actions:**
 
-1.  **Identify Document:** Identify the active feature document path from our conversation. If unsure, ask me.
-2.  **Read Document:** Read the entire content of the feature document.
-3.  **Review Conversation:** Analyze our conversation since the last checkpoint. Look for:
-    *   **CRITICAL: Distill the "WHY".** For every significant action, decision, or code change, you MUST identify and explicitly record the underlying reason, the trade-offs considered, and the justification for the chosen path. This is more important than summarizing the code itself.
-    *   Completed tasks and how they were implemented.
-    *   Problems solved and the reasoning for the solution.
-    *   New questions that arose and any answers discovered.
-4.  **Prepare Updates:**
-    *   **Work Log:** Create a new entry summarizing the progress identified above. This entry MUST be prefixed with a timestamp in the format MONTH.DAY.YYYY:24HH:MINUTES (e.g., 01.01.2026:12:23). This entry MUST focus on the **rationale** behind the work done.
-    *   **Next Steps:** Based on the completed tasks and new understanding, update the list of remaining work.
-    *   **Open Questions:** Update the list with new questions and add answers (with their rationale) to any that have been resolved.
-5.  **Apply Changes:** Use the `replace` tool to update the feature document.
-*   Append the new "Work Log" entry under a main "Work Log" or "Checkpoints" heading.
-    *   Replace the content under the "## Next Steps" heading with the updated list.
-    *   Replace the content under the "## Open Questions" heading with the updated list.
-6.  **Confirm:** State that the checkpoint, with all its captured rationale, has been saved.
+1.  **Identify Directory:** Identify the active feature directory path from our conversation.
+2.  **Review Conversation:** Analyze our conversation since the last checkpoint to understand what tasks were completed and what questions were answered.
+
+3.  **Activate Skill:** Activate the `yq-skill` to get expert knowledge on the `yq` command-line tool.
+
+4.  **Update Plan (`plan.yml`):**
+    *   For each task that was completed, construct and execute the appropriate `yq` command to update its `status` field to 'done'.
+    *   Example: `yq -i '(.[] | select(.id == "add-route")).status = "done"' plan.yml`
+    *   Use `run_shell_command` to execute the command(s).
+
+5.  **Update Questions (`questions.yml`):**
+    *   For each question that was answered, construct and execute the `yq` command(s) to set its `status` to 'resolved' and fill in the `answer`.
+    *   Example: `yq -i '(.[] | select(.id == "clarify-api-endpoint")).status = "resolved" | .[] | select(.id == "clarify-api-endpoint").answer = "The answer is..."' questions.yml`
+    *   Use `run_shell_command` to execute the command(s).
+
+6.  **Generate Log Summary:**
+    *   Based on the completed tasks and resolved questions, generate a concise Markdown summary of the work done for the log file.
+
+7.  **Update Log (`log.md`):**
+    *   Call the `append_to_log.sh` helper script to add the timestamped summary to the log.
+    *   Use `run_shell_command` to execute it, passing the path to the feature directory's `log.md` and the generated summary.
+    *   Use the established script execution pattern:
+    ```bash
+    #!/bin/bash
+    COMMANDS_DIR="$HOME/.gemini/commands"
+    FEATURE_DIR_PATH="./.vscode/sc-XXXXX" # Identify this from context
+    LOG_SUMMARY="Synthesized summary of work." # Generate this
+    "$COMMANDS_DIR/scripts/append_to_log.sh" "$FEATURE_DIR_PATH/log.md" "$LOG_SUMMARY"
+    ```
+
+8.  **Confirm:** State that the checkpoint has been saved.
 """

@@ -1,6 +1,6 @@
 # Session Workflow Commands
 
-This document describes a suite of custom Gemini CLI commands designed to implement a structured, session-based workflow for software development. The workflow is centered around a "feature document" that acts as a single source of truth for a task.
+This document describes a suite of custom Gemini CLI commands designed to implement a structured, session-based workflow for software development. The workflow is centered around a "feature directory" that acts as a single source of truth for a task.
 
 ## Project Philosophy
 
@@ -13,198 +13,83 @@ This suite of commands orchestrates the flow of information between the user, th
 
 ## Core Concepts
 
--   **Feature Document:** A Markdown file located in the `.vscode/` directory (e.g., `.vscode/sc-12345.md`). It contains the requirements, implementation plan, and progress log for a specific feature or bug fix. This serves as the "session memory."
+-   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory."
 -   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory."
 
 ## Dependencies
 
-These commands rely on integrations with several external services (MCPs). The prompts are written to leverage the specific tools available for each:
+This workflow has the following dependencies:
 
--   **[Shortcut](https://shortcut.com/):** Used for fetching story details to create and contextualize feature documents.
--   **[Notion](https://www.notion.so/):** Used to pull in additional context from linked documentation.
--   **[Git](https://git-scm.com/):** Used for managing branches, viewing diffs, and understanding the local state of the code.
--   **[GitHub](https://github.com/google/gemini-cli):** Used for creating and managing pull requests and interacting with code reviews. The link points to the core Gemini CLI repository, which provides the GitHub integration.
+-   **`yq` command-line tool (v4+):** Required for atomic and reliable modification of `.yml` state files. It must be installed and available in the system's PATH.
+-   **`yq-skill` & `tdd-skill`:** Locally installed Gemini skills that provide expert knowledge.
+-   **External Services:** Integrations with Shortcut, Notion, Git, and GitHub are used for various commands.
 
 ## Design Notes & Conventions
 
 ### A Note on the `.vscode` Directory
 
-The choice to store feature documents in `.vscode/` is a practical one based on personal habit. Because the `.vscode` folder is ignored in many of our projects, I have been using it to keep personal, project-related files that I don't want to commit.
+The choice to store feature artifacts in `.vscode/` is a practical one based on personal habit. Because the `.vscode` folder is ignored in many of our projects, I have been using it to keep personal, project-related files that I don't want to commit.
 
-For that reason, it was natural for me to store the feature documents in this directory when I started this project. I recognize this is not an ideal solution and can clearly be improved, but it was very practical for getting started.
+### Architectural Rationale
+
+#### From Single File to Feature Directory
+This command suite originally used a single Markdown file. This proved brittle as it relied on the `replace` tool, which often failed. The first refactoring split this file into a **feature directory**, enabling safer, more reliable file-specific operations.
+
+#### From Markdown Lists to Structured YAML
+The next improvement was to change stateful lists (plans, questions, etc.) from Markdown to **structured YAML**. This allowed the agent to programmatically parse and modify the data in memory before writing it back, which was more robust than text manipulation.
+
+#### From In-Memory Parsing to `yq`
+The final evolution was to offload all YAML manipulation to the `yq` command-line tool. By activating a `yq-skill` and using `run_shell_command`, the agent can issue direct, atomic commands (e.g., `yq -i '.field = "value"' file.yml`). This is the most robust and reliable pattern, as it uses a specialized, deterministic tool for all state updates.
+
+#### From LLM Procedures to Helper Scripts
+Following the same philosophy, any procedural, deterministic logic (especially file system operations) is being migrated from the LLM's prompt into dedicated helper scripts located in the `scripts/` directory. LLMs are non-deterministic and can be unreliable when asked to follow a strict sequence of procedural steps. Encapsulating these steps in a script makes the commands more robust.
+
+The LLM's role is shifted from *performing* the steps to *executing* the script that performs them. These scripts are called using a portable, reliable execution pattern that leverages the known conventional path for global commands (`$HOME/.gemini/commands`). This refactoring effort is ongoing.
+
+Examples include:
+- The `/session:new` command, which uses `scripts/create_feature_dir.sh` to scaffold the feature directory.
+- The `/session:checkpoint` command, which uses `scripts/append_to_log.sh` to add a timestamped entry to the log file.
+- The `/session:migration` command, which uses the `scripts/migrate_feature_file.sh` script to reliably convert a legacy feature file into the new directory structure.
+- The `/session:start` and `/session:summary` commands, which use `scripts/load_context_files.sh` to consolidate multiple file reads into a single, efficient operation.
+
+#### From Helper Scripts to Hybrid Orchestrators
+The latest and most powerful evolution of this architecture is the **hybrid orchestrator** pattern. This pattern resolves a key limitation: a command's `prompt` can either be a non-interactive shell script OR a flexible LLM prompt, but not both. The hybrid model provides the best of both worlds.
+
+The pattern is as follows:
+1.  The command's `prompt` is defined as a **high-level LLM prompt**, not a shell script. This prompt acts as an "orchestrator" for the entire command workflow.
+2.  This orchestrator agent uses the `run_shell_command` tool to execute small, deterministic, single-purpose **helper scripts** for predictable steps where precision is critical (e.g., generating a filename with a specific timestamp format).
+3.  The orchestrator agent then handles the complex, stateful, or interactive parts of the workflow itself. This can include loops, conditional logic, and calling other tools like `read_file` or `replace`.
+
+This architecture allows a single, self-contained command to have a complex, interactive, AI-powered workflow. The `/session:prepare-release` command is the canonical example of this pattern. It uses a helper script to reliably create a release branch, then the main orchestrator agent manages the complex loop of cherry-picking commits and handling potential merge conflicts by analyzing them and asking the user for approval on proposed fixes. This balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones.
+
+#### Orchestrator Scripts with Focused Sub-Sessions
+This pattern represents the most advanced and efficient architecture in the suite, taking the "Gemini Inception" concept and formalizing it. It is an alternative to the "Hybrid Orchestrator" and is ideal for commands that need to process a large amount of data for a specific, one-off AI task (like summarization) without polluting the main session context.
+
+The pattern is as follows:
+1.  The command's `prompt` is defined as a `#!/bin/bash` **shell script**, which acts as the main orchestrator.
+2.  This script first gathers and prepares a minimal, focused context for the task. This often involves calling other helper scripts (e.g., `scripts/load_context_files.sh` to get content, or `scripts/get_git_context.sh` to get a diff).
+3.  The orchestrator script then delegates the AI-heavy task to a temporary, isolated **sub-session** by piping the prepared context directly into a `gemini query "..."` command.
+4.  The orchestrator script captures the output of the sub-session and performs any final actions. The temporary sub-session and its large context are destroyed upon completion.
+
+This provides maximum efficiency, context isolation, and token economy. The `/session:start` and `/session:summary` commands are the canonical examples of this pattern, using it to load and process all feature files in a single, isolated operation.
 
 ---
 
 ## Commands
 
-Here is a detailed description of each command in the session suite.
-
-### /session:new `[story-id]`
-
-**Description:** Creates a new feature document from a Shortcut story ID. It fetches the story's name, description, and comments, and also pulls in content from any linked Notion pages or other Shortcut stories. This file becomes the central reference for the task.
-
-**Usage:**
-`bash
-/session:new sc-12345
-`
-
-### /session:start `[feature-doc]`
-
-**Description:** Starts a work session. This command loads the context from the specified feature document (e.g., `sc-12345.md`) and the main `GEMINI.md` project file, preparing the assistant for the work ahead.
-
-**Usage:**
-`bash
-/session:start sc-12345.md
-`
-
-### /session:plan
-
-**Description:** Analyzes the codebase and the loaded feature document to generate a detailed, step-by-step implementation plan. It populates the "Next Steps" and "Open Questions" sections of the feature document, providing a clear path forward. This is a planning phase only.
-
-**Usage:**
-`bash
-/session:plan
-`
-
-### /session:checkpoint
-
-**Description:** Saves a timestamped log of the work done during a session. It reviews the conversation history, records completed tasks, notes decisions made, and updates the "Work Log," "Next Steps," and "Open Questions" sections in the feature document. This ensures progress is not lost between sessions.
-
-**Usage:**
-`bash
-/session:checkpoint
-`
-
-### /session:review
-
-**Description:** Performs a critical, context-aware code review of the current git branch. It uses the active feature document as the source of truth for acceptance criteria and saves its feedback (a numbered list of required changes) to a "## Code Review Feedback" section within that same document.
-
-**Usage:**
-`bash
-/session:review
-`
-
-### /session:review_from_branch
-
-**Description:** Performs a code review similar to `/session:review`, but derives its context directly from the Shortcut story ID found in the current git branch name (e.g., `sc-12345-my-feature`). It posts the feedback as a comment on the corresponding Shortcut story.
-
-**Usage:**
-`bash
-/session:review_from_branch
-`
-
-### /session:pr
-
-**Description:** Generates a comprehensive pull request description. It uses the active feature document, a template from `.vscode/pull_request_template.md`, and the `git diff` of the current branch. It can then update an existing PR on GitHub, or, with user approval, create a new one. It also saves the PR link to the feature document for future reference.
-
-**Usage:**
-`bash
-/session:pr
-`
-
-### /session:pr_from_branch
-
-**Description:** Generates a pull request description, but like `review_from_branch`, it uses the Shortcut story linked in the git branch name for context instead of a feature document. It then updates the corresponding PR on GitHub or creates a local file.
-
-**Usage:**
-`bash
-/session:pr_from_branch
-`
-
-### /session:address-feedback
-
-**Description:** Fetches unresolved review comments from the feature's linked GitHub Pull Request. It then guides the user through addressing each comment one by one, proposing a plan, and implementing the changes upon approval, while documenting the rationale for each change.
-
-**Usage:**
-`bash
-/session:address-feedback
-`
-
-### /session:end
-
-**Description:** Finalizes a work session. It performs one last checkpoint to save all remaining progress to the feature document. Crucially, it also analyzes the entire session to identify any new, project-wide knowledge (like new architectural patterns or conventions) and saves it to the global `GEMINI.md` file for future reference.
-
-**Usage:**
-`bash
-/session:end
-`
-
----
-
-## Typical Workflows
-
-### Full Session-Based Workflow
-
-This is the most common and structured way to use the command suite.
-
-1.  **Initialize the feature:**
-    `bash
-    /session:new sc-12345
-    `
-
-2.  **Start your work session:**
-    `bash
-    /session:start sc-12345.md
-    `
-
-3.  **Create an implementation plan:**
-    `bash
-    /session:plan
-    `
-
-4.  **(Work on the code using Gemini's assistance...)**
-
-5.  **Log your progress periodically:**
-    `bash
-    /session:checkpoint
-    `
-
-6.  **(Finish the implementation...)**
-
-7.  **Review your changes against the requirements:**
-    `bash
-    /session:review
-    `
-
-8.  **Prepare and create the pull request:**
-    `bash
-    /session:pr
-    `
-
-9.  **Address PR feedback from teammates:**
-    `bash
-    /session:address-feedback
-    `
-
-10. **End the session and save long-term knowledge:**
-    `bash
-    /session:end
-    `
-
-### Quick Actions from a Branch
-
-These commands are useful for quickly performing a single action without a full session context.
-
-**Scenario 1: Code Review from a Branch**
-
-1.  Checkout a feature branch (e.g., `sc-54321-fix-login-bug`).
-2.  Run a review based on the linked Shortcut story:
-    `bash
-    /session:review_from_branch
-    `
-
-**Scenario 2: PR Description from a Branch**
-
-1.  Checkout the feature branch and ensure your changes are complete.
-2.  Generate the PR description from the linked Shortcut story:
-    `bash
-    /session:pr_from_branch
-    `
-## Future Considerations
-
-For developers looking to extend or improve this suite, here are some potential ideas:
-
--   **Configurable Artifact Path:** The path for feature documents is currently hardcoded to `.vscode/`. A future improvement could be to make this path configurable, perhaps via a setting in the global `GEMINI.md` file.
--   **Enhanced Error Handling:** The commands could benefit from more robust error handling, providing clearer feedback when a dependency (like a Shortcut story or Notion page) is not found.
--   **Abstracting Core Logic:** The core logic for interacting with feature documents (reading, updating sections) could be abstracted into a shared skill or prompt to reduce duplication across commands.
--   **Interactive Setup:** A command like `/session:init` could be created to help set up the necessary `GEMINI.md` and `.vscode/pull_request_template.md` files for a new project.
+- `**/session:address-feedback**: Fetches and helps address feedback comments from the active feature's GitHub Pull Request.
+- `**/session:checkpoint**: Saves a checkpoint of the work done by updating the state files using the yq tool.
+- `**/session:define**: Starts a conversational session to define a new user story and create its feature directory.
+- `**/session:end**: Ends the work session, saving progress to the feature directory and project-wide knowledge to GEMINI.md.
+- `**/session:log-research**: Logs a detailed, comprehensive summary of research findings to log.md.
+- `**/session:migration**: Migrates an old, single-file feature document to the new directory structure with structured YAML files.
+- `**/session:new**: Creates a new feature directory from a Shortcut story ID.
+- `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
+- `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
+- `**/session:pr_from_branch**: Generates a PR description. If branch name has a Shortcut story, it uses it for context and links the PR back to the story.
+- `**/session:prepare-release**: Prepares a release by creating a branch, cherry-picking commits, and intelligently resolving any conflicts.
+- `**/session:review**: Performs a critical, context-aware code review of the current branch.
+- `**/session:review_from_branch**: Performs a critical, context-aware code review of the current branch, using the Shortcut story from the branch name as context.
+- `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
+- `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
+- `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found.

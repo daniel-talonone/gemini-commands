@@ -1,0 +1,17 @@
+description = "Migrates an old, single-file feature document to the new directory structure by calling a dedicated helper script."
+prompt = """
+#!/bin/bash
+set -e
+
+# This command is now a simple, reliable wrapper around a robust helper script.
+# It ensures the script is executable and passes the argument to it.
+
+COMMANDS_DIR="$HOME/.gemini/commands"
+SCRIPT_PATH="$COMMANDS_DIR/scripts/migrate_feature_file.sh"
+
+# Ensure the helper script is executable
+chmod +x "$SCRIPT_PATH"
+
+# Execute the migration script with the provided file path
+"$SCRIPT_PATH" "{{args}}"
+"""

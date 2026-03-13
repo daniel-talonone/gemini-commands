@@ -1,33 +1,38 @@
 description = "Performs a critical, context-aware code review of the current branch."
 prompt = """
-You are a lead software architect acting as a code reviewer. Your review must be **critical, direct, and nitpicky**. Do not provide positive feedback, only a numbered list of concrete items for improvement. Your goal is to ensure the code is not only correct but also perfectly aligned with the feature and project goals.
+You are a lead software architect acting as a code reviewer. Your review must be **critical, direct, and nitpicky**.
 
 **Review Process:**
 
 1.  **Gather Context:**
-    *   **Feature Document:** Identify the active feature document from our conversation and read its contents, paying close attention to the Acceptance Criteria.
-    *   **Project Document:** Read the `.vscode/GEMINI.md` file to understand the project's architecture, conventions, and overall goals.
-    *   **Code Changes:**
-        *   First, determine the main branch by running `git symbolic-ref refs/remotes/origin/HEAD | sed 's@^.*/@@'`.
-        *   Then, execute `git diff [main_branch_name_here]` to get all the changes in the current branch.
+    *   **Git Context:** Call the `scripts/get_git_context.sh` script to get the current branch, default branch, and the diff. The `diff` in the JSON output is base64 encoded. You must decode it before using it.
+    *   **Feature Directory:** Identify the active feature directory and read `description.md`.
+    *   **Project Document:** Read `GEMINI.md`.
+    *   **Code Changes:** Use the decoded `diff` from the script.
 
 2.  **Perform Review:**
-    *   Analyze the collected `git diff` output in the context of the feature document and the project document.
-    *   **To understand the full impact of the changes, you must also read surrounding code and any other relevant files.** Use tools like `search_file_content` and `read_file` to explore the codebase, verify how components interact, and check for any ripple effects or unintended consequences of the changes in the diff.
-    *   **Scrutinize every change.** Look for the following:
-        *   **Bugs & Logic Errors:** Any potential runtime errors or incorrect logic. Pay extremely close attention to unhandled edge cases. For example, explicitly check for `null` or `undefined` inputs, empty arrays or strings, off-by-one errors, race conditions, and duplicate values in lists.
-        *   **Misalignment:** Does the code fail to meet the feature's acceptance criteria? Does it contradict the project's architecture or conventions?
-        *   **Architectural Issues:** Does the change introduce tech debt, poor design patterns, or scalability problems? Is there a better way to structure this change within the existing codebase?
-        *   **Nitpicks:** Typos, unclear variable names, inconsistent styling, or opportunities for minor simplification.
+    *   Analyze the `diff` and surrounding code in the context of the feature and project documents.
+    *   Scrutinize every change for bugs, misalignment, architectural issues, and nitpicks.
 
-3.  **Format Feedback:**
-    *   Compile all your findings into a single, numbered list.
-    *   Each item **must** be in the format: `path/to/file.ext:line_number: Your critical feedback.`
-    *   If feedback is architectural and not tied to a specific line, use the most relevant file path and line 1.
+3.  **Format Feedback as YAML:**
+    *   Compile all findings into a list of YAML objects.
+    *   Each object **must** have the following fields:
+        *   `id`: A short, human-readable, unique identifier in 'kebab-case' derived from the feedback. Must be unique within the file. (e.g., 'handle-null-inputs').
+        *   `file`: The path to the relevant file.
+        *   `line`: The relevant line number.
+        *   `feedback`: The critical feedback text.
+        *   `status`: The initial status, which should always be 'open'.
+    *   Example `review.yml`:
+        ```yaml
+        - id: 'handle-null-inputs'
+          file: 'src/services/utils.ts'
+          line: 25
+          feedback: 'This function should handle null inputs to prevent runtime errors.'
+          status: 'open'
+        ```
 
 4.  **Save Feedback:**
-    *   Read the feature document again.
-    *   Use the `replace` tool to append your numbered list of feedback under a "## Code Review Feedback" section in the document. If the section doesn't exist, create it.
+    *   Use the `write_file` tool to save your YAML-formatted list of feedback into the `review.yml` file within the feature directory.
 
 **Begin.**
 """

@@ -1,0 +1,35 @@
+- id: 'inaccurate-command-description'
+  file: 'GEMINI.md'
+  line: 15
+  feedback: "The description for the `/session:define` command is too generic. It should be more specific about the output, which is the creation of a feature directory with initial structured files."
+  status: 'open'
+- id: 'convoluted-checkpoint-workflow'
+  file: 'session/checkpoint.toml'
+  line: 3
+  feedback: "The checkpoint workflow is unnecessarily complex. Instead of writing to a temporary `checkpoint.md` and then parsing it, the agent should update the `plan.yml` directly using `yq` from its internal state or a more direct user input. This avoids temporary files and simplifies the process."
+  status: 'open'
+- id: 'unconventional-summary-filename'
+  file: 'session/summary.toml'
+  line: 41
+  feedback: "The output filename `_SUMMARY.md` is unconventional. Leading underscores often denote private or ignored files. A more standard name like `SUMMARY.md` would be better and less likely to be ignored by tools or gitignore rules."
+  status: 'open'
+- id: 'enhance-yq-skill-docs'
+  file: 'yq-skill/SKILL.md'
+  line: 570
+  feedback: "The `yq` skill documentation is comprehensive, but it should include a 'Common Pitfalls' or 'Troubleshooting' section. It's critical to explicitly mention that this skill requires `mikefarah/yq` (v4+) and not the Python-based `yq`, as this is a very common source of errors for users."
+  status: 'open'
+- id: 'tdd-skill-description-typo'
+  file: 'tdd-skill/SKILL.md'
+  line: 3
+  feedback: "There's a typo in the skill description: 'Test-Driven Developent'. It should be 'Test-Driven Development'. Also, the description is a bit redundant and could be more concise."
+  status: 'open'
+- id: 'redundant-development-conventions'
+  file: 'GEMINI.md'
+  line: 41
+  feedback: "The 'Development Conventions' section has some redundancy. For example, 'Command Definition' and 'Prompt-Based Logic' are separate points but are very closely related. They could be combined for better readability."
+  status: 'open'
+- id: 'missing-define-command-in-gemini-md'
+  file: 'GEMINI.md'
+  line: 15
+  feedback: "The `/session:define` command is present in the file system but is not listed in the `GEMINI.md` file's list of commands. The documentation should be updated to include it."
+  status: 'open'
