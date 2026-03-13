@@ -9,8 +9,7 @@ set -e
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 
 # Determine the default branch name (e.g., main, master)
-# This command gets the symbolic-ref for the remote's HEAD and strips the 'refs/remotes/origin/' part.
-default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+default_branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
 
 
 # Fetch the latest changes from origin to ensure the diff is up-to-date
@@ -18,7 +17,7 @@ git fetch origin
 
 # Get the diff between the current branch and the default branch's tracking branch.
 # The diff is base64 encoded to handle special characters safely in JSON.
-diff_content=$(git diff "origin/$default_branch...HEAD")
+diff_content=$(git diff "origin/$default_branch...HEAD" -- . ':(exclude)vendor' ':(exclude)node_modules')
 encoded_diff=$(echo "$diff_content" | base64)
 
 # Output as JSON

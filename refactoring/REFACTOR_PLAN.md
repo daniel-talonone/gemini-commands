@@ -105,6 +105,7 @@ The following commands have been identified as candidates for future refactoring
     -   **Current Logic:** These prompts all involve running multiple `git` commands to get context (current branch name, main branch name, diff against main).
     -   **Proposed Script:** `scripts/get_git_context.sh`.
     -   **Implementation:** A single script could reliably gather all necessary git context and return it as a structured string (e.g., JSON), which the LLM can then use for generating the PR description or performing the code review. This would consolidate the logic and reduce the number of shell commands the LLM needs to invoke.
+    -   **Future Consideration:** The output from `get_git_context.sh` is currently piped directly to the next command. For debugging or handling extremely large diffs, it might be beneficial to store this JSON output in a file within the feature directory (e.g., `git_context.json`). This would create a persistent artifact of the context used, but introduces the risk of the data becoming stale if not regenerated before each use. This is a trade-off to be evaluated later.
 
 -   **/session:plan**:
     -   **Current Logic:** The LLM generates content for `plan.yml` and `questions.yml` and then uses two separate `write_file` calls to save them.

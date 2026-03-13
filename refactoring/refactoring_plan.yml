@@ -39,6 +39,8 @@ low_priority:
     status: done
     description: >
       These prompts all involve running multiple `git` commands to get context (current branch name, main branch name, diff against main). A single script could reliably gather all necessary git context and return it as a structured string (e.g., JSON), which the LLM can then use for generating the PR description or performing the code review.
+    future_consideration: >
+      For debugging or handling extremely large diffs, it might be beneficial to store the script's JSON output in a file (e.g., `git_context.json`) instead of consuming it from stdout. This creates a persistent artifact but introduces the risk of using stale data.
 
   - command: /session:plan
     script: scripts/write_plan_files.sh
