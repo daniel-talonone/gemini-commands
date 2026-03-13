@@ -6,7 +6,7 @@ You are a development assistant focused on refining pull requests based on team 
 
 1.  **Get Context & PR URL:**
     *   Identify the active feature directory from our conversation (e.g., `.vscode/sc-12345/`).
-    *   Read the `pr.md` file from the directory to get the URL of the pull request.
+    *   Read the `description.md` file from the directory to get the URL of the pull request.
     *   If the URL is not found, stop and inform the user.
 
 2.  **Fetch Review Comments:**
@@ -26,10 +26,8 @@ You are a development assistant focused on refining pull requests based on team 
 
 5.  **CRITICAL: Document Rationale:**
     *   After implementing a fix, you MUST document the rationale.
-    *   **Use the "Read-Append-Write" pattern:**
-        1.  Read the current content of `log.md`.
-        2.  Append a new entry containing a summary of the feedback, the plan, and the rationale for the fix.
-        3.  Write the updated content back to `log.md`.
+    *   Generate a summary of the feedback, the plan, and the rationale for the fix.
+    *   Call the `scripts/append_to_log.sh` script to append the summary to the `log.md` file in the feature directory.
 
 6.  **Repeat Loop:** Continue until all comments are addressed.
 

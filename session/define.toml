@@ -35,9 +35,8 @@ The user has provided a high-level goal: `{{args}}`.
 5.  **Create Artifacts (Upon Approval):**
     *   Once the user approves the draft:
         1.  Generate a suitable directory name from the user's initial goal (e.g., "Create user profile page" -> `create-user-profile-page`).
-        2.  Create the new feature directory (e.g., `.vscode/create-user-profile-page/`).
-        3.  Create `description.md` and populate it with the approved user story draft.
-        4.  Create the standard empty artifacts: `plan.yml`, `questions.yml`, `review.yml`, `log.md`, and `pr.md`.
+        2.  Call the `create_feature_dir.sh` script to create the directory and placeholder files. The first argument should be `.vscode` and the second should be the generated directory name.
+        3.  Create `description.md` in the new directory and populate it with the approved user story draft.
     *   Announce that the feature directory has been successfully created and is ready for the `/session:plan` phase.
 
 **Begin the conversation.**
