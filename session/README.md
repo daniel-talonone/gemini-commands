@@ -32,46 +32,28 @@ The choice to store feature artifacts in `.vscode/` is a practical one based on 
 
 ### Architectural Rationale
 
-#### From Single File to Feature Directory
-This command suite originally used a single Markdown file. This proved brittle as it relied on the `replace` tool, which often failed. The first refactoring split this file into a **feature directory**, enabling safer, more reliable file-specific operations.
+This project has evolved through several stages, with each step aimed at increasing reliability and using the best tool for the job. The core principle is to use deterministic, specialized tools (`yq`, shell scripts) for procedural tasks, and to reserve the LLM for creative, analytical, and orchestrating tasks. This has led to two primary architectural patterns for creating commands.
 
-#### From Markdown Lists to Structured YAML
-The next improvement was to change stateful lists (plans, questions, etc.) from Markdown to **structured YAML**. This allowed the agent to programmatically parse and modify the data in memory before writing it back, which was more robust than text manipulation.
-
-#### From In-Memory Parsing to `yq`
-The final evolution was to offload all YAML manipulation to the `yq` command-line tool. By activating a `yq-skill` and using `run_shell_command`, the agent can issue direct, atomic commands (e.g., `yq -i '.field = "value"' file.yml`). This is the most robust and reliable pattern, as it uses a specialized, deterministic tool for all state updates.
-
-#### From LLM Procedures to Helper Scripts
-Following the same philosophy, any procedural, deterministic logic (especially file system operations) is being migrated from the LLM's prompt into dedicated helper scripts located in the `scripts/` directory. LLMs are non-deterministic and can be unreliable when asked to follow a strict sequence of procedural steps. Encapsulating these steps in a script makes the commands more robust.
-
-The LLM's role is shifted from *performing* the steps to *executing* the script that performs them. These scripts are called using a portable, reliable execution pattern that leverages the known conventional path for global commands (`$HOME/.gemini/commands`). This refactoring effort is ongoing.
-
-Examples include:
-- The `/session:new` command, which uses `scripts/create_feature_dir.sh` to scaffold the feature directory.
-- The `/session:checkpoint` command, which uses `scripts/append_to_log.sh` to add a timestamped entry to the log file.
-- The `/session:migration` command, which uses the `scripts/migrate_feature_file.sh` script to reliably convert a legacy feature file into the new directory structure.
-- The `/session:start` and `/session:summary` commands, which use `scripts/load_context_files.sh` to consolidate multiple file reads into a single, efficient operation.
-
-#### From Helper Scripts to Hybrid Orchestrators
-The latest and most powerful evolution of this architecture is the **hybrid orchestrator** pattern. This pattern resolves a key limitation: a command's `prompt` can either be a non-interactive shell script OR a flexible LLM prompt, but not both. The hybrid model provides the best of both worlds.
+#### Pattern 1: LLM Orchestrator with Helper Scripts
+This pattern is ideal for complex, interactive commands that may require conditional logic, loops, or user interaction.
 
 The pattern is as follows:
-1.  The command's `prompt` is defined as a **high-level LLM prompt**, not a shell script. This prompt acts as an "orchestrator" for the entire command workflow.
-2.  This orchestrator agent uses the `run_shell_command` tool to execute small, deterministic, single-purpose **helper scripts** for predictable steps where precision is critical (e.g., generating a filename with a specific timestamp format).
-3.  The orchestrator agent then handles the complex, stateful, or interactive parts of the workflow itself. This can include loops, conditional logic, and calling other tools like `read_file` or `replace`.
+1.  The command's `prompt` is defined as a **high-level LLM prompt**, not a shell script. This prompt makes the agent an "orchestrator" for the entire command workflow.
+2.  The orchestrator agent uses the `run_shell_command` tool to execute small, deterministic, single-purpose **helper scripts** for predictable steps where precision is critical (e.g., generating a filename with a specific timestamp format, running git commands).
+3.  The orchestrator agent then handles the complex, stateful, or interactive parts of the workflow itself, using its reasoning capabilities to manage the process.
 
-This architecture allows a single, self-contained command to have a complex, interactive, AI-powered workflow. The `/session:prepare-release` command is the canonical example of this pattern. It uses a helper script to reliably create a release branch, then the main orchestrator agent manages the complex loop of cherry-picking commits and handling potential merge conflicts by analyzing them and asking the user for approval on proposed fixes. This balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones.
+This architecture balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones. Commands like `/session:define` and `/session:review` (before its refactoring) are good examples.
 
-#### Orchestrator Scripts with Focused Sub-Sessions
-This pattern represents the most advanced and efficient architecture in the suite, taking the "Gemini Inception" concept and formalizing it. It is an alternative to the "Hybrid Orchestrator" and is ideal for commands that need to process a large amount of data for a specific, one-off AI task (like summarization) without polluting the main session context.
+#### Pattern 2: Shell Orchestrator with Focused LLM Sub-sessions
+This pattern (also called "Gemini Inception") is the most advanced and efficient architecture in the suite. It is ideal for commands that need to perform a specific, one-off AI task (like summarization or generation) on a large amount of data without polluting the main session context.
 
 The pattern is as follows:
 1.  The command's `prompt` is defined as a `#!/bin/bash` **shell script**, which acts as the main orchestrator.
-2.  This script first gathers and prepares a minimal, focused context for the task. This often involves calling other helper scripts (e.g., `scripts/load_context_files.sh` to get content, or `scripts/get_git_context.sh` to get a diff).
+2.  This script first gathers and prepares a minimal, focused context for the task, often by calling other helper scripts (e.g., `scripts/load_context_files.sh`).
 3.  The orchestrator script then delegates the AI-heavy task to a temporary, isolated **sub-session** by piping the prepared context directly into a `gemini query "..."` command.
 4.  The orchestrator script captures the output of the sub-session and performs any final actions. The temporary sub-session and its large context are destroyed upon completion.
 
-This provides maximum efficiency, context isolation, and token economy. The `/session:start` and `/session:summary` commands are the canonical examples of this pattern, using it to load and process all feature files in a single, isolated operation.
+This provides maximum efficiency, context isolation, and token economy. The `/session:start` and `/session:summary` commands are the canonical examples of this pattern.
 
 ---
 
@@ -87,7 +69,6 @@ This provides maximum efficiency, context isolation, and token economy. The `/se
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
 - `**/session:pr_from_branch**: Generates a PR description. If branch name has a Shortcut story, it uses it for context and links the PR back to the story.
-- `**/session:prepare-release**: Prepares a release by creating a branch, cherry-picking commits, and intelligently resolving any conflicts.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch.
 - `**/session:review_from_branch**: Performs a critical, context-aware code review of the current branch, using the Shortcut story from the branch name as context.
 - `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.

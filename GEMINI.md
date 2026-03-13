@@ -15,7 +15,6 @@ The defined commands are:
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
 - `**/session:pr_from_branch**: Generates a PR description. If branch name has a Shortcut story, it uses it for context and links the PR back to the story.
-- `**/session:prepare-release**: Prepares a release by creating a branch, cherry-picking commits, and intelligently resolving any conflicts.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch.
 - `**/session:review_from_branch**: Performs a critical, context-aware code review of the current branch, using the Shortcut story from the branch name as context.
 - `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
@@ -42,15 +41,12 @@ Followed by:
 *   **State Management**: The workflow state is managed through the contents of the feature directory files.
     *   **Unstructured Data:** `description.md` and `log.md` are standard markdown files.
     *   **Structured Data:** `plan.yml`, `questions.yml`, and `review.yml` are structured YAML files.
-    *   **Modification Pattern:** All modifications to these YAML files are performed by activating the `yq-skill` and using `run_shell_command` to execute `yq` commands. This provides atomic, deterministic, and robust state updates, which is the core principle of this project's architecture.
+    *   **Modification Pattern:** All modifications to these YAML files are performed by activating the `yq-skill` and using `run_shell_command` to execute `yq` commands. This provides atomic, deterministic, and robust state updates.
 *   **Skills**: The workflow relies on locally installed skills (`tdd-skill`, `yq-skill`) for complex, reusable logic.
-*   **Command Prompt Design**: Commands can be implemented in three main ways:
-    *   **Shell Script Prompt**: For simple, deterministic, non-interactive tasks, the `prompt` can be a `#!/bin/bash` script that directly calls helper scripts.
-    *   **LLM Orchestrator Prompt**: For complex workflows that require loops, conditional logic, or AI-powered analysis, the `prompt` should be a natural language set of instructions for the agent.
-    *   **Orchestrator Script Prompt**: For highly-efficient, task-specific commands, the `prompt` can be a shell script that prepares a minimal context and pipes it into a separate `gemini query` sub-session. This is the most token-efficient pattern.
-*   **Hybrid Pattern (Preferred)**: The most robust pattern for complex, interactive commands is to use an **LLM Orchestrator Prompt** as the main entry point, which then calls small, single-purpose **helper scripts**. This balances the reliability of scripts for predictable tasks with the flexibility of the LLM. An alternative for efficient, single-purpose tasks is the **Orchestrator Script Prompt**. See the `session/README.md` for the full architectural rationale on all patterns.
+*   **Command Patterns**: Commands are implemented using two primary architectural patterns, which balance flexibility and efficiency.
+    *   **LLM Orchestrator Prompt**: For complex, interactive tasks (e.g., `/session:define`), the `prompt` is a high-level set of instructions for the agent. The agent acts as an orchestrator, using tools like `run_shell_command` to call helper scripts for deterministic steps, while managing the overall workflow and user interaction.
+    *   **Shell Orchestrator Prompt**: For efficient, single-purpose tasks (e.g., `/session:start`), the `prompt` is a `#!/bin/bash` script. This script orchestrates the task by preparing a minimal context (often using helper scripts) and then piping that context into an isolated `gemini query` sub-session for the AI-heavy lifting. This is the most token-efficient pattern.
+*   See the `session/README.md` for the full architectural rationale and detailed examples of these patterns.
 
 # Skill Development
-
-(No changes in this section)
 ...
