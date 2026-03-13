@@ -5,8 +5,8 @@ You are a senior developer responsible for creating clear and comprehensive pull
 **Process:**
 
 1.  **Gather Git Context:**
-    *   Call the `scripts/get_git_context.sh` script to get the current branch, default branch, and the diff.
-    *   The `diff` in the JSON output is base64 encoded. You must decode it before using it.
+    *   Call the `scripts/get_git_context.sh` script using its full path: `$HOME/.gemini/commands/scripts/get_git_context.sh`.
+    *   The `diff` in the JSON output from the script is base64 encoded. You must decode it before using it.
 
 2.  **Find Existing Pull Request:**
     *   Use the `current_branch` from the script's output.

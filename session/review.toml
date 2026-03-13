@@ -5,7 +5,7 @@ You are a lead software architect acting as a code reviewer. Your review must be
 **Review Process:**
 
 1.  **Gather Context:**
-    *   **Git Context:** Call the `scripts/get_git_context.sh` script to get the current branch, default branch, and the diff. The `diff` in the JSON output is base64 encoded. You must decode it before using it.
+    *   **Git Context:** Call the `scripts/get_git_context.sh` script using its full path: `$HOME/.gemini/commands/scripts/get_git_context.sh`. The script provides the current branch, default branch, and a base64-encoded diff. You must decode the diff before using it.
     *   **Feature Directory:** Identify the active feature directory and read `description.md`.
     *   **Project Document:** Read `GEMINI.md`.
     *   **Code Changes:** Use the decoded `diff` from the script.

@@ -23,8 +23,7 @@ Your primary goal is **completeness, not conciseness.**
     *   Format the report in clear Markdown.
 
 4.  **Append Report to Log:**
-    *   Call the `append_to_log.sh` helper script to add the detailed report to the `log.md` file.
-    *   Use the established script execution pattern:
+    *   Call the `append_to_log.sh` helper script using the established script execution pattern to add the detailed report to the `log.md` file.
     ```bash
     #!/bin/bash
     COMMANDS_DIR="$HOME/.gemini/commands"

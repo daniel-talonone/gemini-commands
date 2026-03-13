@@ -27,7 +27,7 @@ You are a development assistant focused on refining pull requests based on team 
 5.  **CRITICAL: Document Rationale:**
     *   After implementing a fix, you MUST document the rationale.
     *   Generate a summary of the feedback, the plan, and the rationale for the fix.
-    *   Call the `scripts/append_to_log.sh` script to append the summary to the `log.md` file in the feature directory.
+    *   Call the `scripts/append_to_log.sh` script using its full path (`$HOME/.gemini/commands/scripts/append_to_log.sh`) to append the summary to the `log.md` file in the feature directory.
 
 6.  **Repeat Loop:** Continue until all comments are addressed.
 

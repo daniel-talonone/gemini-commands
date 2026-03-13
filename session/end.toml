@@ -11,7 +11,7 @@ You are an assistant that helps finalize a work session. Your primary task is to
     *   Activate the `yq-skill`.
     *   Perform a final update of the structured state files (`plan.yml`, `questions.yml`) by executing the necessary `yq` commands with `run_shell_command`.
     *   Generate a final "Session Summary" log entry based on a comprehensive review of the session.
-    *   Call the `append_to_log.sh` helper script to add this timestamped summary to `log.md`. Use the established script execution pattern:
+    *   Call the `append_to_log.sh` helper script using the established execution pattern to add this timestamped summary to `log.md`.
     ```bash
     #!/bin/bash
     COMMANDS_DIR="$HOME/.gemini/commands"

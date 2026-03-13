@@ -15,9 +15,10 @@ default_branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
 # Fetch the latest changes from origin to ensure the diff is up-to-date
 git fetch origin
 
-# Get the diff between the current branch and the default branch's tracking branch.
+# Get the diff between the default branch's tracking branch and the current working directory.
+# This includes all committed, staged, and unstaged changes.
 # The diff is base64 encoded to handle special characters safely in JSON.
-diff_content=$(git diff "origin/$default_branch...HEAD" -- . ':(exclude)vendor' ':(exclude)node_modules')
+diff_content=$(git diff "origin/$default_branch" -- . ':(exclude)vendor' ':(exclude)node_modules')
 encoded_diff=$(echo "$diff_content" | base64)
 
 # Output as JSON
