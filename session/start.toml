@@ -1,12 +1,27 @@
-description = "Starts a work session by loading context from a feature directory and the project's GEMINI file."
+description = "Starts a work session by efficiently loading all context from a feature directory using a helper script."
 prompt = """
-You are starting a new session for the feature in `{{args}}`.
+#!/bin/bash
+set -e
+COMMANDS_DIR="$HOME/.gemini/commands"
+SCRIPT_PATH="$COMMANDS_DIR/scripts/load_context_files.sh"
+FEATURE_DIR=".vscode/{{args}}"
 
-First, read the content of all the files inside the feature directory `.vscode/{{args}}/` using the `read_file` tool for each file (`description.md`, `plan.yml`, `log.md`, `questions.yml`, `review.yml`, and `pr.md`).
-Then read the content of the file `GEMINI.md` using the `read_file` tool, this is the project document.
+# This command now orchestrates a sub-session for maximum efficiency.
+# 1. Ensure the helper script is executable.
+# 2. Call the script to consolidate all context files into a single variable.
+# 3. Pipe that consolidated context into a new, focused `gemini query` process.
 
-Review very carefully all documents and understand what is the feature to implement (feature directory) and how the current project works (project document).
-Then, say:
-Context loaded. I have reviewed the feature and project documentation.
+chmod +x "$SCRIPT_PATH"
 
+CONTEXT=$("$SCRIPT_PATH" "$FEATURE_DIR")
+
+# The sub-session is given a clear prompt and the consolidated context.
+# It reviews the files and confirms completion, without polluting the main session.
+gemini query "You are starting a new session for the feature '{{args}}'. All context files have been loaded and are provided below, separated by '--- FILE: [filename] ---'.
+
+Review all content carefully, then confirm by saying ONLY:
+'Context loaded. I have reviewed the feature and project documentation.'
+
+---
+$CONTEXT"
 """

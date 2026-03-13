@@ -44,10 +44,11 @@ Followed by:
     *   **Structured Data:** `plan.yml`, `questions.yml`, and `review.yml` are structured YAML files.
     *   **Modification Pattern:** All modifications to these YAML files are performed by activating the `yq-skill` and using `run_shell_command` to execute `yq` commands. This provides atomic, deterministic, and robust state updates, which is the core principle of this project's architecture.
 *   **Skills**: The workflow relies on locally installed skills (`tdd-skill`, `yq-skill`) for complex, reusable logic.
-*   **Command Prompt Design**: Commands can be implemented in two main ways:
-    *   **Shell Script Prompt**: For simple, deterministic, non-interactive tasks, the `prompt` can be a `#!/bin/bash` script.
-    *   **LLM Orchestrator Prompt**: For complex workflows that require loops, conditional logic, error handling, or AI-powered analysis, the `prompt` should be a natural language set of instructions for the agent, which then uses tools to execute the steps.
-*   **Hybrid Pattern (Preferred)**: The most robust pattern is to use an **LLM Orchestrator Prompt** as the main entry point for a command. This orchestrator should then call small, single-purpose **helper scripts** (located in `scripts/`) for any procedural or deterministic steps where precision is critical (e.g., generating a timestamped file name). This balances the reliability of scripts for predictable tasks with the flexibility of the LLM for complex, interactive ones. Commands like `/session:new`, `/session:checkpoint`, and `/session:prepare-release` are good examples of this pattern. See the `session/README.md` for the full architectural rationale.
+*   **Command Prompt Design**: Commands can be implemented in three main ways:
+    *   **Shell Script Prompt**: For simple, deterministic, non-interactive tasks, the `prompt` can be a `#!/bin/bash` script that directly calls helper scripts.
+    *   **LLM Orchestrator Prompt**: For complex workflows that require loops, conditional logic, or AI-powered analysis, the `prompt` should be a natural language set of instructions for the agent.
+    *   **Orchestrator Script Prompt**: For highly-efficient, task-specific commands, the `prompt` can be a shell script that prepares a minimal context and pipes it into a separate `gemini query` sub-session. This is the most token-efficient pattern.
+*   **Hybrid Pattern (Preferred)**: The most robust pattern for complex, interactive commands is to use an **LLM Orchestrator Prompt** as the main entry point, which then calls small, single-purpose **helper scripts**. This balances the reliability of scripts for predictable tasks with the flexibility of the LLM. An alternative for efficient, single-purpose tasks is the **Orchestrator Script Prompt**. See the `session/README.md` for the full architectural rationale on all patterns.
 
 # Skill Development
 

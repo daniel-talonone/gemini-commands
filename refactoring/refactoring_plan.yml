@@ -4,7 +4,7 @@ description: >
 high_priority:
   - command: /session:migration
     script: scripts/migrate_feature_file.sh
-    status: todo
+    status: done
     description: >
       The prompt contains a complex, multi-step procedure for reading an old markdown file, parsing it section by section, creating a new directory, creating multiple new files, converting content to YAML, and renaming the old file. This is extremely brittle for an LLM to perform directly. The script would accept the path to the old markdown file as an argument and handle the entire migration process internally. The LLM's only role would be to call this single script.
 
@@ -19,7 +19,7 @@ medium_priority:
       - /session:start
       - /session:summary
     script: scripts/load_context_files.sh
-    status: todo
+    status: done
     description: >
       Both commands begin by reading all 5-6 files from the feature directory, one by one. This is inefficient and results in multiple tool calls. The script would take the feature directory path as an argument, read all the context files, and print their contents to standard output, perhaps separated by a delimiter. The LLM could then get all context in a single, efficient tool call.
 
@@ -41,10 +41,3 @@ low_priority:
       These prompts all involve running multiple `git` commands to get context (current branch name, main branch name, diff against main). A single script could reliably gather all necessary git context and return it as a structured string (e.g., JSON), which the LLM can then use for generating the PR description or performing the code review.
     future_consideration: >
       For debugging or handling extremely large diffs, it might be beneficial to store the script's JSON output in a file (e.g., `git_context.json`) instead of consuming it from stdout. This creates a persistent artifact but introduces the risk of using stale data.
-
-  - command: /session:plan
-    script: scripts/write_plan_files.sh
-    status: todo
-    description: >
-      The LLM generates content for `plan.yml` and `questions.yml` and then uses two separate `write_file` calls to save them. A script could take the feature directory path and the content for both files as arguments, ensuring they are written in a single, atomic operation from the LLM's perspective.
-
