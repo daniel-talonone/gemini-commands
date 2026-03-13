@@ -1,4 +1,4 @@
-description = "Reviews the code changes on the current branch using the generalist subagent."
+description = "Gets familiar with the current code changes by having a subagent generate a summary."
 ephemeral = true
 prompt = """
 Use the `generalist` subagent to perform a review of the current code changes.
