@@ -2,7 +2,7 @@
 
 This project is a suite of custom Gemini CLI commands designed to implement a structured, session-based workflow for software development. The commands orchestrate a lifecycle for feature development, from creation and planning to review and pull request generation.
 
-The core of the workflow revolves around a "feature directory" (a directory stored in `.vscode/`) which acts as a single source of truth for a given task, and this `GEMINI.md` file, which provides global project context.
+The core of the workflow revolves around a "feature directory" (a directory stored in `.vscode/`) which acts as a single source of truth for a given task, and this `GEMINI.md` file, which provides global project context. See the `example-feature-document/` directory for a complete example of a feature directory.
 
 The defined commands are:
 - `**/session:address-feedback**: Fetches and helps address feedback comments from the active feature's GitHub Pull Request.
