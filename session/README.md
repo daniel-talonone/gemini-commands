@@ -32,9 +32,9 @@ The choice to store feature artifacts in `.vscode/` is a practical one based on 
 
 ### Architectural Rationale
 
-This project has evolved through several stages, with each step aimed at increasing reliability and using the best tool for the job. The core principle is to use deterministic, specialized tools (`yq`, shell scripts) for procedural tasks, and to reserve the LLM for creative, analytical, and orchestrating tasks. This has led to the following architectural pattern:
+This project has evolved through several stages, with each step aimed at increasing reliability and using the best tool for the job. The core principle is to use deterministic, specialized tools (`yq`, shell scripts) for procedural tasks, and to reserve the LLM for creative, analytical, and orchestrating tasks. This has led to the following architectural patterns:
 
-#### LLM Orchestrator with Helper Scripts
+#### Pattern 1: LLM Orchestrator with Helper Scripts
 This pattern is ideal for complex, interactive commands that may require conditional logic, loops, or user interaction.
 
 The pattern is as follows:
@@ -43,6 +43,17 @@ The pattern is as follows:
 3.  The orchestrator agent then handles the complex, stateful, or interactive parts of the workflow itself, using its reasoning capabilities to manage the process.
 
 This architecture balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones. Commands like `/session:define` and `/session:review` are good examples.
+
+#### Pattern 2: Subagent Pattern for Focused Tasks
+This is the modern and preferred pattern for delegating a complex, one-off task to an isolated environment.
+
+The pattern is as follows:
+1.  The command's `prompt` instructs the main agent to use the `generalist` sub-agent tool.
+2.  The prompt includes a detailed set of instructions that will be passed to the `generalist`.
+3.  The main agent calls the `generalist`, which executes the task in a completely isolated session with its own context and tools.
+4.  The final result is returned to the main agent.
+
+This provides maximum efficiency and context isolation. The `/session:get-familiar` command is the canonical example of this pattern.
 
 ---
 
