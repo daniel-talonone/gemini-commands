@@ -82,24 +82,6 @@ This provides maximum efficiency, context isolation, and token economy. The `/se
 
 This section provides a detailed breakdown of individual session commands, their dependencies, and their interactions with the file system and external tools.
 
-### `/session:checkpoint`
-
--   **Description:** Saves a snapshot of the work-in-progress by updating the status of tasks and questions and logging a summary of the progress.
--   **Orchestration Pattern:** [LLM Orchestrator with Helper Scripts](#pattern-1-llm-orchestrator-with-helper-scripts)
--   **Dependencies:**
-    -   **Skills:** `yq YAML Processing`
-    -   **Scripts:** `scripts/append_to_log.sh`
-    -   **Tools:** `run_shell_command`, `activate_skill`
--   **Interactions:**
-    -   **Input (Reads):**
-        -   The active feature directory path from the conversation.
-        -   `.vscode/<feature-dir>/plan.yml`
-        -   `.vscode/<feature-dir>/questions.yml`
-    -   **Output (Writes):**
-        -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
-        -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
-        -   Appends a summary to `.vscode/<feature-dir>/log.md`.
-
 ### `/session:address-feedback`
 
 -   **Description:** Fetches and helps address unresolved review comments from a feature's GitHub Pull Request.
@@ -117,6 +99,24 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Output (Writes):**
         -   Appends a summary to `.vscode/<feature-dir>/log.md`.
         -   Modifies project source files to address feedback.
+
+### `/session:checkpoint`
+
+-   **Description:** Saves a snapshot of the work-in-progress by updating the status of tasks and questions and logging a summary of the progress.
+-   **Orchestration Pattern:** [LLM Orchestrator with Helper Scripts](#pattern-1-llm-orchestrator-with-helper-scripts)
+-   **Dependencies:**
+    -   **Skills:** `yq YAML Processing`
+    -   **Scripts:** `scripts/append_to_log.sh`
+    -   **Tools:** `run_shell_command`, `activate_skill`
+-   **Interactions:**
+    -   **Input (Reads):**
+        -   The active feature directory path from the conversation.
+        -   `.vscode/<feature-dir>/plan.yml`
+        -   `.vscode/<feature-dir>/questions.yml`
+    -   **Output (Writes):**
+        -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
+        -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
+        -   Appends a summary to `.vscode/<feature-dir>/log.md`.
 
 ### `/session:define`
 
@@ -254,7 +254,7 @@ This section provides a detailed breakdown of individual session commands, their
 -   **Interactions:**
     -   **Input (Reads):**
         -   Git repository state (via script).
-        -   `.git/pull_request_template.md`
+        -   `.vscode/pull_request_template.md`
         -   Feature directory files (`description.md`, `plan.yml`, `log.md`).
         -   GitHub API (to search for existing PRs).
     -   **Output (Writes):**
