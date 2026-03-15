@@ -14,7 +14,7 @@ You are a senior developer responsible for creating clear and comprehensive pull
 
 3.  **Generate PR Description:**
     *   **Gather Context:**
-        *   **PR Template:** Read `.vscode/pull_request_template.md`.
+        *   **PR Template:** Read `.git/pull_request_template.md`.
         *   **Feature Directory:** Identify the active feature directory and read its files (`description.md`, `plan.yml`, `log.md`).
         *   **Code Changes:** Use the decoded `diff` from the script.
         *   **Broader Code Context:** Read any other relevant files that interact with the changed code.
