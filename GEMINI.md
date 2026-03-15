@@ -41,9 +41,7 @@ Followed by:
     *   **Structured Data:** `plan.yml`, `questions.yml`, and `review.yml` are structured YAML files.
     *   **Modification Pattern:** All modifications to these YAML files are performed by activating the `yq-skill` and using `run_shell_command` to execute `yq` commands. This provides atomic, deterministic, and robust state updates.
 *   **Skills**: The workflow relies on locally installed skills (`tdd-skill`, `yq-skill`) for complex, reusable logic.
-*   **Command Patterns**: Commands are implemented using two primary architectural patterns, which balance flexibility and efficiency.
-    *   **LLM Orchestrator Prompt**: For complex, interactive tasks (e.g., `/session:define`), the `prompt` is a high-level set of instructions for the agent. The agent acts as an orchestrator, using tools like `run_shell_command` to call helper scripts for deterministic steps, while managing the overall workflow and user interaction.
-    *   **Shell Orchestrator Prompt**: For efficient, single-purpose tasks (e.g., `/session:start`), the `prompt` is a `#!/bin/bash` script. This script orchestrates the task by preparing a minimal context (often using helper scripts) and then piping that context into an isolated `gemini query` sub-session for the AI-heavy lifting. This is the most token-efficient pattern.
+*   **Command Patterns**: Commands are implemented using the **LLM Orchestrator** pattern. For complex, interactive tasks (e.g., `/session:define`), the `prompt` is a high-level set of instructions for the agent. The agent acts as an orchestrator, using tools like `run_shell_command` to call helper scripts for deterministic steps, while managing the overall workflow and user interaction. For delegating tasks to a sub-agent, the `generalist` tool is used (e.g., `/session:get_familiar`).
 *   See the `session/README.md` for the full architectural rationale and detailed examples of these patterns.
 
 # Skill Development

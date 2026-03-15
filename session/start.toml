@@ -1,27 +1,19 @@
-description = "Starts a work session by efficiently loading all context from a feature directory using a helper script."
+description = "Starts a work session by loading context from a feature directory and the project's GEMINI file."
 prompt = """
-#!/bin/bash
-set -e
-COMMANDS_DIR="$HOME/.gemini/commands"
-SCRIPT_PATH="$COMMANDS_DIR/scripts/load_context_files.sh"
-FEATURE_DIR=".vscode/{{args}}"
+You are starting a new session for the feature in `{{args}}`.
 
-# This command now orchestrates a sub-session for maximum efficiency.
-# 1. Ensure the helper script is executable.
-# 2. Call the script to consolidate all context files into a single variable.
-# 3. Pipe that consolidated context into a new, focused `gemini query` process.
+Your first step is to load all the context.
 
-chmod +x "$SCRIPT_PATH"
+1.  **Execute Script:** Call the `load_context_files.sh` helper script using its full path to get the content of all context files.
+    *   You must construct and run the shell command using the established pattern.
+    *   Example of the command you need to run:
+    ```bash
+    #!/bin/bash
+    COMMANDS_DIR="$HOME/.gemini/commands"
+    "$COMMANDS_DIR/scripts/load_context_files.sh" ".vscode/{{args}}"
+    ```
+2.  **Review Context:** The output of the script will be a single string containing all the context files concatenated. Review this content very carefully to understand the feature to implement and how the current project works.
 
-CONTEXT=$("$SCRIPT_PATH" "$FEATURE_DIR")
-
-# The sub-session is given a clear prompt and the consolidated context.
-# It reviews the files and confirms completion, without polluting the main session.
-gemini query "You are starting a new session for the feature '{{args}}'. All context files have been loaded and are provided below, separated by '--- FILE: [filename] ---'.
-
-Review all content carefully, then confirm by saying ONLY:
-'Context loaded. I have reviewed the feature and project documentation.'
-
----
-$CONTEXT"
+3.  **Confirm:** Once you have reviewed all the content, say ONLY:
+    "Context loaded. I have reviewed the feature and project documentation."
 """

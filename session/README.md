@@ -32,9 +32,9 @@ The choice to store feature artifacts in `.vscode/` is a practical one based on 
 
 ### Architectural Rationale
 
-This project has evolved through several stages, with each step aimed at increasing reliability and using the best tool for the job. The core principle is to use deterministic, specialized tools (`yq`, shell scripts) for procedural tasks, and to reserve the LLM for creative, analytical, and orchestrating tasks. This has led to two primary architectural patterns for creating commands.
+This project has evolved through several stages, with each step aimed at increasing reliability and using the best tool for the job. The core principle is to use deterministic, specialized tools (`yq`, shell scripts) for procedural tasks, and to reserve the LLM for creative, analytical, and orchestrating tasks. This has led to the following architectural pattern:
 
-#### Pattern 1: LLM Orchestrator with Helper Scripts
+#### LLM Orchestrator with Helper Scripts
 This pattern is ideal for complex, interactive commands that may require conditional logic, loops, or user interaction.
 
 The pattern is as follows:
@@ -42,18 +42,7 @@ The pattern is as follows:
 2.  The orchestrator agent uses the `run_shell_command` tool to execute small, deterministic, single-purpose **helper scripts** for predictable steps where precision is critical (e.g., generating a filename with a specific timestamp format, running git commands).
 3.  The orchestrator agent then handles the complex, stateful, or interactive parts of the workflow itself, using its reasoning capabilities to manage the process.
 
-This architecture balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones. Commands like `/session:define` and `/session:review` (before its refactoring) are good examples.
-
-#### Pattern 2: Shell Orchestrator with Focused LLM Sub-sessions
-This pattern (also called "Gemini Inception") is the most advanced and efficient architecture in the suite. It is ideal for commands that need to perform a specific, one-off AI task (like summarization or generation) on a large amount of data without polluting the main session context.
-
-The pattern is as follows:
-1.  The command's `prompt` is defined as a `#!/bin/bash` **shell script**, which acts as the main orchestrator.
-2.  This script first gathers and prepares a minimal, focused context for the task, often by calling other helper scripts (e.g., `scripts/load_context_files.sh`).
-3.  The orchestrator script then delegates the AI-heavy task to a temporary, isolated **sub-session** by piping the prepared context directly into a `gemini query "..."` command.
-4.  The orchestrator script captures the output of the sub-session and performs any final actions. The temporary sub-session and its large context are destroyed upon completion.
-
-This provides maximum efficiency, context isolation, and token economy. The `/session:start` and `/session:summary` commands are the canonical examples of this pattern.
+This architecture balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones. Commands like `/session:define` and `/session:review` are good examples.
 
 ---
 
@@ -192,11 +181,11 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:migration`
 
 -   **Description:** Migrates a legacy, single-file feature markdown document into the modern, multi-file directory structure.
--   **Orchestration Pattern:** Shell Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/migrate_feature_file.sh`
-    -   **Tools:** The script internally uses `chmod`, `mkdir`, `touch`, `awk`, `mv`, `sed`, `basename`.
+    -   **Tools:** `run_shell_command`
     -   **External Services:** None
 -   **Interactions:**
     -   **Input (Reads):**
@@ -279,33 +268,31 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:start`
 
--   **Description:** Starts a work session by loading all context files from a feature directory into a focused sub-session.
--   **Orchestration Pattern:** Shell Orchestrator
+-   **Description:** Starts a work session by loading all context from a feature directory and the project's `GEMINI.md` file.
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/load_context_files.sh`
-    -   **Tools:** `gemini query`
+    -   **Tools:** `run_shell_command`
     -   **External Services:** None
 -   **Interactions:**
     -   **Input (Reads):**
-        -   All files from the feature directory (`description.md`, `plan.yml`, etc.).
-        -   `GEMINI.md`
+        -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
     -   **Output (Writes):**
-        -   Pipes the consolidated file content into a `gemini query` sub-session.
+        -   The context is loaded into the main session. The command confirms completion to the user.
 
 ### `/session:summary`
 
 -   **Description:** Generates a single, human-readable Markdown summary of the feature's entire state.
--   **Orchestration Pattern:** Shell Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/load_context_files.sh`
-    -   **Tools:** `write_file`
+    -   **Tools:** `run_shell_command`, `write_file`
     -   **External Services:** None
 -   **Interactions:**
     -   **Input (Reads):**
-        -   All files from the feature directory (`description.md`, `plan.yml`, etc.).
-        -   `GEMINI.md`
+        -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
     -   **Output (Writes):**
         -   `.vscode/<feature-dir>/_SUMMARY.md`
 
