@@ -69,9 +69,7 @@ This provides maximum efficiency, context isolation, and token economy. The `/se
 - `**/session:new**: Creates a new feature directory from a Shortcut story ID.
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
-- `**/session:pr_from_branch**: Generates a PR description. If branch name has a Shortcut story, it uses it for context and links the PR back to the story.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch.
-- `**/session:review_from_branch**: Performs a critical, context-aware code review of the current branch, using the Shortcut story from the branch name as context.
 - `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
 - `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
 - `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found.
@@ -262,25 +260,6 @@ This section provides a detailed breakdown of individual session commands, their
         -   Writes the PR link to `.vscode/<feature-dir>/description.md`.
         -   `pull_request_descr.md` (as a fallback).
 
-### `/session:pr_from_branch`
-
--   **Description:** Generates a PR description by analyzing git changes and optionally fetching context from a Shortcut story linked in the branch name.
--   **Orchestration Pattern:** LLM Orchestrator
--   **Dependencies:**
-    -   **Skills:** None
-    -   **Scripts:** `scripts/get_git_context.sh`
-    -   **Tools:** `run_shell_command`, `read_file`, `write_file`, `stories_get_by_id`, `search_pull_requests`, `update_pull_request`, `create_pull_request`
-    -   **External Services:** GitHub, Shortcut
--   **Interactions:**
-    -   **Input (Reads):**
-        -   Git repository state (via script).
-        -   `.vscode/pull_request_template.md`
-        -   Shortcut API (to get story details).
-        -   GitHub API (to search for existing PRs).
-    -   **Output (Writes):**
-        -   Creates or updates a pull request on GitHub.
-        -   `pull_request_descr.md` (as a fallback).
-
 ### `/session:review`
 
 -   **Description:** Performs a critical, context-aware code review of the current branch and saves the feedback to `review.yml`.
@@ -297,24 +276,6 @@ This section provides a detailed breakdown of individual session commands, their
         -   `GEMINI.md`
     -   **Output (Writes):**
         -   `.vscode/<feature-dir>/review.yml`
-
-### `/session:review_from_branch`
-
--   **Description:** Performs a code review of the current branch against its associated Shortcut story and posts the feedback as a comment.
--   **Orchestration Pattern:** LLM Orchestrator
--   **Dependencies:**
-    -   **Skills:** None
-    -   **Scripts:** `scripts/get_git_context.sh`
-    -   **Tools:** `stories_get_by_id`, `read_file`, `grep_search`, `stories_create_comment`
-    -   **External Services:** Shortcut, Git
--   **Interactions:**
-    -   **Input (Reads):**
-        -   Git repository state (via script).
-        -   `GEMINI.md`
-        -   Project source files.
-        -   Shortcut API (to get story details).
-    -   **Output (Writes):**
-        -   Posts a comment to a Shortcut story.
 
 ### `/session:start`
 

@@ -14,9 +14,7 @@ The defined commands are:
 - `**/session:new**: Creates a new feature directory from a Shortcut story ID.
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
-- `**/session:pr_from_branch**: Generates a PR description. If branch name has a Shortcut story, it uses it for context and links the PR back to the story.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch.
-- `**/session:review_from_branch**: Performs a critical, context-aware code review of the current branch, using the Shortcut story from the branch name as context.
 - `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
 - `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
 - `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found.
