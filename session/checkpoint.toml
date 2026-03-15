@@ -4,35 +4,44 @@ You are an assistant that helps log work-in-progress and update the session stat
 
 **Actions:**
 
-1.  **Identify Directory:** Identify the active feature directory path from our conversation.
-2.  **Review Conversation:** Analyze our conversation since the last checkpoint to understand what tasks were completed and what questions were answered.
+1.  **Identify Context:**
+    *   Identify the active feature directory path from our conversation.
+    *   Review our conversation since the last checkpoint to determine which tasks were completed and which questions were answered.
 
-3.  **Activate Skill:** Activate the `yq-skill` to get expert knowledge on the `yq` command-line tool.
+2.  **Delegate State Update:**
+    *   You will now delegate the file modifications to a sub-agent to keep this session clean.
+    *   Construct a detailed request for the `generalist` tool. This request must contain all the necessary information for the sub-agent to complete its task, including:
+        *   The path to the feature directory.
+        *   A list of task IDs to be marked as 'done'.
+        *   A list of question objects, each containing an `id` and the `answer` text.
+    *   The instruction payload for the `generalist` tool should be a prompt like this:
+        \"\"\"
+        You are a YAML file specialist. Your task is to update session state files using `yq`. The user will provide you with the feature directory, a list of task IDs, and a list of questions to update.
 
-4.  **Update Plan (`plan.yml`):**
-    *   For each task that was completed, construct and execute the appropriate `yq` command to update its `status` field to 'done'.
-    *   Example: `yq -i '(.[] | select(.id == "add-route")).status = "done"' plan.yml`
-    *   Use `run_shell_command` to execute the command(s).
+        1. Activate the `yq YAML Processing` skill for expert guidance.
+        2. Change into the feature directory.
+        3. For each task ID, run the `yq` command to update its status to 'done' in `plan.yml`.
+           Example: `yq -i '(.[] | select(.id == "task-id")).status = "done"' plan.yml`
+        4. For each question object, run the `yq` command to update its status to 'resolved' and set its `answer` in `questions.yml`.
+           Example: `yq -i '(.[] | select(.id == "question-id")).status = "resolved" | .[] | select(.id == "question-id").answer = "The answer text."' questions.yml`
+        5. Confirm when you have successfully updated all files. Do not output the `yq` skill instructions.
+        \"\"\"
+    *   Call the `generalist` tool with the composed request.
 
-5.  **Update Questions (`questions.yml`):**
-    *   For each question that was answered, construct and execute the `yq` command(s) to set its `status` to 'resolved' and fill in the `answer`.
-    *   Example: `yq -i '(.[] | select(.id == "clarify-api-endpoint")).status = "resolved" | .[] | select(.id == "clarify-api-endpoint").answer = "The answer is..."' questions.yml`
-    *   Use `run_shell_command` to execute the command(s).
+3.  **Generate Log Summary:**
+    *   Based on the items you just sent to the sub-agent, generate a concise Markdown summary of the work done for the log file.
 
-6.  **Generate Log Summary:**
-    *   Based on the completed tasks and resolved questions, generate a concise Markdown summary of the work done for the log file.
-
-7.  **Update Log (`log.md`):**
+4.  **Update Log (`log.md`):**
     *   Call the `append_to_log.sh` helper script to add the timestamped summary to the log.
     *   Use `run_shell_command` to execute it, passing the path to the feature directory's `log.md` and the generated summary.
-    *   Use the established script execution pattern:
-    ```bash
-    #!/bin/bash
-    COMMANDS_DIR="$HOME/.gemini/commands"
-    FEATURE_DIR_PATH="./.vscode/sc-XXXXX" # Identify this from context
-    LOG_SUMMARY="Synthesized summary of work." # Generate this
-    "$COMMANDS_DIR/scripts/append_to_log.sh" "$FEATURE_DIR_PATH/log.md" "$LOG_SUMMARY"
-    ```
+    *   Example:
+        ```bash
+        #!/bin/bash
+        COMMANDS_DIR="$HOME/.gemini/commands"
+        FEATURE_DIR_PATH="./.vscode/sc-XXXXX" # Use the path from step 1
+        LOG_SUMMARY="Your generated summary." # Use the summary from step 3
+        "$COMMANDS_DIR/scripts/append_to_log.sh" "$FEATURE_DIR_PATH/log.md" "$LOG_SUMMARY"
+        ```
 
-8.  **Confirm:** State that the checkpoint has been saved.
+5.  **Confirm:** State that the checkpoint has been saved.
 """

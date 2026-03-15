@@ -45,6 +45,10 @@ This pattern is highly versatile. Here are several concrete applications:
 **Problem:** A command needs to generate a structured piece of text (like a PR description or a research log) based on a few specific inputs.
 **Solution:** Instead of using the full session context, commands like `/session:pr` or `/session:log-research` can use the `generalist` subagent to gather only the relevant inputs (e.g., plan file, git context, or a single web article), and delegate the generation task to a focused sub-session. This is faster, cheaper, and produces more predictable results.
 
+### Use Case 4: Isolating Verbose Tools
+**Problem:** A command relies on a tool or skill that is very "chatty" or returns a large amount of instructional text (like a skill's activation prompt). Including this in the main session pollutes the history and can distract the LLM.
+**Solution:** A command can delegate the *use* of that tool to a sub-agent. The main agent prepares the inputs, and the sub-agent handles the interaction with the verbose tool and returns only the final result. The `/session:checkpoint` command uses this pattern to isolate the `yq YAML Processing` skill, keeping the main session focused.
+
 ---
 
 ## Example: `/session:get-familiar`

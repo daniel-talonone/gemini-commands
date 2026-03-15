@@ -53,7 +53,7 @@ The pattern is as follows:
 3.  The main agent calls the `generalist`, which executes the task in a completely isolated session with its own context and tools.
 4.  The final result is returned to the main agent.
 
-This provides maximum efficiency and context isolation. The `/session:get-familiar` command is the canonical example of this pattern.
+This provides maximum efficiency and context isolation. Commands like `/session:get-familiar` and `/session:checkpoint` are good examples of this pattern.
 
 ---
 
@@ -101,11 +101,11 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:checkpoint`
 
 -   **Description:** Saves a snapshot of the work-in-progress by updating the status of tasks and questions and logging a summary of the progress.
--   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
+-   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Skills:** `yq YAML Processing`
     -   **Scripts:** `scripts/append_to_log.sh`
-    -   **Tools:** `run_shell_command`, `activate_skill`
+    -   **Tools:** `run_shell_command`, `generalist`
 -   **Interactions:**
     -   **Input (Reads):**
         -   The active feature directory path from the conversation.
