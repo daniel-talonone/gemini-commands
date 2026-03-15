@@ -35,7 +35,7 @@ This pattern is highly versatile. Here are several concrete applications:
 
 ### Use Case 1: Processing Large or Volatile Data
 **Problem:** A task requires processing a large or frequently changing piece of data, like a `git diff`. Adding this to the main context would be expensive and quickly become stale.
-**Solution:** A dedicated command (e.g., `/session:get_familiar`) can use the `generalist` subagent to get the diff, summarize it, and present the small, cheap summary to the user, without ever polluting the main context.
+**Solution:** A dedicated command (e.g., `/session:get-familiar`) can use the `generalist` subagent to get the diff, summarize it, and present the small, cheap summary to the user, without ever polluting the main context.
 
 ### Use Case 2: Unbiased Analysis
 **Problem:** The agent that wrote the code is asked to review it. Its knowledge of the implementation history can create blind spots, leading to a biased, less critical review.
@@ -47,10 +47,10 @@ This pattern is highly versatile. Here are several concrete applications:
 
 ---
 
-## Example: `/session:get_familiar`
+## Example: `/session:get-familiar`
 The implementation for this command becomes a simple instruction to the main agent.
 
-The `prompt` in `session/get_familiar.toml`:
+The `prompt` in `session/get-familiar.toml`:
 ```toml
 description = "Gets familiar with the current code changes by having a subagent generate a summary."
 ephemeral = true

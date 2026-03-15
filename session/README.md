@@ -52,7 +52,7 @@ This architecture balances the reliability of scripts for deterministic tasks wi
 - `**/session:checkpoint**: Saves a checkpoint of the work done by updating the state files using the yq tool.
 - `**/session:define**: Starts a conversational session to define a new user story and create its feature directory.
 - `**/session:end**: Ends the work session, saving progress to the feature directory and project-wide knowledge to GEMINI.md.
-- `**/session:get_familiar`**: Gets familiar with the current code changes by having a subagent generate a summary.
+- `**/session:get-familiar`**: Gets familiar with the current code changes by having a subagent generate a summary.
 - `**/session:log-research**: Logs a detailed, comprehensive summary of research findings to log.md.
 - `**/session:migration**: Migrates an old, single-file feature document to the new directory structure with structured YAML files.
 - `**/session:new**: Creates a new feature directory from a Shortcut story ID.
@@ -148,7 +148,7 @@ This section provides a detailed breakdown of individual session commands, their
         -   Appends a final summary to `.vscode/<feature-dir>/log.md`.
         -   Modifies `GEMINI.md` in-place.
 
-### `/session:get_familiar`
+### `/session:get-familiar`
 
 -   **Description:** Uses a sub-agent to analyze and summarize the current Git branch's code changes.
 -   **Orchestration Pattern:** LLM Orchestrator
