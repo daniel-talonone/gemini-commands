@@ -34,7 +34,7 @@ The choice to store feature artifacts in `.vscode/` is a practical one based on 
 
 This project has evolved through several stages, with each step aimed at increasing reliability and using the best tool for the job. The core principle is to use deterministic, specialized tools (`yq`, shell scripts) for procedural tasks, and to reserve the LLM for creative, analytical, and orchestrating tasks. This has led to the following architectural patterns:
 
-#### Pattern 1: LLM Orchestrator with Helper Scripts
+#### LLM Orchestrator with Helper Scripts
 This pattern is ideal for complex, interactive commands that may require conditional logic, loops, or user interaction.
 
 The pattern is as follows:
@@ -44,7 +44,7 @@ The pattern is as follows:
 
 This architecture balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones. Commands like `/session:define` and `/session:review` are good examples.
 
-#### Pattern 2: Subagent Pattern for Focused Tasks
+#### Subagent Pattern for Focused Tasks
 This is the modern and preferred pattern for delegating a complex, one-off task to an isolated environment.
 
 The pattern is as follows:
@@ -83,7 +83,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:address-feedback`
 
 -   **Description:** Fetches and helps address unresolved review comments from a feature's GitHub Pull Request.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/append_to_log.sh`
@@ -101,7 +101,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:checkpoint`
 
 -   **Description:** Saves a snapshot of the work-in-progress by updating the status of tasks and questions and logging a summary of the progress.
--   **Orchestration Pattern:** [LLM Orchestrator with Helper Scripts](#pattern-1-llm-orchestrator-with-helper-scripts)
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** `yq YAML Processing`
     -   **Scripts:** `scripts/append_to_log.sh`
@@ -119,7 +119,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:define`
 
 -   **Description:** Starts a conversational session to define a new user story and creates the corresponding feature directory and artifacts.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/create_feature_dir.sh`
@@ -141,7 +141,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:end`
 
 -   **Description:** Ends the work session, saving a final summary to the feature directory and persisting any project-wide knowledge to `GEMINI.md`.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** `yq YAML Processing`
     -   **Scripts:** `scripts/append_to_log.sh`
@@ -162,7 +162,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:get-familiar`
 
 -   **Description:** Uses a sub-agent to analyze and summarize the current Git branch's code changes.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/get_git_context.sh`
@@ -177,7 +177,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:log-research`
 
 -   **Description:** Logs a detailed, comprehensive summary of research findings to the feature's `log.md` file.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/append_to_log.sh`
@@ -209,7 +209,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:new`
 
 -   **Description:** Creates a feature directory from a Shortcut story ID, fetching related resources to populate the `description.md` file.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/create_feature_dir.sh`
@@ -243,7 +243,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:pr`
 
 -   **Description:** Generates a pull request description, creates or updates the PR on GitHub, and saves the resulting PR link to the feature directory.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/get_git_context.sh`
@@ -263,7 +263,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:review`
 
 -   **Description:** Performs a critical, context-aware code review of the current branch and saves the feedback to `review.yml`.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/get_git_context.sh`
@@ -310,7 +310,7 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:verify-release`
 
 -   **Description:** Verifies a cherry-picked release branch against its original commits and provides an AI-powered analysis of any discrepancies.
--   **Orchestration Pattern:** LLM Orchestrator
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/verify-release.sh`
