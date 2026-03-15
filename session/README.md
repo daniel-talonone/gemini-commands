@@ -53,7 +53,7 @@ The pattern is as follows:
 3.  The main agent calls the `generalist`, which executes the task in a completely isolated session with its own context and tools.
 4.  The final result is returned to the main agent.
 
-This provides maximum efficiency and context isolation. Commands like `/session:get-familiar` and `/session:checkpoint` are good examples of this pattern.
+This provides maximum efficiency and context isolation. Commands like `/session:get-familiar`, `/session:checkpoint`, and `/session:end` are good examples of this pattern.
 
 ---
 
@@ -141,11 +141,11 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:end`
 
 -   **Description:** Ends the work session, saving a final summary to the feature directory and persisting any project-wide knowledge to `GEMINI.md`.
--   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
+-   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Skills:** `yq YAML Processing`
     -   **Scripts:** `scripts/append_to_log.sh`
-    -   **Tools:** `read_file`, `run_shell_command`, `replace`, `activate_skill`
+    -   **Tools:** `read_file`, `run_shell_command`, `replace`, `generalist`
     -   **External Services:** None
 -   **Interactions:**
     -   **Input (Reads):**

@@ -32,16 +32,10 @@ You are an assistant that helps log work-in-progress and update the session stat
     *   Based on the items you just sent to the sub-agent, generate a concise Markdown summary of the work done for the log file.
 
 4.  **Update Log (`log.md`):**
-    *   Call the `append_to_log.sh` helper script to add the timestamped summary to the log.
-    *   Use `run_shell_command` to execute it, passing the path to the feature directory's `log.md` and the generated summary.
-    *   Example:
-        ```bash
-        #!/bin/bash
-        COMMANDS_DIR="$HOME/.gemini/commands"
-        FEATURE_DIR_PATH="./.vscode/sc-XXXXX" # Use the path from step 1
-        LOG_SUMMARY="Your generated summary." # Use the summary from step 3
-        "$COMMANDS_DIR/scripts/append_to_log.sh" "$FEATURE_DIR_PATH/log.md" "$LOG_SUMMARY"
-        ```
+    *   **You must call the `append_to_log.sh` script using `run_shell_command`.** 
+    *   The command must be a single line, replacing the variables with the correct values.
+    *   Example: `$HOME/.gemini/commands/scripts/append_to_log.sh "path/to/your/log.md" "Your generated summary text."`
 
 5.  **Confirm:** State that the checkpoint has been saved.
+"""
 """
