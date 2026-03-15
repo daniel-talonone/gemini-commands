@@ -16,13 +16,23 @@ This suite of commands orchestrates the flow of information between the user, th
 -   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See the `example-feature-document/` directory for a complete example.
 -   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory."
 
+## Getting Started: Session Entry Points
+
+To begin a work session, there are three primary commands, each serving a distinct purpose:
+
+*   **`/session:define`**: Use this to define a **new user story from scratch**. This command guides you through a conversational process to capture requirements and creates a new feature directory.
+*   **`/session:new`**: Use this to **create a feature document from an existing user story ID**. This command fetches information from external services (like Shortcut or Notion) to pre-populate your feature directory.
+*   **`/session:start`**: Use this to **resume work on an existing feature**. This command loads all context from a previously created feature directory into your current session.
+
+Once a session is started (either with `define`, `new`, or `start`), you can proceed with planning, implementation, and other workflow commands.
+
 ## Dependencies
 
 This workflow has the following dependencies:
 
 -   **`yq` command-line tool (v4+):** Required for atomic and reliable modification of `.yml` state files. It must be installed and available in the system's PATH.
 -   **`yq-skill` & `tdd-skill`:** Locally installed Gemini skills that provide expert knowledge.
--   **External Services:** Integrations with Shortcut, Notion, Git, and GitHub are used for various commands.
+-   **External Services:** Integrations with Shortcut, Notion, Git, and GitHub are used for various commands. (Note: Specific API versions are used for stability; refer to individual command details for specifics if applicable.)
 
 ## Design Notes & Conventions
 
@@ -231,14 +241,15 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Scripts:** None
     -   **Tools:** `read_file`, `glob`, `grep_search`, `write_file`
     -   **External Services:** None
--   **Interactions:**
+-   **Interactions:** (Orchestrates by directly using Gemini CLI tools)
     -   **Input (Reads):**
         -   `.vscode/<feature-dir>/description.md`
         -   `GEMINI.md`
         -   Codebase files via `glob` and `grep_search`.
+        -   User input during interactive planning.
     -   **Output (Writes):**
-        -   `.vscode/<feature-dir>/plan.yml`
-        -   `.vscode/<feature-dir>/questions.yml`
+        -   Generates and writes initial `.vscode/<feature-dir>/plan.yml`
+        -   Generates and writes initial `.vscode/<feature-dir>/questions.yml`
 
 ### `/session:pr`
 
