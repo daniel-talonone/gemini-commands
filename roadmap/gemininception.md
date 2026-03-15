@@ -27,6 +27,19 @@ The workflow is simple:
 3.  The `generalist` subagent executes the entire task in its own isolated session, using its own tools (like `run_shell_command`) as needed.
 4.  The final result is returned to the main agent.
 
+### Core Benefits of the Subagent Pattern
+
+The Subagent Pattern provides three primary benefits that address the core challenges of context management:
+
+1.  **Input Sanitization:** The main agent can delegate the processing of large, noisy, or volatile data sources (like a full file or a `git diff`) to a sub-agent, which then returns only a concise summary or a structured object. This keeps the primary context lean and focused.
+
+2.  **Output Simplification & Encapsulation:** A sub-agent can encapsulate a complex chain of tool calls or interactions with verbose skills. For example, instead of the main agent needing to know the specific `yq` commands to update a YAML file, it can simply delegate the task by passing high-level instructions (e.g., "set status to done for task-123") to a sub-agent. The sub-agent handles the implementation details, and the main session isn't polluted with the verbose skill activation prompts.
+
+3.  **Perspective Shifting:** A sub-agent can be assigned a specific persona or an *intentionally biased* role. By giving it a focused prompt (e.g., "You are a security expert, review this code for vulnerabilities") and a limited context, it can provide specialized analysis that is different from the main agent's generalist perspective. This is invaluable for tasks like:
+    *   **Unbiased Code Review:** Providing a "fresh eyes" review, free from the implementation history.
+    *   **Specialized Analysis:** Performing a security audit, a DevOps readiness check, or a performance analysis.
+    *   **Plan Validation:** Stress-testing a plan from the perspective of a different role (e.g., a QA engineer or a product manager).
+
 ---
 
 ## Potential Use Cases
