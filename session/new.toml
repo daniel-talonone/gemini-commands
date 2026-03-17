@@ -1,32 +1,43 @@
-description = "Creates a new feature directory from a Shortcut story ID."
+description = "Creates a new feature directory from a Shortcut story ID or a Notion page URL."
 prompt = """
-You are an assistant who bootstraps feature development. The user has provided a Shortcut story ID: `{{args}}`.
+You are an assistant who bootstraps feature development. The user has provided an identifier: `{{args}}`. This could be a Shortcut story ID (e.g., `sc-12345`) or a Notion page URL.
 
 Your goal is to create a comprehensive feature directory that will serve as the single source of truth for this task.
 
 **Actions:**
 
-1.  **Scaffold Directory & Placeholders:** Call the `create_feature_dir.sh` helper script using its full path to create the directory and all placeholder files.
-    *   You must construct and run the shell command using the established pattern, replacing `{{args}}` with the full story ID (e.g., `sc-12345`).
+1.  **Determine Identifier Type and Feature Name:**
+    *   If `{{args}}` starts with "sc-", it is a Shortcut story ID. The `feature_name` is `{{args}}`.
+    *   If `{{args}}` is a URL containing "notion.so", it is a Notion page. The `feature_name` should be derived from the last part of the URL path (the "slug"). For example, from `https://www.notion.so/t1rnd/My-Page-Title-a1b2c3d4e5f67890`, the `feature_name` would be `My-Page-Title-a1b2c3d4e5f67890`. You should also handle cases where there is no UUID.
+
+2.  **Scaffold Directory & Placeholders:** Call the `create_feature_dir.sh` helper script using its full path to create the directory and all placeholder files, using the `feature_name` you determined.
+    *   You must construct and run the shell command using the established pattern.
     *   Example of the command you need to run:
     ```bash
     #!/bin/bash
     COMMANDS_DIR="$HOME/.gemini/commands"
-    "$COMMANDS_DIR/scripts/create_feature_dir.sh" ".vscode" "{{args}}"
+    "$COMMANDS_DIR/scripts/create_feature_dir.sh" ".vscode" "YOUR_DERIVED_FEATURE_NAME"
     ```
-2.  **Fetch Story & Resources:**
-    *   Use the `stories_get_by_id` tool to get the main story's details (name, description,comments, etc.).
-    *   Scan the story's description and comments for any links to other Shortcut stories or Notion pages.
-    *   For each linked Shortcut story, use `stories_get_by_id` to fetch its details.
-    *   For each linked Notion page, use `notion_fetch` to fetch its content.
-3.  **Create Description File:**
-    *   Synthesize the fetched information into a Markdown document.
-    *   Create the file at `.vscode/{{args}}/description.md` with the synthesized content.
-4.  **Confirm:** After the script runs and the description file is created, confirm with the standard message.
+
+3.  **Fetch Primary Content & Linked Resources:**
+    *   **If it's a Shortcut story:**
+        *   Use the `stories_get_by_id` tool to get the main story's details (name, description, comments, etc.).
+    *   **If it's a Notion page:**
+        *   Use the `notion_fetch` tool to get the page's content.
+    *   **For both cases:**
+        *   Scan the fetched content for any links to other Shortcut stories or Notion pages.
+        *   For each linked Shortcut story, use `stories_get_by_id` to fetch its details.
+        *   For each linked Notion page, use `notion_fetch` to fetch its content.
+
+4.  **Create Description File:**
+    *   Synthesize all the fetched information into a single, comprehensive Markdown document.
+    *   Create the file at `.vscode/YOUR_DERIVED_FEATURE_NAME/description.md` with the synthesized content.
+
+5.  **Confirm:** After the script runs and the description file is created, confirm with the standard message, using the `feature_name` in the path.
 
 **Confirmation Message:**
 
-"I have created the feature directory at `.vscode/{{args}}/` and populated all the necessary files.
+"I have created the feature directory at `.vscode/YOUR_DERIVED_FEATURE_NAME/` and populated all the necessary files.
 
 **Recommended next step:** Run `/session:plan` to devise an implementation strategy."
 """

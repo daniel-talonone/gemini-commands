@@ -12,7 +12,7 @@ The defined commands are:
 - `**/session:get-familiar`**: Gets familiar with the current code changes by having a subagent generate a summary.
 - `**/session:log-research**: Logs a detailed, comprehensive summary of research findings to log.md.
 - `**/session:migration**: Migrates an old, single-file feature document to the new directory structure with structured YAML files.
-- `**/session:new**: Creates a new feature directory from a Shortcut story ID.
+- `**/session:new**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch.

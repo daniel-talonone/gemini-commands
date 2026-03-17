@@ -21,7 +21,7 @@ This suite of commands orchestrates the flow of information between the user, th
 To begin a work session, there are three primary commands, each serving a distinct purpose:
 
 *   **`/session:define`**: Use this to define a **new user story from scratch**. This command guides you through a conversational process to capture requirements and creates a new feature directory.
-*   **`/session:new`**: Use this to **create a feature document from an existing user story ID**. This command fetches information from external services (like Shortcut or Notion) to pre-populate your feature directory.
+*   **`/session:new`**: Use this to **create a feature document from an existing user story ID or Notion page URL**. This command fetches information from external services (like Shortcut or Notion) to pre-populate your feature directory.
 *   **`/session:start`**: Use this to **resume work on an existing feature**. This command loads all context from a previously created feature directory into your current session.
 
 Once a session is started (either with `define`, `new`, or `start`), you can proceed with planning, implementation, and other workflow commands.
@@ -76,7 +76,7 @@ This provides maximum efficiency and context isolation. Commands like `/session:
 - `**/session:get-familiar`**: Gets familiar with the current code changes by having a subagent generate a summary.
 - `**/session:log-research**: Logs a detailed, comprehensive summary of research findings to log.md.
 - `**/session:migration**: Migrates an old, single-file feature document to the new directory structure with structured YAML files.
-- `**/session:new**: Creates a new feature directory from a Shortcut story ID.
+- `**/session:new**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch.
@@ -218,7 +218,7 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:new`
 
--   **Description:** Creates a feature directory from a Shortcut story ID, fetching related resources to populate the `description.md` file.
+-   **Description:** Creates a feature directory from a Shortcut story ID or Notion page URL, fetching related resources to populate the `description.md` file.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
@@ -227,8 +227,8 @@ This section provides a detailed breakdown of individual session commands, their
     -   **External Services:** Shortcut, Notion
 -   **Interactions:**
     -   **Input (Reads):**
-        -   Shortcut API (to get story details).
-        -   Notion API (to get linked page content).
+        -   Shortcut API (to get story details if a story ID is provided).
+        -   Notion API (to get page content if a Notion URL is provided).
     -   **Output (Writes):**
         -   Creates a new directory and populates it with `description.md`, `plan.yml`, etc.
 
