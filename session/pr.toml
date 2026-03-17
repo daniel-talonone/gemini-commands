@@ -14,8 +14,9 @@ You are a senior developer responsible for creating clear and comprehensive pull
 
 3.  **Generate PR Description:**
     *   **Gather Context:**
+        *   **Session Context:** Find the `### ✨ Session Context Loaded for...` block and extract the **Description** and **Project Conventions**.
+        *   **Feature Directory:** Identify the active feature directory and read its `plan.yml` and `log.md` files. These files contain the latest progress.
         *   **PR Template:** Read `.git/pull_request_template.md`.
-        *   **Feature Directory:** Identify the active feature directory and read its files (`description.md`, `plan.yml`, `log.md`).
         *   **Code Changes:** Use the decoded `diff` from the script.
         *   **Broader Code Context:** Read any other relevant files that interact with the changed code.
     *   **Draft Description:**
@@ -27,9 +28,24 @@ You are a senior developer responsible for creating clear and comprehensive pull
     *   **If a PR exists:** Update its body.
     *   **If no PR exists:** Ask the user for approval to create one. If approved, create it. If denied, run the fallback (Step 6).
 
-5.  **CRITICAL: Save PR Link:**
+5.  **CRITICAL: Save PR Link & Update Session Context:**
     *   Get the URL of the pull request from the tool output.
-    *   Use the `write_file` tool to save the URL into the `description.md` file within the active feature directory.
+    *   Read the current content of `description.md` from the file system.
+    *   Append the PR URL to the content you just read.
+    *   Use `write_file` to save the new, combined content back to `description.md`.
+    *   **CRITICAL:** After saving the file, you MUST output a new "Session Context" block to reflect the change. Format it exactly like this, using the new description content:
+
+        ```markdown
+        ### ✨ Session Context Loaded for `{{args}}`
+
+        **Description:**
+        > {{new content of description.md}}
+
+        **Project Conventions (from GEMINI.md):**
+        > {{Project Conventions extracted earlier from the session context}}
+
+        This context is now available for all subsequent commands.
+        ```
 
 6.  **Fallback - Create Local File:**
     *   If you were instructed not to create a PR, save the description to `pull_request_descr.md` in the root.

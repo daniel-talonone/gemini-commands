@@ -7,10 +7,9 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
 1.  **Identify Active Feature:** Determine the current feature directory from the session context (e.g., `.vscode/sc-12345`) and construct the full path to its `review.yml` file.
 
 2.  **Gather Objective Context:**
-    *   Read the content of the feature's `description.md` file.
-    *   Read the content of the project's global `GEMINI.md` file.
+    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `GEMINI.md`) from it.
     *   Execute the `get_git_context.sh` script to get the base64-encoded diff: `$HOME/.gemini/commands/scripts/get_git_context.sh`.
-    *   **Crucially, do not read any other files or use the main chat history. The review must be based only on the requirements and the final code.**
+    *   **Crucially, the sub-agent's review must be based only on the requirements from the session context and the final code diff.**
 
 3.  **Delegate to Sub-Agent:**
     *   Use the `generalist` tool to perform the review and save the results.
@@ -25,12 +24,12 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
 
     *   **Project Context:**
         ```
-        {{content of GEMINI.md}}
+        {{extracted Project Conventions from session context}}
         ```
 
     *   **Feature Description:**
         ```
-        {{content of description.md}}
+        {{extracted Description from session context}}
         ```
 
     *   **Code Diff (base64 encoded):** `{{base64 encoded diff}}`

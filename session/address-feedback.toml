@@ -5,8 +5,9 @@ You are a development assistant focused on refining pull requests based on team 
 **Process:**
 
 1.  **Get Context & PR URL:**
-    *   Identify the active feature directory from our conversation (e.g., `.vscode/sc-12345/`).
-    *   Read the `description.md` file from the directory to get the URL of the pull request.
+    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history.
+    *   Extract the **Description** and **Project Conventions**.
+    *   Parse the PR URL from the **Description** text.
     *   If the URL is not found, stop and inform the user.
 
 2.  **Fetch Review Comments:**
@@ -17,7 +18,7 @@ You are a development assistant focused on refining pull requests based on team 
 3.  **Address Comments Loop:**
     *   Inform the user how many unresolved threads were found.
     *   Loop through each unresolved comment, presenting it to the user (author, file, line, content, code).
-    *   **CRITICAL:** Before proposing a fix, re-read the context from `description.md` and `GEMINI.md` to ensure alignment.
+    *   **CRITICAL:** Before proposing a fix, use the **Description** and **Project Conventions** from the session context to ensure alignment.
 
 4.  **Propose and Implement Plan:**
     *   Propose a step-by-step plan to the user for each comment.

@@ -65,6 +65,14 @@ The pattern is as follows:
 
 This provides maximum efficiency and context isolation. Commands like `/session:get-familiar`, `/session:checkpoint`, and `/session:end` are good examples of this pattern.
 
+#### Session Context Pattern
+To improve performance and reduce token usage from repeatedly reading files, the command suite also uses an explicit context-passing pattern:
+1.  **Context Production:** The entry-point commands (`/session:start`, `/session:define`, `/session:new`) are responsible for producing a "Session Context" block. This block is displayed in the chat and contains the content of static files like `description.md` and `GEMINI.md`.
+2.  **Context Consumption:** Subsequent commands (`/session:plan`, `/session:review`, etc.) are designed to consume this context directly from the chat history, rather than re-reading the files from the disk.
+3.  **Context Updates:** If a command modifies a file that is part of the session context (e.g., `/session:pr` adding a URL to `description.md`), it is responsible for outputting an updated "Session Context" block, ensuring the session remains synchronized.
+
+This pattern makes the context explicit and avoids redundant file I/O and token-intensive re-processing of the same information.
+
 ---
 
 ## Commands
@@ -101,8 +109,7 @@ This section provides a detailed breakdown of individual session commands, their
     -   **External Services:** GitHub
 -   **Interactions:**
     -   **Input (Reads):**
-        -   `.vscode/<feature-dir>/description.md` (to get PR URL)
-        -   `GEMINI.md`
+        -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
         -   GitHub API (to get review comments).
     -   **Output (Writes):**
         -   Appends a summary to `.vscode/<feature-dir>/log.md`.
@@ -141,12 +148,8 @@ This section provides a detailed breakdown of individual session commands, their
         -   Project source code via `glob` and `grep_search`.
     -   **Output (Writes):**
         -   Creates a new feature directory (e.g., `.vscode/create-user-profile-page/`).
-        -   `.vscode/<feature-dir>/description.md`
-        -   `.vscode/<feature-dir>/plan.yml`
-        -   `.vscode/<feature-dir>/questions.yml`
-        -   `.vscode/<feature-dir>/review.yml`
-        -   `.vscode/<feature-dir>/log.md`
-        -   `.vscode/<feature-dir>/pr.md`
+        -   `.vscode/<feature-dir>/description.md` and other placeholder files.
+        -   Outputs the "Session Context" block to the chat.
 
 ### `/session:end`
 
@@ -160,9 +163,9 @@ This section provides a detailed breakdown of individual session commands, their
 -   **Interactions:**
     -   **Input (Reads):**
         -   Session conversation history.
+        -   The "Session Context" block from chat history (for `GEMINI.md` content).
         -   `.vscode/<feature-dir>/plan.yml`
         -   `.vscode/<feature-dir>/questions.yml`
-        -   `GEMINI.md`
     -   **Output (Writes):**
         -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
         -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
@@ -231,6 +234,7 @@ This section provides a detailed breakdown of individual session commands, their
         -   Notion API (to get page content if a Notion URL is provided).
     -   **Output (Writes):**
         -   Creates a new directory and populates it with `description.md`, `plan.yml`, etc.
+        -   Outputs the "Session Context" block to the chat.
 
 ### `/session:plan`
 
@@ -243,8 +247,7 @@ This section provides a detailed breakdown of individual session commands, their
     -   **External Services:** None
 -   **Interactions:** (Orchestrates by directly using Gemini CLI tools)
     -   **Input (Reads):**
-        -   `.vscode/<feature-dir>/description.md`
-        -   `GEMINI.md`
+        -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
         -   Codebase files via `glob` and `grep_search`.
         -   User input during interactive planning.
     -   **Output (Writes):**
@@ -262,13 +265,15 @@ This section provides a detailed breakdown of individual session commands, their
     -   **External Services:** GitHub
 -   **Interactions:**
     -   **Input (Reads):**
+        -   The "Session Context" block from chat history (for `description.md` content).
         -   Git repository state (via script).
         -   `.vscode/pull_request_template.md`
-        -   Feature directory files (`description.md`, `plan.yml`, `log.md`).
+        -   Feature directory files (`plan.yml`, `log.md`).
         -   GitHub API (to search for existing PRs).
     -   **Output (Writes):**
         -   Creates or updates a pull request on GitHub.
         -   Writes the PR link to `.vscode/<feature-dir>/description.md`.
+        -   Outputs an updated "Session Context" block to the chat.
         -   `pull_request_descr.md` (as a fallback).
 
 ### `/session:review`
@@ -282,9 +287,8 @@ This section provides a detailed breakdown of individual session commands, their
     -   **External Services:** Git
 -   **Interactions:**
     -   **Input (Reads):**
+        -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
         -   Git repository state (via script).
-        -   `.vscode/<feature-dir>/description.md`
-        -   `GEMINI.md`
         -   Reads back the `.vscode/<feature-dir>/review.yml` for verification.
     -   **Output (Writes):**
         -   Delegates writing `.vscode/<feature-dir>/review.yml` to a sub-agent.
@@ -302,7 +306,7 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Input (Reads):**
         -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
     -   **Output (Writes):**
-        -   The context is loaded into the main session. The command confirms completion to the user.
+        -   Outputs the "Session Context" block to the chat.
 
 ### `/session:summary`
 

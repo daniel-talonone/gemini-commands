@@ -33,11 +33,22 @@ Your goal is to create a comprehensive feature directory that will serve as the 
     *   Synthesize all the fetched information into a single, comprehensive Markdown document.
     *   Create the file at `.vscode/YOUR_DERIVED_FEATURE_NAME/description.md` with the synthesized content.
 
-5.  **Confirm:** After the script runs and the description file is created, confirm with the standard message, using the `feature_name` in the path.
+5.  **Establish Session Context (Final Step):**
+    *   After creating the `description.md` file, you MUST establish the session context.
+    *   Read the content of `GEMINI.md` from the project root.
+    *   Take the synthesized description you just created and the content of `GEMINI.md`.
+    *   Format and display them using the following Markdown structure EXACTLY:
 
-**Confirmation Message:**
+        ```markdown
+        ### ✨ Session Context Loaded for `{{feature_name}}`
 
-"I have created the feature directory at `.vscode/YOUR_DERIVED_FEATURE_NAME/` and populated all the necessary files.
+        **Description:**
+        > {{The synthesized description}}
 
-**Recommended next step:** Run `/session:plan` to devise an implementation strategy."
+        **Project Conventions (from GEMINI.md):**
+        > {{content of GEMINI.md}}
+
+        This context is now available for all subsequent commands.
+        ```
+    *   After printing this block, the command is complete. Do not add any other confirmation message.
 """

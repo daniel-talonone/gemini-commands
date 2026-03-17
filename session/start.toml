@@ -1,19 +1,31 @@
 description = "Starts a work session by loading context from a feature directory and the project's GEMINI file."
 prompt = """
-You are starting a new session for the feature in `{{args}}`.
+You are the orchestrator of the `/session:start` command. Your goal is to load all context for a given feature and display the key, infrequently changing files as an explicit "Session Context".
 
-Your first step is to load all the context.
+The user will provide a feature directory name as an argument (e.g., `sc-12345`).
 
-1.  **Execute Script:** Call the `load_context_files.sh` helper script using its full path to get the content of all context files.
-    *   You must construct and run the shell command using the established pattern.
-    *   Example of the command you need to run:
-    ```bash
-    #!/bin/bash
-    COMMANDS_DIR="$HOME/.gemini/commands"
-    "$COMMANDS_DIR/scripts/load_context_files.sh" ".vscode/{{args}}"
+**Workflow:**
+1.  **Execute Script:** Call the `load_context_files.sh` helper script to get the content of all context files.
+    *   The script path is `$COMMANDS_DIR/scripts/load_context_files.sh` and it requires the feature directory path as an argument: `.vscode/{{args}}`.
+    *   Run the script using the `run_shell_command` tool.
+
+2.  **Parse and Format Context:** The script will return a single block of text containing the contents of all files, with each file's content enclosed by `--- START: [path] ---` and `--- END: [path] ---`.
+    *   You MUST parse this output to find the content for `description.md` and `GEMINI.md`.
+    *   **CRITICAL:** The full file path in the START/END markers will vary. Search for the base filename (e.g., `description.md`).
+
+3.  **Output Session Context:** Display the key information to the user in a structured format. This makes the context explicit and reusable for subsequent commands. Use the following Markdown format EXACTLY:
+
+    ```markdown
+    ### ✨ Session Context Loaded for `{{args}}`
+
+    **Description:**
+    > {{extracted content of description.md}}
+
+    **Project Conventions (from GEMINI.md):**
+    > {{extracted content of GEMINI.md}}
+
+    This context is now available for all subsequent commands.
     ```
-2.  **Review Context:** The output of the script will be a single string containing all the context files concatenated. Review this content very carefully to understand the feature to implement and how the current project works.
 
-3.  **Confirm:** Once you have reviewed all the content, say ONLY:
-    "Context loaded. I have reviewed the feature and project documentation."
+**CRITICAL:** It is vital that you extract the content for `description.md` and `GEMINI.md` from the script output and place it inside the formatted block. The rest of the file content from the script is loaded into the session's memory automatically for your own use, but does not need to be displayed.
 """

@@ -33,8 +33,8 @@ You are an assistant that helps finalize a work session. Your primary task is to
 
 4.  **Update Project Knowledge (`GEMINI.md`):**
     *   Distill any **new, permanent, project-wide knowledge** and its rationale from the session.
-    *   Read the existing `GEMINI.md` file.
-    *   Integrate this new knowledge by updating the relevant sections or adding new ones. Use the `replace` tool for this step.
+    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history and get the **Project Conventions** content from it.
+    *   Integrate the new knowledge into this content and use the `replace` tool to update the `GEMINI.md` file. The extracted content will serve as the `old_string` for the `replace` operation.
 
 5.  **Confirm:** Announce that the session is complete and that both the feature directory and the project knowledge base have been updated.
 """

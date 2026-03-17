@@ -7,7 +7,7 @@ This is a **planning phase only**. Do not write or modify any code.
 Please perform the following steps:
 
 1.  **Identify Directory:** Identify the active feature directory from our conversation (e.g., `.vscode/sc-1234/`).
-2.  **Gather Context:** Read `description.md` from the feature directory and `GEMINI.md` from the project root.
+2.  **Gather Context:** Find the `### ✨ Session Context Loaded for...` block in the conversation history. This block contains the feature **Description** and **Project Conventions**. Use this information as your primary context.
 3.  **Analyze Codebase:** Perform a high-level analysis of the codebase using `glob` and `grep_search` to understand relevant files and functions.
 4.  **Generate Plan:**
     *   Create a detailed, step-by-step implementation plan. The plan must be composed of small, verifiable, and testable steps.

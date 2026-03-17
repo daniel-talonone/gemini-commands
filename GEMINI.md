@@ -16,7 +16,7 @@ The defined commands are:
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch.
-- `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
+- `**/session:start**: Starts a work session by loading context from a a feature directory and the project's GEMINI file.
 - `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
 - `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found.
 
@@ -39,6 +39,10 @@ Followed by:
 
 *   **Command Definition**: Each command is defined in a `.toml` file within the `session/` directory.
 *   **Prompt-Based Logic**: The core logic for each command is contained within its `prompt` field.
+*   **Session Context Pattern**: To reduce token consumption and improve performance, the session commands use an explicit context-passing pattern.
+    *   **Producers (`/session:start`, `/session:define`, `/session:new`):** At the end of their execution, these commands output a formatted Markdown block titled `### ✨ Session Context Loaded for...`. This block contains the content of static-like files (`description.md`, `GEMINI.md`).
+    *   **Consumers (e.g., `/session:plan`, `/session:review`):** These commands are instructed to find and use the "Session Context" block from the chat history instead of re-reading files from the disk.
+    *   **Updates (`/session:pr`):** If a command modifies a file included in the context (like `/session:pr` updating `description.md`), it is responsible for outputting a new, updated "Session Context" block.
 *   **State Management**: The workflow state is managed through the contents of the feature directory files.
     *   **Unstructured Data:** `description.md` and `log.md` are standard markdown files.
     *   **Structured Data:** `plan.yml`, `questions.yml`, and `review.yml` are structured YAML files.
@@ -48,6 +52,12 @@ Followed by:
     *   **LLM Orchestrator**: For complex, interactive tasks, the agent orchestrates helper scripts and manages the workflow (e.g., `/session:define`, `/session:review`).
     *   **Subagent Pattern**: For focused, one-off tasks, the `generalist` tool is used to delegate work to an isolated sub-agent (e.g., `/session:get-familiar`, `/session:checkpoint`, `/session:end`). This keeps the main session clean and efficient.
 *   See the `session/README.md` for the full architectural rationale and detailed examples of these patterns.
+
+# Testing Conventions
+
+*   All tests for the `/session` commands are initiated by the user.
+*   The user provides the steps and the expected outcome.
+*   The agent's task is to follow the steps and report on the outcome.
 
 # Skill Development
 ...
