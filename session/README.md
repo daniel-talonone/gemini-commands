@@ -79,7 +79,7 @@ This provides maximum efficiency and context isolation. Commands like `/session:
 - `**/session:new**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
-- `**/session:review**: Performs a critical, context-aware code review of the current branch.
+- `**/session:review**: Performs a critical, context-aware code review of the current branch using a focused sub-agent.
 - `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
 - `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
 - `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found.
@@ -273,20 +273,21 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:review`
 
--   **Description:** Performs a critical, context-aware code review of the current branch and saves the feedback to `review.yml`.
--   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
+-   **Description:** Performs a critical, context-aware code review of the current branch using a focused sub-agent.
+-   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/get_git_context.sh`
-    -   **Tools:** `run_shell_command`, `read_file`, `write_file`
+    -   **Tools:** `run_shell_command`, `read_file`, `generalist`
     -   **External Services:** Git
 -   **Interactions:**
     -   **Input (Reads):**
         -   Git repository state (via script).
         -   `.vscode/<feature-dir>/description.md`
         -   `GEMINI.md`
+        -   Reads back the `.vscode/<feature-dir>/review.yml` for verification.
     -   **Output (Writes):**
-        -   `.vscode/<feature-dir>/review.yml`
+        -   Delegates writing `.vscode/<feature-dir>/review.yml` to a sub-agent.
 
 ### `/session:start`
 
