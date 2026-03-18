@@ -20,7 +20,23 @@ This suite of commands orchestrates the flow of information between the user, th
 
     The terminal session is still used during development, but the feature directory acts as a more durable and explicit source of context. This makes it easier to resume work across multiple days and helps the LLM rely on structured information rather than incomplete conversational history.
 -   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See the `example-feature-document/` directory for a complete example.
--   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory."
+
+    Example:
+    ```
+    .vscode/sc-12345/
+        description.md
+        plan.yml
+        questions.yml
+        log.md
+        review.yml
+    ```
+-   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory." It ensures that key project knowledge is maintained and applied consistently across all sessions.
+
+    Examples of knowledge to include in `GEMINI.md`:
+    -   Architectural conventions and rules
+    -   Testing standards and patterns
+    -   Recurring development patterns
+    -   Project-specific terminology and definitions.
 
 ## Getting Started: Session Entry Points
 
@@ -31,6 +47,39 @@ To begin a work session, there are three primary commands, each serving a distin
 *   **`/session:start`**: Use this to **resume work on an existing feature**. This command loads all context from a previously created feature directory into your current session.
 
 Once a session is started (either with `define`, `new`, or `start`), you can proceed with planning, implementation, and other workflow commands.
+
+## Workflow Lifecycle
+
+While the commands can be used flexibly, they are designed to support a typical feature development lifecycle. The process is initiated by one of three entry-point commands and then proceeds through planning, implementation, and delivery.
+
+Here is a typical end-to-end workflow:
+
+1.  **Start a Session** (Choose one entry point):
+    *   `/session:define`: Create a new story from scratch.
+    *   `/session:new sc-12345`: Create a story from an existing ticket.
+    *   `/session:start sc-12345`: Resume work on an existing story.
+
+2.  **Plan the Work**:
+    *   `/session:plan`: The agent analyzes the requirements and codebase to produce a detailed implementation plan (`plan.yml`).
+
+3.  **Implement**:
+    *   The developer writes the code to implement the tasks defined in the plan. This can be done manually or delegated to the LLM for AI-assisted coding.
+
+4.  **Track Progress** (Optional, as needed):
+    *   `/session:checkpoint`: Save a snapshot of the work, update task statuses, and log progress. Can be used multiple times.
+    *   `/session:log-research`: Add research notes to the session log.
+
+5.  **Review and Deliver**:
+    *   `/session:review`: The agent performs a code review of the local changes.
+    *   `/session:pr`: The agent generates a pull request description and creates the PR on GitHub.
+    *   `/session:address-feedback`: After a PR is created and has received feedback, this command helps to fetch and address any unresolved review comments.
+
+6.  **End the Session**:
+    *   `/session:end`: The agent saves the final state and any long-term learnings.
+
+This structured lifecycle ensures that all context, from initial requirements to final delivery, is captured and utilized effectively.
+
+**Note**: The lifecycle described above is an example path, but the system is designed for flexibility. You can run `/session:end` at any point to safely store the current state. You can close your terminal and later resume your work exactly where you left off by using `/session:start`, regardless of whether you were in the middle of implementation, planning, or review.
 
 ## Dependencies
 
@@ -140,13 +189,12 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Scripts:** `scripts/append_to_log.sh`
     -   **Tools:** `read_file`, `pull_request_read`, `run_shell_command`
     -   **External Services:** GitHub
--   **Interactions:**
-    -   **Input (Reads):**
-        -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
-        -   GitHub API (to get review comments).
-    -   **Output (Writes):**
-        -   Appends a summary to `.vscode/<feature-dir>/log.md`.
-        -   Modifies project source files to address feedback.
+-   **Inputs:**
+    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
+    -   GitHub API (to get review comments).
+-   **Outputs:**
+    -   Appends a summary to `.vscode/<feature-dir>/log.md`.
+    -   Modifies project source files to address feedback.
 
 ### `/session:checkpoint`
 
@@ -156,15 +204,14 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Skills:** `yq YAML Processing`
     -   **Scripts:** `scripts/append_to_log.sh`
     -   **Tools:** `run_shell_command`, `generalist`
--   **Interactions:**
-    -   **Input (Reads):**
-        -   The active feature directory path from the conversation.
-        -   `.vscode/<feature-dir>/plan.yml`
-        -   `.vscode/<feature-dir>/questions.yml`
-    -   **Output (Writes):**
-        -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
-        -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
-        -   Appends a summary to `.vscode/<feature-dir>/log.md`.
+-   **Inputs:**
+    -   The active feature directory path from the conversation.
+    -   `.vscode/<feature-dir>/plan.yml`
+    -   `.vscode/<feature-dir>/questions.yml`
+-   **Outputs:**
+    -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
+    -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
+    -   Appends a summary to `.vscode/<feature-dir>/log.md`.
 
 ### `/session:define`
 
@@ -174,15 +221,13 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Skills:** None
     -   **Scripts:** `scripts/create_feature_dir.sh`
     -   **Tools:** `glob`, `grep_search`, `run_shell_command`, `write_file`
-    -   **External Services:** None
--   **Interactions:**
-    -   **Input (Reads):**
-        -   User's command-line arguments (`{{args}}`).
-        -   Project source code via `glob` and `grep_search`.
-    -   **Output (Writes):**
-        -   Creates a new feature directory (e.g., `.vscode/create-user-profile-page/`).
-        -   `.vscode/<feature-dir>/description.md` and other placeholder files.
-        -   Outputs the "Session Context" block to the chat.
+-   **Inputs:**
+    -   User's command-line arguments (`{{args}}`).
+    -   Project source code via `glob` and `grep_search`.
+-   **Outputs:**
+    -   Creates a new feature directory (e.g., `.vscode/create-user-profile-page/`).
+    -   `.vscode/<feature-dir>/description.md` and other placeholder files.
+    -   Outputs the "Session Context" block to the chat.
 
 ### `/session:end`
 
@@ -192,183 +237,152 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Skills:** `yq YAML Processing`
     -   **Scripts:** `scripts/append_to_log.sh`
     -   **Tools:** `read_file`, `run_shell_command`, `replace`, `generalist`
-    -   **External Services:** None
--   **Interactions:**
-    -   **Input (Reads):**
-        -   Session conversation history.
-        -   The "Session Context" block from chat history (for `GEMINI.md` content).
-        -   `.vscode/<feature-dir>/plan.yml`
-        -   `.vscode/<feature-dir>/questions.yml`
-    -   **Output (Writes):**
-        -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
-        -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
-        -   Appends a final summary to `.vscode/<feature-dir>/log.md`.
-        -   Modifies `GEMINI.md` in-place.
+-   **Inputs:**
+    -   Session conversation history.
+    -   The "Session Context" block from chat history (for `GEMINI.md` content).
+    -   `.vscode/<feature-dir>/plan.yml`
+    -   `.vscode/<feature-dir>/questions.yml`
+-   **Outputs:**
+    -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
+    -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
+    -   Appends a final summary to `.vscode/<feature-dir>/log.md`.
+    -   Modifies `GEMINI.md` in-place.
 
 ### `/session:get-familiar`
 
 -   **Description:** Uses a sub-agent to analyze and summarize the current Git branch's code changes.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/get_git_context.sh`
     -   **Tools:** `generalist`
-    -   **External Services:** Git
--   **Interactions:**
-    -   **Input (Reads):**
-        -   Local Git repository state (diff against the remote default branch).
-    -   **Output (Writes):**
-        -   Writes a summary of code changes to standard output.
+-   **Inputs:**
+    -   Local Git repository state (diff against the remote default branch).
+-   **Outputs:**
+    -   Writes a summary of code changes to standard output.
 
 ### `/session:log-research`
 
 -   **Description:** Logs a detailed, comprehensive summary of research findings to the feature's `log.md` file.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/append_to_log.sh`
     -   **Tools:** `generalist`
-    -   **External Services:** None
--   **Interactions:**
-    -   **Input (Reads):**
-        -   Session conversation history.
-    -   **Output (Writes):**
-        -   Delegates appending a timestamped report to `.vscode/<feature-dir>/log.md` to a sub-agent.
+-   **Inputs:**
+    -   Session conversation history.
+-   **Outputs:**
+    -   Delegates appending a timestamped report to `.vscode/<feature-dir>/log.md` to a sub-agent.
 
 ### `/session:migration`
 
 -   **Description:** Migrates a legacy, single-file feature markdown document into the modern, multi-file directory structure.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/migrate_feature_file.sh`
     -   **Tools:** `run_shell_command`
-    -   **External Services:** None
--   **Interactions:**
-    -   **Input (Reads):**
-        -   A single markdown file path provided as an argument.
-    -   **Output (Writes):**
-        -   Creates a new directory named after the input file.
-        -   Populates the new directory with `description.md`, `plan.yml`, `questions.yml`, etc.
-        -   Archives the original file by renaming it with a `.migrated` extension.
+-   **Inputs:**
+    -   A single markdown file path provided as an argument.
+-   **Outputs:**
+    -   Creates a new directory named after the input file.
+    -   Populates the new directory with `description.md`, `plan.yml`, `questions.yml`, etc.
+    -   Archives the original file by renaming it with a `.migrated` extension.
 
 ### `/session:new`
 
 -   **Description:** Creates a feature directory from a Shortcut story ID or Notion page URL, fetching related resources to populate the `description.md` file.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/create_feature_dir.sh`
     -   **Tools:** `run_shell_command`, `generalist`, `read_file`
     -   **External Services:** Shortcut, Notion, GitHub
--   **Interactions:**
-    -   **Input (Reads):**
-        -   Delegates API calls to Shortcut, Notion, and GitHub to a sub-agent.
-        -   Reads `GEMINI.md`.
-    -   **Output (Writes):**
-        -   Creates a new directory and placeholder files.
-        -   Delegates writing the synthesized `description.md` to a sub-agent.
-        -   Outputs the "Session Context" block to the chat.
+-   **Inputs:**
+    -   Delegates API calls to Shortcut, Notion, and GitHub to a sub-agent.
+    -   Reads `GEMINI.md`.
+-   **Outputs:**
+    -   Creates a new directory and placeholder files.
+    -   Delegates writing the synthesized `description.md` to a sub-agent.
+    -   Outputs the "Session Context" block to the chat.
 
 ### `/session:plan`
 
 -   **Description:** Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 -   **Orchestration Pattern:** LLM Orchestrator
 -   **Dependencies:**
-    -   **Skills:** None
-    -   **Scripts:** None
     -   **Tools:** `read_file`, `glob`, `grep_search`, `write_file`
-    -   **External Services:** None
--   **Interactions:** (Orchestrates by directly using Gemini CLI tools)
-    -   **Input (Reads):**
-        -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
-        -   Codebase files via `glob` and `grep_search`.
-        -   User input during interactive planning.
-    -   **Output (Writes):**
-        -   Generates and writes initial `.vscode/<feature-dir>/plan.yml`
-        -   Generates and writes initial `.vscode/<feature-dir>/questions.yml`
+-   **Inputs:**
+    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
+    -   Codebase files via `glob` and `grep_search`.
+    -   User input during interactive planning.
+-   **Outputs:**
+    -   Generates and writes initial `.vscode/<feature-dir>/plan.yml`
+    -   Generates and writes initial `.vscode/<feature-dir>/questions.yml`
 
 ### `/session:pr`
 
 -   **Description:** Generates a pull request description, creates or updates the PR on GitHub, and saves the resulting PR link to the feature directory.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/get_git_context.sh`
     -   **Tools:** `run_shell_command`, `search_pull_requests`, `read_file`, `create_pull_request`, `update_pull_request`, `write_file`, `ask_user`, `generalist`
     -   **External Services:** GitHub
--   **Interactions:**
-    -   **Input (Reads):**
-        -   The "Session Context" block from chat history.
-        -   Git repository state (via script).
-        -   `.git/pull_request_template.md`
-        -   Feature directory files (`plan.yml`, `log.md`).
-    -   **Output (Writes):**
-        -   Delegates PR description generation to a sub-agent.
-        -   Creates or updates a pull request on GitHub.
-        -   Writes the PR link to `.vscode/<feature-dir>/description.md`.
-        -   Outputs an updated "Session Context" block to the chat.
-        -   Saves `pull_request_descr.md` to `.vscode/<feature-dir>/` (as a fallback).
+-   **Inputs:**
+    -   The "Session Context" block from chat history.
+    -   Git repository state (via script).
+    -   `.git/pull_request_template.md`
+    -   Feature directory files (`plan.yml`, `log.md`).
+-   **Outputs:**
+    -   Delegates PR description generation to a sub-agent.
+    -   Creates or updates a pull request on GitHub.
+    -   Writes the PR link to `.vscode/<feature-dir>/description.md`.
+    -   Outputs an updated "Session Context" block to the chat.
+    -   Saves `pull_request_descr.md` to `.vscode/<feature-dir>/` (as a fallback).
 
 ### `/session:review`
 
 -   **Description:** Performs a critical, context-aware code review of the current branch using a focused sub-agent.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/get_git_context.sh`
     -   **Tools:** `run_shell_command`, `read_file`, `generalist`
-    -   **External Services:** Git
--   **Interactions:**
-    -   **Input (Reads):**
-        -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
-        -   Git repository state (via script).
-        -   Reads back the `.vscode/<feature-dir>/review.yml` for verification.
-    -   **Output (Writes):**
-        -   Delegates writing `.vscode/<feature-dir>/review.yml` to a sub-agent.
+-   **Inputs:**
+    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
+    -   Git repository state (via script).
+    -   Reads back the `.vscode/<feature-dir>/review.yml` for verification.
+-   **Outputs:**
+    -   Delegates writing `.vscode/<feature-dir>/review.yml` to a sub-agent.
 
 ### `/session:start`
 
 -   **Description:** Starts a work session by loading all context from a feature directory and the project's `GEMINI.md` file.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/load_context_files.sh`
     -   **Tools:** `run_shell_command`
-    -   **External Services:** None
--   **Interactions:**
-    -   **Input (Reads):**
-        -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
-    -   **Output (Writes):**
-        -   Outputs the "Session Context" block to the chat.
+-   **Inputs:**
+    -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
+-   **Outputs:**
+    -   Outputs the "Session Context" block to the chat.
 
 ### `/session:summary`
 
 -   **Description:** Generates a single, human-readable Markdown summary of the feature's entire state.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/load_context_files.sh`
     -   **Tools:** `run_shell_command`, `write_file`
-    -   **External Services:** None
--   **Interactions:**
-    -   **Input (Reads):**
-        -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
-    -   **Output (Writes):**
-        -   `.vscode/<feature-dir>/_SUMMARY.md`
+-   **Inputs:**
+    -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
+-   **Outputs:**
+    -   `.vscode/<feature-dir>/_SUMMARY.md`
 
 ### `/session:verify-release`
 
 -   **Description:** Verifies a cherry-picked release branch against its original commits and provides an AI-powered analysis of any discrepancies.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
-    -   **Skills:** None
     -   **Scripts:** `scripts/verify-release.sh`
     -   **Tools:** `run_shell_command`
-    -   **External Services:** Git
--   **Interactions:**
-    -   **Input (Reads):**
-        -   Local Git repository (branches, commits, commit messages, and patch data).
-    -   **Output (Writes):**
-        -   Writes temporary patch files for comparison.
-        -   Writes a verification report to standard output.
+-   **Inputs:**
+    -   Local Git repository (branches, commits, commit messages, and patch data).
+-   **Outputs:**
+    -   Writes temporary patch files for comparison.
+    -   Writes a verification report to standard output.

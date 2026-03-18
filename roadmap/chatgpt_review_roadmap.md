@@ -15,7 +15,7 @@ more robust AI-assisted engineering workflow.
 
 ## 1.1 Documentation Clarity Improvements
 
-### Add a Workflow Overview
+### Add a Workflow Overview [IMPLEMENTED]
 
 The README explains commands individually but does not clearly show the
 **end-to-end lifecycle of a session**.
@@ -45,7 +45,7 @@ This would help readers understand how commands relate to each other.
 
 ------------------------------------------------------------------------
 
-### Provide a Feature Directory Example
+### Provide a Feature Directory Example [IMPLEMENTED]
 
 The README explains the concept but does not show a concrete directory
 example.
@@ -64,7 +64,7 @@ This helps users visualize how the system is structured.
 
 ------------------------------------------------------------------------
 
-### Document YAML Schemas
+### Document YAML Schemas [MISSING]
 
 The README mentions structured YAML files but does not explain their
 schema.
@@ -105,7 +105,7 @@ findings:
 
 ------------------------------------------------------------------------
 
-### Document Status Enums
+### Document Status Enums [MISSING]
 
 The README references statuses but does not define them.
 
@@ -124,7 +124,7 @@ Explain when each status should be used.
 
 ------------------------------------------------------------------------
 
-### Clarify the Difference Between `/session:new` and `/session:define`
+### Clarify the Difference Between `/session:new` and `/session:define` [IMPLEMENTED]
 
 The distinction may be confusing.
 
@@ -146,7 +146,7 @@ Explicitly documenting this would reduce ambiguity.
 
 ## 1.2 Structural Improvements
 
-### Separate Command Categories
+### Separate Command Categories [MISSING]
 
 Commands could be grouped by lifecycle stage:
 
@@ -170,7 +170,7 @@ This improves readability.
 
 ------------------------------------------------------------------------
 
-## 1.3 Clarify the Subagent Pattern
+## 1.3 Clarify the Subagent Pattern [IMPLEMENTED]
 
 The README mentions the subagent pattern but does not fully explain:
 
@@ -184,7 +184,7 @@ choice.
 
 ------------------------------------------------------------------------
 
-## 1.4 Clarify the Role of `GEMINI.md`
+## 1.4 Clarify the Role of `GEMINI.md` [IMPLEMENTED]
 
 The README describes `GEMINI.md` as **project memory**, but it would
 help to clarify:
@@ -202,7 +202,7 @@ This helps maintain consistency across sessions.
 
 ------------------------------------------------------------------------
 
-## 1.5 Add a "Typical Usage Example"
+## 1.5 Add a "Typical Usage Example" [IMPLEMENTED]
 
 A step-by-step example would help readers understand the workflow.
 
@@ -221,7 +221,7 @@ Example:
 
 ## 1.6 Minor Ambiguities
 
-### `.vscode` usage
+### `.vscode` usage [ADDRESSED]
 
 The README explains the reason for using `.vscode`, but this may confuse
 users because:
@@ -239,7 +239,7 @@ This is not necessarily a required change, but worth noting.
 
 ------------------------------------------------------------------------
 
-## 1.7 Consistency Improvements
+## 1.7 Consistency Improvements [IMPLEMENTED]
 
 Some command descriptions differ slightly in format and level of detail.
 
