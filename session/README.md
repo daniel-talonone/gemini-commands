@@ -11,8 +11,14 @@ The primary goal of this command suite is to create a robust, semi-automated dev
 
 This suite of commands orchestrates the flow of information between the user, the codebase, external tools, and dedicated documents that store these two types of knowledge, creating a persistent "memory" for both the specific task and the overall project.
 
+
 ## Core Concepts
 
+-  **Session:** A session represents the working context for a single feature or user story.
+
+    In this workflow, a session is not tied only to the terminal or chat history. Instead, it is primarily defined by the feature directory, which stores the description, implementation plan, open questions, progress log, and review notes for the feature.
+
+    The terminal session is still used during development, but the feature directory acts as a more durable and explicit source of context. This makes it easier to resume work across multiple days and helps the LLM rely on structured information rather than incomplete conversational history.
 -   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See the `example-feature-document/` directory for a complete example.
 -   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory."
 
