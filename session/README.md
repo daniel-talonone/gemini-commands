@@ -87,7 +87,7 @@ This workflow has the following dependencies:
 
 -   **`yq` command-line tool (v4+):** Required for atomic and reliable modification of `.yml` state files. It must be installed and available in the system's PATH.
 -   **`yq-skill` & `tdd-skill`:** Locally installed Gemini skills that provide expert knowledge.
--   **External Services:** Integrations with Shortcut, Notion, Git, and GitHub are used for various commands.
+-   **External Services:** Integrations with Shortcut, Notion, Git, and GitHub are used for various commands. For detailed documentation on the available commands and their usage, refer to the Gemini CLI documentation for [Shortcut](https://www.shortcut.com/blog/why-we-built-the-shortcut-mcp-server), [Notion](https://developers.notion.com/guides/mcp/get-started-with-mcp), [Git](https://pypi.org/project/mcp-server-git/), and [GitHub](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-gemini-cli.md).
     To enable these integrations, configure your `.gemini/settings.json` with the following MCP servers:
     ```json
     "shortcut": {
