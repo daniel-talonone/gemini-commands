@@ -42,9 +42,9 @@ The Subagent Pattern provides three primary benefits that address the core chall
 
 ---
 
-## Potential Use Cases
+## Examples in Practice
 
-This pattern is highly versatile. Here are several concrete applications:
+This pattern is highly versatile and has been implemented across several commands to improve focus and efficiency. The following commands currently utilize the Subagent Pattern:
 
 ### Use Case 1: Processing Large or Volatile Data
 **Problem:** A task requires processing a large or frequently changing piece of data, like a `git diff`. Adding this to the main context would be expensive and quickly become stale.

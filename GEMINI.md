@@ -49,8 +49,8 @@ Followed by:
     *   **Modification Pattern:** All modifications to these YAML files are performed by activating the `yq-skill` and using `run_shell_command` to execute `yq` commands. This provides atomic, deterministic, and robust state updates.
 *   **Skills**: The workflow relies on locally installed skills (`tdd-skill`, `yq-skill`) for complex, reusable logic.
 *   **Command Patterns**: Commands are implemented using two main patterns:
-    *   **LLM Orchestrator**: For complex, interactive tasks, the agent orchestrates helper scripts and manages the workflow (e.g., `/session:define`, `/session:review`).
-    *   **Subagent Pattern**: For focused, one-off tasks, the `generalist` tool is used to delegate work to an isolated sub-agent (e.g., `/session:get-familiar`, `/session:checkpoint`, `/session:end`). This keeps the main session clean and efficient.
+    *   **LLM Orchestrator**: For complex, interactive tasks, the agent orchestrates helper scripts and manages the workflow (e.g., `/session:define`).
+    *   **Subagent Pattern**: For focused, one-off tasks, the `generalist` tool is used to delegate work to an isolated sub-agent (e.g., most one-off tasks like `/session:new`, `/session:pr`, etc.). This keeps the main session clean and efficient.
 *   See the `session/README.md` for the full architectural rationale and detailed examples of these patterns.
 
 # Testing Conventions

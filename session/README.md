@@ -52,7 +52,7 @@ The pattern is as follows:
 2.  The orchestrator agent uses the `run_shell_command` tool to execute small, deterministic, single-purpose **helper scripts** for predictable steps where precision is critical (e.g., generating a filename with a specific timestamp format, running git commands).
 3.  The orchestrator agent then handles the complex, stateful, or interactive parts of the workflow itself, using its reasoning capabilities to manage the process.
 
-This architecture balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones. Commands like `/session:define` and `/session:review` are good examples.
+This architecture balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones. A command like `/session:define` is a good example.
 
 #### Subagent Pattern for Focused Tasks
 This is the modern and preferred pattern for delegating a complex, one-off task to an isolated environment.
@@ -63,7 +63,7 @@ The pattern is as follows:
 3.  The main agent calls the `generalist`, which executes the task in a completely isolated session with its own context and tools.
 4.  The final result is returned to the main agent.
 
-This provides maximum efficiency and context isolation. Commands like `/session:get-familiar`, `/session:checkpoint`, and `/session:end` are good examples of this pattern.
+This provides maximum efficiency and context isolation. Commands like `/session:get-familiar`, `/session:checkpoint`, `/session:end`, `/session:new`, `/session:review`, `/session:pr`, and `/session:log-research` are good examples of this pattern.
 
 #### Session Context Pattern
 To improve performance and reduce token usage from repeatedly reading files, the command suite also uses an explicit context-passing pattern:
@@ -190,17 +190,17 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:log-research`
 
 -   **Description:** Logs a detailed, comprehensive summary of research findings to the feature's `log.md` file.
--   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
+-   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/append_to_log.sh`
-    -   **Tools:** `run_shell_command`
+    -   **Tools:** `generalist`
     -   **External Services:** None
 -   **Interactions:**
     -   **Input (Reads):**
         -   Session conversation history.
     -   **Output (Writes):**
-        -   Appends a timestamped report to `.vscode/<feature-dir>/log.md`.
+        -   Delegates appending a timestamped report to `.vscode/<feature-dir>/log.md` to a sub-agent.
 
 ### `/session:migration`
 
@@ -222,18 +222,19 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:new`
 
 -   **Description:** Creates a feature directory from a Shortcut story ID or Notion page URL, fetching related resources to populate the `description.md` file.
--   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
+-   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/create_feature_dir.sh`
-    -   **Tools:** `run_shell_command`, `stories_get_by_id`, `notion_fetch`, `write_file`
-    -   **External Services:** Shortcut, Notion
+    -   **Tools:** `run_shell_command`, `generalist`, `read_file`
+    -   **External Services:** Shortcut, Notion, GitHub
 -   **Interactions:**
     -   **Input (Reads):**
-        -   Shortcut API (to get story details if a story ID is provided).
-        -   Notion API (to get page content if a Notion URL is provided).
+        -   Delegates API calls to Shortcut, Notion, and GitHub to a sub-agent.
+        -   Reads `GEMINI.md`.
     -   **Output (Writes):**
-        -   Creates a new directory and populates it with `description.md`, `plan.yml`, etc.
+        -   Creates a new directory and placeholder files.
+        -   Delegates writing the synthesized `description.md` to a sub-agent.
         -   Outputs the "Session Context" block to the chat.
 
 ### `/session:plan`
@@ -257,24 +258,24 @@ This section provides a detailed breakdown of individual session commands, their
 ### `/session:pr`
 
 -   **Description:** Generates a pull request description, creates or updates the PR on GitHub, and saves the resulting PR link to the feature directory.
--   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
+-   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/get_git_context.sh`
-    -   **Tools:** `run_shell_command`, `search_pull_requests`, `read_file`, `create_pull_request`, `update_pull_request`, `write_file`, `ask_user`
+    -   **Tools:** `run_shell_command`, `search_pull_requests`, `read_file`, `create_pull_request`, `update_pull_request`, `write_file`, `ask_user`, `generalist`
     -   **External Services:** GitHub
 -   **Interactions:**
     -   **Input (Reads):**
-        -   The "Session Context" block from chat history (for `description.md` content).
+        -   The "Session Context" block from chat history.
         -   Git repository state (via script).
-        -   `.vscode/pull_request_template.md`
+        -   `.git/pull_request_template.md`
         -   Feature directory files (`plan.yml`, `log.md`).
-        -   GitHub API (to search for existing PRs).
     -   **Output (Writes):**
+        -   Delegates PR description generation to a sub-agent.
         -   Creates or updates a pull request on GitHub.
         -   Writes the PR link to `.vscode/<feature-dir>/description.md`.
         -   Outputs an updated "Session Context" block to the chat.
-        -   `pull_request_descr.md` (as a fallback).
+        -   Saves `pull_request_descr.md` to `.vscode/<feature-dir>/` (as a fallback).
 
 ### `/session:review`
 
