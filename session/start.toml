@@ -13,6 +13,8 @@ The user will provide a feature directory name as an argument (e.g., `sc-12345`)
     *   You MUST parse this output to find the content for `description.md` and `GEMINI.md`.
     *   **CRITICAL:** The full file path in the START/END markers will vary. Search for the base filename (e.g., `description.md`).
 
+3.  **Read GEMINI file:** Find the gemini file, if it's not in the root you can search in in ./.vscode/GEMINI.md and keep its content in your memory during the whole session. You must use this knowledge while planing or implementing any change.
+
 3.  **Output Session Context:** Display the key information to the user in a structured format. This makes the context explicit and reusable for subsequent commands. Use the following Markdown format EXACTLY:
 
     ```markdown
@@ -21,11 +23,8 @@ The user will provide a feature directory name as an argument (e.g., `sc-12345`)
     **Description:**
     > {{extracted content of description.md}}
 
-    **Project Conventions (from GEMINI.md):**
-    > {{extracted content of GEMINI.md}}
-
     This context is now available for all subsequent commands.
     ```
 
-**CRITICAL:** It is vital that you extract the content for `description.md` and `GEMINI.md` from the script output and place it inside the formatted block. The rest of the file content from the script is loaded into the session's memory automatically for your own use, but does not need to be displayed.
+**CRITICAL:** It is vital that you extract the content for `description.md` from the script output and place it inside the formatted block. The rest of the file content from the script is loaded into the session's memory automatically for your own use, but does not need to be displayed.
 """
