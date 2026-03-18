@@ -1,0 +1,124 @@
+- command: "/session:address-feedback"
+  priority: "Medium"
+  status: "Missing"
+  reason_for_subagent: "The sub-task of 'Document Rationale' (Step 5) could benefit from delegation to a sub-agent. This would align with Core Benefit 2 (Output Simplification & Encapsulation) and Use Case 3 (Content Generation from Specific Inputs). The main agent could focus on the interactive feedback loop, while the sub-agent handles the details of formatting the summary and appending it to log.md."
+  details: |
+    **Current Implementation:**
+    The command currently orchestrates a complex, interactive loop for addressing GitHub PR comments. Step 5 involves the main agent generating a summary and calling `scripts/append_to_log.sh`.
+
+    **Justification for Sub-task Delegation:**
+    - **Pros:** Isolates the Markdown formatting and script execution from the main agent's prompt, making the main agent's loop logic cleaner. Ensures consistency in logging rationale.
+    - **Cons:** Introduces an additional sub-agent call for a relatively simple logging task, potentially adding minimal overhead. However, the benefits of cleaner prompt logic and consistency outweigh this.
+
+    **Proposed Change:**
+    Modify Step 5 to delegate the "Document Rationale" task to a `generalist` sub-agent. The main agent would synthesize the feedback, plan, and rationale, then pass this structured input to the sub-agent. The sub-agent would be responsible for generating the final Markdown for the log and calling `append_to_log.sh`.
+
+- command: "/session:define"
+  priority: "Medium"
+  status: "Missing"
+  reason_for_subagent: "The core command needs to remain interactive, but two sub-tasks are strong candidates for sub-agent delegation: 'Perform Codebase Analysis' (Step 3) and 'Create Artifacts' (Step 5). This aligns with Core Benefits 1 (Input Sanitization) and 2 (Output Simplification & Encapsulation)."
+  details: |
+    **Current Implementation:**
+    The command is a highly interactive LLM Orchestrator, guiding the user through story definition.
+
+    **Justification for Sub-task Delegation:**
+    - **Step 3 (Codebase Analysis):**
+        - **Pros:** `glob` and `grep_search` can produce large, raw outputs. A sub-agent can process these, filter noise, and return concise, relevant technical notes, thereby sanitizing the input for the main agent. This would improve focus and efficiency for the main conversational agent.
+        - **Cons:** Adds an additional tool call.
+    - **Step 5 (Create Artifacts):**
+        - **Pros:** Encapsulating the `create_feature_dir.sh` script call and the initial `write_file` operations makes the orchestrator's logic cleaner and ensures these procedural steps are handled robustly by a specialized sub-agent.
+        - **Cons:** Minimal.
+
+    **Proposed Change:**
+    - Modify Step 3 to delegate the codebase analysis (running `glob`/`grep_search` and summarizing findings) to a `generalist` sub-agent. The sub-agent would return the "Technical Notes" content.
+    - Modify Step 5 to delegate the creation of the feature directory and the initial `description.md` file (calling `create_feature_dir.sh` and `write_file`) to a `generalist` sub-agent.
+
+- command: "/session:migration"
+  priority: "Low"
+  status: "No Change Recommended"
+  reason_for_subagent: "Not recommended. The command is a simple wrapper around a shell script that performs a deterministic file system operation. Introducing a sub-agent would add unnecessary overhead and complexity without providing significant benefits in terms of context isolation, input sanitization, or output simplification, as the core logic is already encapsulated in the helper script."
+  details: |
+    **Current Implementation:**
+    The command's prompt is a bash script that executes another helper script (`migrate_feature_file.sh`). This is a direct, efficient execution of a procedural task.
+
+    **Justification for No Change:**
+    - **Pros of current implementation:** Minimal overhead, direct execution, task logic already fully encapsulated in a script.
+    - **Cons of adding a sub-agent:** Unnecessary token cost and latency for a simple, non-interactive, deterministic task.
+
+- command: "/session:plan"
+  priority: "High"
+  status: "Missing"
+  reason_for_subagent: "The core task of generating a detailed implementation plan and clarifying questions (Steps 4 & 5) based on feature requirements and codebase analysis is highly analytical and generative. Delegating this to a sub-agent would significantly simplify the main orchestrator's prompt by offloading complex decision-making and structured output generation. It supports Core Benefit 2 (Output Simplification & Encapsulation) and 3 (Perspective Shifting)."
+  details: |
+    **Current Implementation:**
+    The main agent performs all steps, including gathering context, analyzing the codebase, generating the YAML plan and questions, and saving them.
+
+    **Justification for Sub-task Delegation:**
+    - **Pros:**
+        - Encapsulates the complex logic of converting high-level requirements and codebase insights into structured YAML plans and questions.
+        - Allows the sub-agent to adopt a specific persona (e.g., 'meticulous TDD expert') for higher quality output.
+        - Reduces the size and complexity of the main orchestrator's prompt.
+    - **Cons:**
+        - The sub-agent's prompt would need to be very detailed to guide the plan/question generation effectively.
+        - Passing the raw codebase analysis results to the sub-agent might still contribute to its context size, though its output to the main agent would be concise.
+
+    **Proposed Change:**
+    Modify the command so that the main agent performs Steps 1-3 (identifying directory, gathering context, performing codebase analysis). It then passes the gathered feature description, project conventions, and codebase analysis summary to a `generalist` sub-agent. The sub-agent would be responsible for Steps 4 and 5 (generating the `plan.yml` and `questions.yml` content) and returning them to the main agent, which would then perform Step 6 (saving the files).
+
+- command: "/session:start"
+  priority: "High"
+  status: "Missing"
+  reason_for_subagent: "The parsing and formatting of the output from the `load_context_files.sh` script (Steps 2 & 3) are mechanical tasks that can be delegated to a sub-agent. This aligns with Core Benefit 2 (Output Simplification & Encapsulation) and 1 (Input Sanitization), as the sub-agent can process the large, raw script output and return a clean, formatted session context block."
+  details: |
+    **Current Implementation:**
+    The main agent executes `load_context_files.sh` and then directly parses its output to construct the 'Session Context' block.
+
+    **Justification for Sub-task Delegation:**
+    - **Pros:**
+        - Encapsulates the logic for parsing a potentially large script output and formatting it into a specific Markdown structure.
+        - Simplifies the main orchestrator's prompt, making it more focused on initiating the context loading process rather than its details.
+        - Improves robustness by having a dedicated sub-agent handle parsing.
+    - **Cons:**
+        - Introduces a sub-agent call.
+
+    **Proposed Change:**
+    Modify the command so that the main agent performs Step 1 (executing `load_context_files.sh`). It then passes the raw script output to a `generalist` sub-agent. The sub-agent would be responsible for Steps 2 and 3 (parsing the output, extracting `description.md` and `GEMINI.md`, and formatting the final 'Session Context Loaded for...' block) and returning this formatted string to the main agent, which would then display it.
+
+- command: "/session:summary"
+  priority: "High"
+  status: "Missing"
+  reason_for_subagent: "The core task of synthesizing all feature context into a structured, human-readable Markdown report (Step 2) is a complex generative process. Delegating this to a sub-agent would enable significant Output Simplification & Encapsulation (Core Benefit 2) and Input Sanitization (Core Benefit 1) by offloading the processing of large, raw file content and the intricate Markdown formatting from the main orchestrator."
+  details: |
+    **Current Implementation:**
+    The main agent executes `load_context_files.sh` and then directly processes its raw output to generate a comprehensive Markdown summary.
+
+    **Justification for Sub-task Delegation:**
+    - **Pros:**
+        - Encapsulates the complex logic of parsing multiple file formats (Markdown, YAML) from a single raw string and converting them into a specific Markdown output format (checklists, Q&A).
+        - Greatly simplifies the main orchestrator's prompt, making it a simple 'execute script, pass output to sub-agent, save sub-agent's output' workflow.
+        - Reduces the cognitive load on the main agent by handling verbose input processing and intricate formatting within an isolated environment.
+    - **Cons:**
+        - Introduces a sub-agent call.
+
+    **Proposed Change:**
+    Modify the command so that the main agent performs Step 1 (executing `load_context_files.sh`). It then passes the raw script output to a `generalist` sub-agent. The sub-agent would be responsible for Step 2 (synthesizing the Markdown report) and returning this formatted string to the main agent, which would then perform Step 3 (saving the summary file).
+
+- command: "/session:verify-release"
+  priority: "High"
+  status: "Missing"
+  reason_for_subagent: "The core task of analyzing the `verify-release.sh` script's output, parsing complex failure modes (extra/missing/changed commits with diffs), and generating a semantic, AI-powered report (Steps 2 & 3) is highly complex and analytical. Delegating this to a sub-agent would enable significant Output Simplification & Encapsulation (Core Benefit 2), Input Sanitization (Core Benefit 1) of verbose script output, and reinforce Perspective Shifting (Core Benefit 3) by giving the sub-agent a dedicated 'release verification expert' role."
+  details: |
+    **Current Implementation:**
+    The main agent executes `verify-release.sh` and then directly processes its raw output to perform semantic analysis and generate a structured report.
+
+    **Justification for Sub-task Delegation:**
+    - **Pros:**
+        - Encapsulates the complex logic of parsing varied script output, including raw diffs, and transforming it into a high-level semantic analysis.
+        - Offloads intricate conditional logic for success/failure reporting and detailed commit analysis.
+        - Simplifies the main orchestrator's prompt, making it a simple 'execute script, pass output to sub-agent, present sub-agent's report' workflow.
+        - Leverages the sub-agent's isolated context for a focused analytical task, preventing pollution of the main session.
+    - **Cons:**
+        - Introduces a sub-agent call.
+
+    **Proposed Change:**
+    Modify the command so that the main agent performs Step 1 (executing `verify-release.sh`). It then passes the raw script output to a `generalist` sub-agent. The sub-agent would be responsible for Steps 2 and 3 (analyzing the output, performing semantic analysis, and generating the final well-structured report) and returning this report to the main agent, which would then display it.
