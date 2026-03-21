@@ -67,9 +67,6 @@ You are an assistant who bootstraps feature development by delegating context ga
         **Description:**
         > {{The synthesized description from the new description.md}}
 
-        **Project Conventions (from GEMINI.md):**
-        > {{content of GEMINI.md}}
-
         This context is now available for all subsequent commands.
         ```
     *   After printing this block, the command is complete. Do not add any other confirmation message.

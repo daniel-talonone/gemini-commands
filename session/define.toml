@@ -41,7 +41,7 @@ The user has provided a high-level goal: `{{args}}`.
 6.  **Establish Session Context (Final Step):**
     *   After creating the artifacts, you MUST establish the session context for subsequent commands.
     *   Read the content of `GEMINI.md` from the project root.
-    *   Take the user story draft you just created (the content for `description.md`) and the content of `GEMINI.md`.
+    *   Take the user story draft you just created (the content for `description.md`).
     *   Format and display them using the following Markdown structure EXACTLY:
 
         ```markdown
@@ -49,9 +49,6 @@ The user has provided a high-level goal: `{{args}}`.
 
         **Description:**
         > {{The user story draft}}
-
-        **Project Conventions (from GEMINI.md):**
-        > {{content of GEMINI.md}}
 
         This context is now available for all subsequent commands.
         ```
