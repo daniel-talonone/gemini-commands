@@ -170,6 +170,8 @@ This pattern makes the context explicit and avoids redundant file I/O and token-
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch using a focused sub-agent.
+- `**/session:review-devops**: Performs a critical, context-aware devops review of the current branch using a focused sub-agent.
+- `**/session:review-docs**: Performs a critical, context-aware documentation review of the current branch using a focused sub-agent.
 - `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
 - `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
 - `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found.
@@ -349,6 +351,34 @@ This section provides a detailed breakdown of individual session commands, their
     -   Reads back the `.vscode/<feature-dir>/review.yml` for verification.
 -   **Outputs:**
     -   Delegates writing `.vscode/<feature-dir>/review.yml` to a sub-agent.
+
+### `/session:review-devops`
+
+-   **Description:** Performs a critical, context-aware devops review of the current branch using a focused sub-agent.
+-   **Orchestration Pattern:** Subagent Pattern
+-   **Dependencies:**
+    -   **Scripts:** `scripts/get_git_context.sh`
+    -   **Tools:** `run_shell_command`, `read_file`, `generalist`
+-   **Inputs:**
+    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
+    -   Git repository state (via script).
+    -   Reads back the `.vscode/<feature-dir>/devops-review.yml` for verification.
+-   **Outputs:**
+    -   Delegates writing `.vscode/<feature-dir>/devops-review.yml` to a sub-agent.
+
+### `/session:review-docs`
+
+-   **Description:** Performs a critical, context-aware documentation review of the current branch using a focused sub-agent.
+-   **Orchestration Pattern:** Subagent Pattern
+-   **Dependencies:**
+    -   **Scripts:** `scripts/get_git_context.sh`
+    -   **Tools:** `run_shell_command`, `read_file`, `generalist`
+-   **Inputs:**
+    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
+    -   Git repository state (via script).
+    -   Reads back the `.vscode/<feature-dir>/docs-review.yml` for verification.
+-   **Outputs:**
+    -   Delegates writing `.vscode/<feature-dir>/docs-review.yml` to a sub-agent.
 
 ### `/session:start`
 

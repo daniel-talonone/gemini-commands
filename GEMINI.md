@@ -16,6 +16,8 @@ The defined commands are:
 - `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
 - `**/session:review**: Performs a critical, context-aware code review of the current branch.
+- `**/session:review-devops**: Performs a critical, context-aware devops review of the current branch.
+- `**/session:review-docs**: Performs a critical, context-aware documentation review of the current branch.
 - `**/session:start**: Starts a work session by loading context from a a feature directory and the project's GEMINI file.
 - `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
 - `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found.
