@@ -20,7 +20,7 @@ To begin a work session, there are three primary commands:
 
 *   **`/session:define`**: Use this to define a **new user story from scratch**. This command guides you through a conversational process to capture requirements and creates a new feature directory.
     ```bash
-    /session:define "define user story in natural language"
+    /session:define "define user story in natural language, you can link @filenames as well"
     ```
 
 *   **`/session:new`**: Use this to **create a feature document from an existing user story ID or Notion page URL**. This command fetches information from external services (like Shortcut or Notion) to pre-populate your feature directory.
@@ -28,7 +28,7 @@ To begin a work session, there are three primary commands:
     # Creates feature document fetching user story sc-1234 from Shortcut
     /session:new sc-12234
 
-    # Creates feature document fetching user story Notion
+    # Creates feature document fetching user story from Notion
     /session:new https://notion_page_url.com
     ```
 
