@@ -14,43 +14,6 @@ This document describes a suite of custom Gemini CLI commands for a structured, 
 This suite of commands orchestrates the flow of information between the user, the codebase, external tools, and dedicated documents that store these two types of knowledge. This creates persistent storage for both task-specific and project-wide information.
 
 
-## Core Concepts
-
--  **Session:** A session represents the working context for a single feature or user story.
-
-    In this workflow, a session is not only tied to the terminal or chat history. Instead, it is primarily defined by the feature directory, which stores the description, implementation plan, open questions, progress log, and review notes for the feature.
-
-    The terminal session is still used during development, but the feature directory acts as a more stable source of context. This makes it easier to resume work across multiple days and allows the LLM to use structured information rather than incomplete conversational history.
--   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See the `example-feature-document/` directory for a complete example.
-
-    Example:
-    ```
-    .vscode/sc-12345/
-        description.md
-        plan.yml
-        questions.yml
-        log.md
-        review.yml
-    ```
--   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory" and helps maintain and apply project knowledge consistently across all sessions.
-
-    Examples of knowledge to include in `GEMINI.md`:
-    -   Architectural conventions and rules
-    -   Testing standards and patterns
-    -   Recurring development patterns
-    -   Project-specific terminology and definitions.
-
-## Evolution of the Approach
-
-This project has evolved through several stages, with each step aiming to improve the process of AI-assisted development:
-
-*   **Phase 1: Prompt-based** - Initial approach with no structured context, reliant on chat history.
-*   **Phase 2: Single Feature Document** - Centralized all feature information into one document, which became unwieldy.
-*   **Phase 3: Feature Directory** - Split the single document into multiple, domain-specific files within a feature directory.
-*   **Phase 4: YAML + yq, Scripts, Subagents** - Introduced structured YAML files for state management, `yq` for updates, and helper scripts and subagents for deterministic task execution.
-
-This evolution represents a shift from a conversation-driven to a state-driven workflow, where explicit, structured state takes precedence over ephemeral chat history.
-
 ## Getting Started: Session Entry Points
 
 To begin a work session, there are three primary commands:
@@ -119,6 +82,63 @@ This lifecycle helps capture and utilize context, from initial requirements to f
     }
     ```
 
+## Commands
+
+- `**/session:address-feedback**: Fetches and helps address feedback comments from a GitHub Pull Request.
+- `**/session:checkpoint**: Saves a checkpoint of the work done by updating state files using the yq tool.
+- `**/session:define**: Starts a conversational session to define a new user story and create its feature directory.
+- `**/session:end**: Ends the work session, saving progress and project-wide knowledge to GEMINI.md.
+- `**/session:get-familiar`**: Gets familiar with the current code changes by having a subagent generate a summary.
+- `**/session:log-research**: Logs a summary of research findings to log.md.
+- `**/session:migration**: Migrates an old, single-file feature document to the new directory structure.
+- `**/session:new**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
+- `**/session:plan**: Analyzes codebase and feature requirements to create an implementation plan.
+- `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
+- `**/session:review**: Performs a code review of the current branch using a focused sub-agent.
+- `**/session:review-devops**: Performs a devops review of the current branch using a focused sub-agent.
+- `**/session:review-docs**: Performs a documentation review of the current branch using a focused sub-agent.
+- `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
+- `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
+- `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an analysis of any changes found.
+
+
+## Core Concepts
+
+-  **Session:** A session represents the working context for a single feature or user story.
+
+    In this workflow, a session is not only tied to the terminal or chat history. Instead, it is primarily defined by the feature directory, which stores the description, implementation plan, open questions, progress log, and review notes for the feature.
+
+    The terminal session is still used during development, but the feature directory acts as a more stable source of context. This makes it easier to resume work across multiple days and allows the LLM to use structured information rather than incomplete conversational history.
+-   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See the `example-feature-document/` directory for a complete example.
+
+    Example:
+    ```
+    .vscode/sc-12345/
+        description.md
+        plan.yml
+        questions.yml
+        log.md
+        review.yml
+    ```
+-   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory" and helps maintain and apply project knowledge consistently across all sessions.
+
+    Examples of knowledge to include in `GEMINI.md`:
+    -   Architectural conventions and rules
+    -   Testing standards and patterns
+    -   Recurring development patterns
+    -   Project-specific terminology and definitions.
+
+## Evolution of the Approach
+
+This project has evolved through several stages, with each step aiming to improve the process of AI-assisted development:
+
+*   **Phase 1: Prompt-based** - Initial approach with no structured context, reliant on chat history.
+*   **Phase 2: Single Feature Document** - Centralized all feature information into one document, which became unwieldy.
+*   **Phase 3: Feature Directory** - Split the single document into multiple, domain-specific files within a feature directory.
+*   **Phase 4: YAML + yq, Scripts, Subagents** - Introduced structured YAML files for state management, `yq` for updates, and helper scripts and subagents for deterministic task execution.
+
+This evolution represents a shift from a conversation-driven to a state-driven workflow, where explicit, structured state takes precedence over ephemeral chat history.
+
 ## Design Notes & Conventions
 
 ### A Note on the `.vscode` Directory
@@ -147,27 +167,6 @@ This workflow is still evolving, and there are some limitations to be aware of:
 *   **Requires discipline:** The workflow requires user discipline to be effective.
 *   **Semi-automated:** The workflow is not fully automated and requires user guidance.
 *   **Actively evolving:** The commands and processes are continuously being refined.
-
----
-
-## Commands
-
-- `**/session:address-feedback**: Fetches and helps address feedback comments from a GitHub Pull Request.
-- `**/session:checkpoint**: Saves a checkpoint of the work done by updating state files using the yq tool.
-- `**/session:define**: Starts a conversational session to define a new user story and create its feature directory.
-- `**/session:end**: Ends the work session, saving progress and project-wide knowledge to GEMINI.md.
-- `**/session:get-familiar`**: Gets familiar with the current code changes by having a subagent generate a summary.
-- `**/session:log-research**: Logs a summary of research findings to log.md.
-- `**/session:migration**: Migrates an old, single-file feature document to the new directory structure.
-- `**/session:new**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
-- `**/session:plan**: Analyzes codebase and feature requirements to create an implementation plan.
-- `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
-- `**/session:review**: Performs a code review of the current branch using a focused sub-agent.
-- `**/session:review-devops**: Performs a devops review of the current branch using a focused sub-agent.
-- `**/session:review-docs**: Performs a documentation review of the current branch using a focused sub-agent.
-- `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
-- `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
-- `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an analysis of any changes found.
 
 ---
 
