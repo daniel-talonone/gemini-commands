@@ -1,0 +1,13 @@
+# This is a sample questions file for testing purposes.
+- id: 'auth-method'
+  question: 'What authentication method should be used for the new membership endpoint?'
+  status: 'resolved'
+  answer: 'Use the existing session-based authentication middleware, same as the other user endpoints.'
+- id: 'error-message-format'
+  question: 'What should the format of the error message be if the External API is down?'
+  status: 'open'
+  answer: null
+- id: 'non-member-display'
+  question: 'Should the "Not a member" message be dismissible or always visible for non-members?'
+  status: 'open'
+  answer: null
