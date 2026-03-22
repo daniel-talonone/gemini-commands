@@ -1,24 +1,26 @@
-# Session Workflow Commands
+# A Session-Based Workflow for Development
 
-This document describes a suite of custom Gemini CLI commands designed to implement a structured, session-based workflow for software development. The workflow is centered around a "feature directory" that acts as a single source of truth for a task.
+> **Note on Active Development:** This project is under active development and is used as a playground for exploring and experimenting with AI-assisted development concepts. As such, commands and workflows may change or break unexpectedly.
 
-## Project Philosophy
+> **Important Note on Feature Directories:** By default, feature directories are located in `.vscode/`. However, this can be overridden by a custom path defined in your project's `GEMINI.md`. For more details, refer to [A Note on the `.vscode` Directory](#a-note-on-the-vscode-directory).
 
-The primary goal of this command suite is to create a robust, semi-automated development loop that intelligently manages context. The core idea is to differentiate between two types of knowledge:
+## Overview
+
+This document describes a suite of custom Gemini CLI commands for a structured, session-based workflow. The goal is to provide a semi-automated development loop that manages context by separating two types of knowledge:
 
 1.  **Feature-Specific Knowledge:** The details, requirements, implementation plan, and progress related to a single user story. This context is ephemeral and only relevant for the duration of the task.
-2.  **Project-Wide Knowledge:** Enduring architectural patterns, conventions, and learnings that should persist and be shared across all future development in the repository.
+2.  **Project-Wide Knowledge:** Architectural patterns, conventions, and learnings that should persist and be shared across all future development in the repository.
 
-This suite of commands orchestrates the flow of information between the user, the codebase, external tools, and dedicated documents that store these two types of knowledge, creating a persistent "memory" for both the specific task and the overall project.
+This suite of commands orchestrates the flow of information between the user, the codebase, external tools, and dedicated documents that store these two types of knowledge. This creates persistent storage for both task-specific and project-wide information.
 
 
 ## Core Concepts
 
 -  **Session:** A session represents the working context for a single feature or user story.
 
-    In this workflow, a session is not tied only to the terminal or chat history. Instead, it is primarily defined by the feature directory, which stores the description, implementation plan, open questions, progress log, and review notes for the feature.
+    In this workflow, a session is not only tied to the terminal or chat history. Instead, it is primarily defined by the feature directory, which stores the description, implementation plan, open questions, progress log, and review notes for the feature.
 
-    The terminal session is still used during development, but the feature directory acts as a more durable and explicit source of context. This makes it easier to resume work across multiple days and helps the LLM rely on structured information rather than incomplete conversational history.
+    The terminal session is still used during development, but the feature directory acts as a more stable source of context. This makes it easier to resume work across multiple days and allows the LLM to use structured information rather than incomplete conversational history.
 -   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See the `example-feature-document/` directory for a complete example.
 
     Example:
@@ -30,7 +32,7 @@ This suite of commands orchestrates the flow of information between the user, th
         log.md
         review.yml
     ```
--   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory." It ensures that key project knowledge is maintained and applied consistently across all sessions.
+-   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory" and helps maintain and apply project knowledge consistently across all sessions.
 
     Examples of knowledge to include in `GEMINI.md`:
     -   Architectural conventions and rules
@@ -38,56 +40,57 @@ This suite of commands orchestrates the flow of information between the user, th
     -   Recurring development patterns
     -   Project-specific terminology and definitions.
 
+## Evolution of the Approach
+
+This project has evolved through several stages, with each step aiming to improve the process of AI-assisted development:
+
+*   **Phase 1: Prompt-based** - Initial approach with no structured context, reliant on chat history.
+*   **Phase 2: Single Feature Document** - Centralized all feature information into one document, which became unwieldy.
+*   **Phase 3: Feature Directory** - Split the single document into multiple, domain-specific files within a feature directory.
+*   **Phase 4: YAML + yq, Scripts, Subagents** - Introduced structured YAML files for state management, `yq` for updates, and helper scripts and subagents for deterministic task execution.
+
+This evolution represents a shift from a conversation-driven to a state-driven workflow, where explicit, structured state takes precedence over ephemeral chat history.
+
 ## Getting Started: Session Entry Points
 
-To begin a work session, there are three primary commands, each serving a distinct purpose:
+To begin a work session, there are three primary commands:
 
 *   **`/session:define`**: Use this to define a **new user story from scratch**. This command guides you through a conversational process to capture requirements and creates a new feature directory.
 *   **`/session:new`**: Use this to **create a feature document from an existing user story ID or Notion page URL**. This command fetches information from external services (like Shortcut or Notion) to pre-populate your feature directory.
-*   **`/session:start`**: Use this to **resume work on an existing feature**. This command loads all context from a previously created feature directory into your current session.
+*   **`/session:start`**: Use this to **resume work on an existing feature**. This command loads context from a previously created feature directory into your current session.
 
-Once a session is started (either with `define`, `new`, or `start`), you can proceed with planning, implementation, and other workflow commands.
+Once a session is started, you can proceed with other workflow commands.
 
 ## Workflow Lifecycle
 
-While the commands can be used flexibly, they are designed to support a typical feature development lifecycle. The process is initiated by one of three entry-point commands and then proceeds through planning, implementation, and delivery.
+While the commands can be used flexibly, they are designed to support a typical feature development lifecycle. The process is initiated by one of the entry-point commands and then proceeds through planning, implementation, and delivery.
 
-Here is a typical end-to-end workflow:
+Here is a typical workflow:
 
-1.  **Start a Session** (Choose one entry point):
-    *   `/session:define`: Create a new story from scratch.
-    *   `/session:new sc-12345`: Create a story from an existing ticket.
-    *   `/session:start sc-12345`: Resume work on an existing story.
-
+1.  **Start a Session** (using one of the [entry points](#getting-started-session-entry-points)).
 2.  **Plan the Work**:
-    *   `/session:plan`: The agent analyzes the requirements and codebase to produce a detailed implementation plan (`plan.yml`).
-
+    *   `/session:plan`: The agent analyzes the requirements and codebase to produce an implementation plan (`plan.yml`).
 3.  **Implement**:
-    *   The developer writes the code to implement the tasks defined in the plan. This can be done manually or delegated to the LLM for AI-assisted coding.
-
+    *   The developer writes the code to implement the tasks defined in the plan.
 4.  **Track Progress** (Optional, as needed):
-    *   `/session:checkpoint`: Save a snapshot of the work, update task statuses, and log progress. Can be used multiple times.
+    *   `/session:checkpoint`: Save a snapshot of the work, update task statuses, and log progress.
     *   `/session:log-research`: Add research notes to the session log.
-
 5.  **Review and Deliver**:
     *   `/session:review`: The agent performs a code review of the local changes.
     *   `/session:pr`: The agent generates a pull request description and creates the PR on GitHub.
-    *   `/session:address-feedback`: After a PR is created and has received feedback, this command helps to fetch and address any unresolved review comments.
-
+    *   `/session:address-feedback`: After a PR is created, this command helps to fetch and address any unresolved review comments.
 6.  **End the Session**:
-    *   `/session:end`: The agent saves the final state and any long-term learnings.
+    *   `/session:end`: The agent saves the final state and any project-wide learnings.
 
-This structured lifecycle ensures that all context, from initial requirements to final delivery, is captured and utilized effectively.
+This lifecycle helps capture and utilize context, from initial requirements to final delivery.
 
-**Note**: The lifecycle described above is an example path, but the system is designed for flexibility. You can run `/session:end` at any point to safely store the current state. You can close your terminal and later resume your work exactly where you left off by using `/session:start`, regardless of whether you were in the middle of implementation, planning, or review.
+**Note**: The lifecycle described above is an example path. The system is designed for flexibility. You can run `/session:end` at any point to store the current state and later resume your work with `/session:start`.
 
 ## Dependencies
 
-This workflow has the following dependencies:
-
--   **`yq` command-line tool (v4+):** Required for atomic and reliable modification of `.yml` state files. It must be installed and available in the system's PATH.
--   **`yq-skill` & `tdd-skill`:** Locally installed Gemini skills that provide expert knowledge.
--   **External Services:** Integrations with Shortcut, Notion, Git, and GitHub are used for various commands. For detailed documentation on the available commands and their usage, refer to the Gemini CLI documentation for [Shortcut](https://www.shortcut.com/blog/why-we-built-the-shortcut-mcp-server), [Notion](https://developers.notion.com/guides/mcp/get-started-with-mcp), [Git](https://pypi.org/project/mcp-server-git/), and [GitHub](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-gemini-cli.md).
+-   **`yq` command-line tool (v4+):** Used for modifying `.yml` state files. It must be installed and available in the system's PATH.
+-   **`yq-skill` & `tdd-skill`:** Locally installed Gemini skills.
+-   **External Services:** Integrations with Shortcut, Notion, Git, and GitHub are used for various commands. For documentation on the available commands and their usage, refer to the Gemini CLI documentation for [Shortcut](https://www.shortcut.com/blog/why-we-built-the-shortcut-mcp-server), [Notion](https://developers.notion.com/guides/mcp/get-started-with-mcp), [Git](https://pypi.org/project/mcp-server-git/), and [GitHub](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-gemini-cli.md).
     To enable these integrations, configure your `.gemini/settings.json` with the following MCP servers:
     ```json
     "shortcut": {
@@ -122,65 +125,55 @@ This workflow has the following dependencies:
 
 The choice to store feature artifacts in `.vscode/` is a practical one based on personal habit. Because the `.vscode` folder is ignored in many of our projects, I have been using it to keep personal, project-related files that I don't want to commit.
 
+To override this default, you can specify a different path in your project's `GEMINI.md` file. For example:
+
+> **Feature document root is `.features/` instead of `.vscode/`**
+
 ### Architectural Rationale
 
-This project has evolved through several stages, with each step aimed at increasing reliability and using the best tool for the job. The core principle is to use deterministic, specialized tools (`yq`, shell scripts) for procedural tasks, and to reserve the LLM for creative, analytical, and orchestrating tasks. This has led to the following architectural patterns:
+The design principles of this project emphasize using deterministic tools (`yq`, shell scripts) for procedural tasks, while reserving the LLM for orchestration and analytical functions. This approach has led to the following architectural patterns:
 
 #### LLM Orchestrator with Helper Scripts
-This pattern is ideal for complex, interactive commands that may require conditional logic, loops, or user interaction.
-
-The pattern is as follows:
-1.  The command's `prompt` is defined as a **high-level LLM prompt**, not a shell script. This prompt makes the agent an "orchestrator" for the entire command workflow.
-2.  The orchestrator agent uses the `run_shell_command` tool to execute small, deterministic, single-purpose **helper scripts** for predictable steps where precision is critical (e.g., generating a filename with a specific timestamp format, running git commands).
-3.  The orchestrator agent then handles the complex, stateful, or interactive parts of the workflow itself, using its reasoning capabilities to manage the process.
-
-This architecture balances the reliability of scripts for deterministic tasks with the analytical flexibility of the LLM for complex ones. A command like `/session:define` is a good example.
+This pattern is for complex, interactive commands. The agent acts as an "orchestrator," using `run_shell_command` to execute small helper scripts for predictable steps, while handling the stateful or interactive parts of the workflow itself. This separates procedural tasks (handled by scripts) from analytical tasks (handled by the LLM). `/session:define` is a good example.
 
 #### Subagent Pattern for Focused Tasks
-This is the modern and preferred pattern for delegating a complex, one-off task to an isolated environment.
+This is the preferred pattern for delegating a complex, one-off task. The main agent instructs the `generalist` sub-agent to execute the task in an isolated session. This provides efficiency and context isolation. Commands like `/session:get-familiar`, `/session:checkpoint`, and `/session:pr` use this pattern.
 
-The pattern is as follows:
-1.  The command's `prompt` instructs the main agent to use the `generalist` sub-agent tool.
-2.  The prompt includes a detailed set of instructions that will be passed to the `generalist`.
-3.  The main agent calls the `generalist`, which executes the task in a completely isolated session with its own context and tools.
-4.  The final result is returned to the main agent.
 
-This provides maximum efficiency and context isolation. Commands like `/session:get-familiar`, `/session:checkpoint`, `/session:end`, `/session:new`, `/session:review`, `/session:pr`, and `/session:log-research` are good examples of this pattern.
+## Current Limitations and Future Considerations
 
-#### Session Context Pattern
-To improve performance and reduce token usage from repeatedly reading files, the command suite also uses an explicit context-passing pattern:
-1.  **Context Production:** The entry-point commands (`/session:start`, `/session:define`, `/session:new`) are responsible for producing a "Session Context" block. This block is displayed in the chat and contains the content of static files like `description.md` and `GEMINI.md`.
-2.  **Context Consumption:** Subsequent commands (`/session:plan`, `/session:review`, etc.) are designed to consume this context directly from the chat history, rather than re-reading the files from the disk.
-3.  **Context Updates:** If a command modifies a file that is part of the session context (e.g., `/session:pr` adding a URL to `description.md`), it is responsible for outputting an updated "Session Context" block, ensuring the session remains synchronized.
+This workflow is still evolving, and there are some limitations to be aware of:
 
-This pattern makes the context explicit and avoids redundant file I/O and token-intensive re-processing of the same information.
+*   **Requires discipline:** The workflow requires user discipline to be effective.
+*   **Semi-automated:** The workflow is not fully automated and requires user guidance.
+*   **Actively evolving:** The commands and processes are continuously being refined.
 
 ---
 
 ## Commands
 
-- `**/session:address-feedback**: Fetches and helps address feedback comments from the active feature's GitHub Pull Request.
-- `**/session:checkpoint**: Saves a checkpoint of the work done by updating the state files using the yq tool.
+- `**/session:address-feedback**: Fetches and helps address feedback comments from a GitHub Pull Request.
+- `**/session:checkpoint**: Saves a checkpoint of the work done by updating state files using the yq tool.
 - `**/session:define**: Starts a conversational session to define a new user story and create its feature directory.
-- `**/session:end**: Ends the work session, saving progress to the feature directory and project-wide knowledge to GEMINI.md.
+- `**/session:end**: Ends the work session, saving progress and project-wide knowledge to GEMINI.md.
 - `**/session:get-familiar`**: Gets familiar with the current code changes by having a subagent generate a summary.
-- `**/session:log-research**: Logs a detailed, comprehensive summary of research findings to log.md.
-- `**/session:migration**: Migrates an old, single-file feature document to the new directory structure with structured YAML files.
+- `**/session:log-research**: Logs a summary of research findings to log.md.
+- `**/session:migration**: Migrates an old, single-file feature document to the new directory structure.
 - `**/session:new**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
-- `**/session:plan**: Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
+- `**/session:plan**: Analyzes codebase and feature requirements to create an implementation plan.
 - `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
-- `**/session:review**: Performs a critical, context-aware code review of the current branch using a focused sub-agent.
-- `**/session:review-devops**: Performs a critical, context-aware devops review of the current branch using a focused sub-agent.
-- `**/session:review-docs**: Performs a critical, context-aware documentation review of the current branch using a focused sub-agent.
+- `**/session:review**: Performs a code review of the current branch using a focused sub-agent.
+- `**/session:review-devops**: Performs a devops review of the current branch using a focused sub-agent.
+- `**/session:review-docs**: Performs a documentation review of the current branch using a focused sub-agent.
 - `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
 - `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
-- `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an AI-powered analysis of any changes found.
+- `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an analysis of any changes found.
 
 ---
 
 ## Command Details
 
-This section provides a detailed breakdown of individual session commands, their dependencies, and their interactions with the file system and external tools.
+This section provides a breakdown of individual session commands, their dependencies, and their interactions with the file system and external tools.
 
 ### `/session:address-feedback`
 
@@ -192,7 +185,7 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Tools:** `read_file`, `pull_request_read`, `run_shell_command`
     -   **External Services:** GitHub
 -   **Inputs:**
-    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
+    -   The "Session Context" block from chat history.
     -   GitHub API (to get review comments).
 -   **Outputs:**
     -   Appends a summary to `.vscode/<feature-dir>/log.md`.
@@ -217,7 +210,7 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:define`
 
--   **Description:** Starts a conversational session to define a new user story and creates the corresponding feature directory and artifacts.
+-   **Description:** Starts a conversational session to define a new user story and creates the corresponding feature directory.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
@@ -241,7 +234,7 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Tools:** `read_file`, `run_shell_command`, `replace`, `generalist`
 -   **Inputs:**
     -   Session conversation history.
-    -   The "Session Context" block from chat history (for `GEMINI.md` content).
+    -   The "Session Context" block from chat history.
     -   `.vscode/<feature-dir>/plan.yml`
     -   `.vscode/<feature-dir>/questions.yml`
 -   **Outputs:**
@@ -258,13 +251,13 @@ This section provides a detailed breakdown of individual session commands, their
     -   **Scripts:** `scripts/get_git_context.sh`
     -   **Tools:** `generalist`
 -   **Inputs:**
-    -   Local Git repository state (diff against the remote default branch).
+    -   Local Git repository state.
 -   **Outputs:**
     -   Writes a summary of code changes to standard output.
 
 ### `/session:log-research`
 
--   **Description:** Logs a detailed, comprehensive summary of research findings to the feature's `log.md` file.
+-   **Description:** Logs a summary of research findings to the feature's `log.md` file.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Scripts:** `scripts/append_to_log.sh`
@@ -276,7 +269,7 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:migration`
 
--   **Description:** Migrates a legacy, single-file feature markdown document into the modern, multi-file directory structure.
+-   **Description:** Migrates a legacy, single-file feature markdown document into the multi-file directory structure.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Scripts:** `scripts/migrate_feature_file.sh`
@@ -290,7 +283,7 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:new`
 
--   **Description:** Creates a feature directory from a Shortcut story ID or Notion page URL, fetching related resources to populate the `description.md` file.
+-   **Description:** Creates a feature directory from a Shortcut story ID or Notion page URL, fetching resources to populate the `description.md` file.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Scripts:** `scripts/create_feature_dir.sh`
@@ -301,17 +294,17 @@ This section provides a detailed breakdown of individual session commands, their
     -   Reads `GEMINI.md`.
 -   **Outputs:**
     -   Creates a new directory and placeholder files.
-    -   Delegates writing the synthesized `description.md` to a sub-agent.
+    -   Delegates writing the `description.md` to a sub-agent.
     -   Outputs the "Session Context" block to the chat.
 
 ### `/session:plan`
 
--   **Description:** Analyzes codebase and feature requirements to create a detailed, TDD-ready implementation plan.
+-   **Description:** Analyzes codebase and feature requirements to create an implementation plan.
 -   **Orchestration Pattern:** LLM Orchestrator
 -   **Dependencies:**
     -   **Tools:** `read_file`, `glob`, `grep_search`, `write_file`
 -   **Inputs:**
-    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
+    -   The "Session Context" block from chat history.
     -   Codebase files via `glob` and `grep_search`.
     -   User input during interactive planning.
 -   **Outputs:**
@@ -320,7 +313,7 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:pr`
 
--   **Description:** Generates a pull request description, creates or updates the PR on GitHub, and saves the resulting PR link to the feature directory.
+-   **Description:** Generates a pull request description, creates or updates the PR on GitHub, and saves the PR link to the feature directory.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Scripts:** `scripts/get_git_context.sh`
@@ -328,7 +321,7 @@ This section provides a detailed breakdown of individual session commands, their
     -   **External Services:** GitHub
 -   **Inputs:**
     -   The "Session Context" block from chat history.
-    -   Git repository state (via script).
+    -   Git repository state.
     -   `.git/pull_request_template.md`
     -   Feature directory files (`plan.yml`, `log.md`).
 -   **Outputs:**
@@ -340,49 +333,49 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:review`
 
--   **Description:** Performs a critical, context-aware code review of the current branch using a focused sub-agent.
+-   **Description:** Performs a code review of the current branch using a focused sub-agent.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Scripts:** `scripts/get_git_context.sh`
     -   **Tools:** `run_shell_command`, `read_file`, `generalist`
 -   **Inputs:**
-    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
-    -   Git repository state (via script).
+    -   The "Session Context" block from chat history.
+    -   Git repository state.
     -   Reads back the `.vscode/<feature-dir>/review.yml` for verification.
 -   **Outputs:**
     -   Delegates writing `.vscode/<feature-dir>/review.yml` to a sub-agent.
 
 ### `/session:review-devops`
 
--   **Description:** Performs a critical, context-aware devops review of the current branch using a focused sub-agent.
+-   **Description:** Performs a devops review of the current branch using a focused sub-agent.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Scripts:** `scripts/get_git_context.sh`
     -   **Tools:** `run_shell_command`, `read_file`, `generalist`
 -   **Inputs:**
-    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
-    -   Git repository state (via script).
+    -   The "Session Context" block from chat history.
+    -   Git repository state.
     -   Reads back the `.vscode/<feature-dir>/devops-review.yml` for verification.
 -   **Outputs:**
     -   Delegates writing `.vscode/<feature-dir>/devops-review.yml` to a sub-agent.
 
 ### `/session:review-docs`
 
--   **Description:** Performs a critical, context-aware documentation review of the current branch using a focused sub-agent.
+-   **Description:** Performs a documentation review of the current branch using a focused sub-agent.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Scripts:** `scripts/get_git_context.sh`
     -   **Tools:** `run_shell_command`, `read_file`, `generalist`
 -   **Inputs:**
-    -   The "Session Context" block from chat history (for `description.md` and `GEMINI.md` content).
-    -   Git repository state (via script).
+    -   The "Session Context" block from chat history.
+    -   Git repository state.
     -   Reads back the `.vscode/<feature-dir>/docs-review.yml` for verification.
 -   **Outputs:**
     -   Delegates writing `.vscode/<feature-dir>/docs-review.yml` to a sub-agent.
 
 ### `/session:start`
 
--   **Description:** Starts a work session by loading all context from a feature directory and the project's `GEMINI.md` file.
+-   **Description:** Starts a work session by loading context from a feature directory and the project's `GEMINI.md` file.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Scripts:** `scripts/load_context_files.sh`
@@ -394,19 +387,19 @@ This section provides a detailed breakdown of individual session commands, their
 
 ### `/session:summary`
 
--   **Description:** Generates a single, human-readable Markdown summary of the feature's entire state.
+-   **Description:** Generates a human-readable Markdown summary of the feature's entire state.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Scripts:** `scripts/load_context_files.sh`
     -   **Tools:** `run_shell_command`, `write_file`
 -   **Inputs:**
-    -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
+    -   The output of the `load_context_files.sh` script.
 -   **Outputs:**
     -   `.vscode/<feature-dir>/_SUMMARY.md`
 
 ### `/session:verify-release`
 
--   **Description:** Verifies a cherry-picked release branch against its original commits and provides an AI-powered analysis of any discrepancies.
+-   **Description:** Verifies a cherry-picked release branch against its original commits and provides an analysis of any discrepancies.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Scripts:** `scripts/verify-release.sh`
