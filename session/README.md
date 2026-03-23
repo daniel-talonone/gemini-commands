@@ -103,22 +103,22 @@ This lifecycle helps capture and utilize context, from initial requirements to f
 
 ## Commands
 
-- `**/session:address-feedback**: Fetches and helps address feedback comments from a GitHub Pull Request.
-- `**/session:checkpoint**: Saves a checkpoint of the work done by updating state files using the yq tool.
-- `**/session:define**: Starts a conversational session to define a new user story and create its feature directory.
-- `**/session:end**: Ends the work session, saving progress and project-wide knowledge to GEMINI.md.
-- `**/session:get-familiar`**: Gets familiar with the current code changes by having a subagent generate a summary.
-- `**/session:log-research**: Logs a summary of research findings to log.md.
-- `**/session:migration**: Migrates an old, single-file feature document to the new directory structure.
-- `**/session:new**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
-- `**/session:plan**: Analyzes codebase and feature requirements to create an implementation plan.
-- `**/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
-- `**/session:review**: Performs a code review of the current branch using a focused sub-agent.
-- `**/session:review-devops**: Performs a devops review of the current branch using a focused sub-agent.
-- `**/session:review-docs**: Performs a documentation review of the current branch using a focused sub-agent.
-- `**/session:start**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
-- `**/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
-- `**/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an analysis of any changes found.
+- **/session:address-feedback**: Fetches and helps address feedback comments from a GitHub Pull Request.
+- **/session:checkpoint**: Saves a checkpoint of the work done by updating state files using the yq tool.
+- **/session:define {USER STORY DESCRIPTION}**: Starts a conversational session to define a new user story and create its feature directory.
+- **/session:end**: Ends the work session, saving progress and project-wide knowledge to GEMINI.md.
+- `**/session:get-familiar**: Gets familiar with the current code changes by having a subagent generate a summary.
+- **/session:log-research**: Logs a summary of research findings to log.md.
+- **/session:migration**: Migrates an old, single-file feature document to the new directory structure.
+- **/session:new {SHORTCUT ID}**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
+- **/session:plan**: Analyzes codebase and feature requirements to create an implementation plan.
+- **/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
+- **/session:review**: Performs a code review of the current branch using a focused sub-agent.
+- **/session:review-devops**: Performs a devops review of the current branch using a focused sub-agent.
+- **/session:review-docs**: Performs a documentation review of the current branch using a focused sub-agent.
+- **/session:start {FEATURE DIRECTORY NAME}**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
+- **/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
+- **/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an analysis of any changes found.
 
 Please check the file [Command Details](command_details.md) for more information.
 
