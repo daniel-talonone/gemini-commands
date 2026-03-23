@@ -107,7 +107,7 @@ This lifecycle helps capture and utilize context, from initial requirements to f
 - **/session:checkpoint**: Saves a checkpoint of the work done by updating state files using the yq tool.
 - **/session:define {USER STORY DESCRIPTION}**: Starts a conversational session to define a new user story and create its feature directory.
 - **/session:end**: Ends the work session, saving progress and project-wide knowledge to GEMINI.md.
-- `**/session:get-familiar**: Gets familiar with the current code changes by having a subagent generate a summary.
+- **/session:get-familiar**: Gets familiar with the current code changes by having a subagent generate a summary.
 - **/session:log-research**: Logs a summary of research findings to log.md.
 - **/session:migration**: Migrates an old, single-file feature document to the new directory structure.
 - **/session:new {SHORTCUT ID}**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
