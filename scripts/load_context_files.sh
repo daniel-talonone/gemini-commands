@@ -42,8 +42,13 @@ for file in "${FILES_TO_LOAD[@]}"; do
   fi
 done
 
-# Also load the global project GEMINI.md, which is expected by session commands.
-if [ -f "GEMINI.md" ]; then
+# Also load the project context file (AGENTS.md takes precedence as the LLM-agnostic standard,
+# falling back to GEMINI.md for backward compatibility).
+if [ -f "AGENTS.md" ]; then
+    echo "--- FILE: AGENTS.md ---"
+    cat "AGENTS.md"
+    echo ""
+elif [ -f "GEMINI.md" ]; then
     echo "--- FILE: GEMINI.md ---"
     cat "GEMINI.md"
     echo ""

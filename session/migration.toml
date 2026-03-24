@@ -1,17 +1,13 @@
 description = "Migrates an old, single-file feature document to the new directory structure by calling a dedicated helper script."
 prompt = """
-#!/bin/bash
-set -e
+Your task is to migrate a legacy single-file feature Markdown document to the multi-file directory structure.
 
-# This command is now a simple, reliable wrapper around a robust helper script.
-# It ensures the script is executable and passes the argument to it.
+The user has provided a file path as an argument: `{{args}}`.
 
-COMMANDS_DIR="$HOME/.gemini/commands"
-SCRIPT_PATH="$COMMANDS_DIR/scripts/migrate_feature_file.sh"
+**Steps:**
 
-# Ensure the helper script is executable
-chmod +x "$SCRIPT_PATH"
+1.  Run the migration helper script using `run_shell_command`, passing the provided file path as the argument:
+    `$HOME/.gemini/commands/scripts/migrate_feature_file.sh "{{args}}"`
 
-# Execute the migration script with the provided file path
-"$SCRIPT_PATH" "{{args}}"
+2.  Report the outcome to the user: confirm the new directory was created, the files were populated, and the original file was archived with a `.migrated` extension.
 """

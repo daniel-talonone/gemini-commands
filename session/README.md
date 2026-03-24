@@ -167,7 +167,7 @@ The choice to store feature artifacts in `.vscode/` is a practical one based on 
 
 To override this default, you can specify a different path in your project's `GEMINI.md` file. For example:
 
-> **Feature document root is `.features/` instead of `.vscode/`**
+> **Feature directories root is `.features/` instead of `.vscode/`**
 
 ### Architectural Rationale
 

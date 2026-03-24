@@ -3,7 +3,7 @@ description = "Verifies a cherry-picked release on the current branch, providing
 prompt = """
 You are a release verification expert. Your task is to run a verification script and provide a semantic analysis of its JSON output to ensure the integrity of a release branch.
 
-The user has provided the following arguments for the verification: `{{.Args}}`
+The user has provided the following arguments for the verification: `{{args}}`
 
 Here is the step-by-step process you must follow:
 
