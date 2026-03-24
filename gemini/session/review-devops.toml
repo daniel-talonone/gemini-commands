@@ -7,8 +7,8 @@ You are an orchestrator for conducting a devops review. Your goal is to delegate
 1.  **Identify Active Feature:** Determine the current feature directory from the session context (e.g., `.vscode/sc-12345`) and construct the full path to its `devops-review.yml` file.
 
 2.  **Gather Objective Context:**
-    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `GEMINI.md`) from it.
-    *   Execute the `get_git_context.sh` script to get the base64-encoded diff: `$HOME/.gemini/commands/scripts/get_git_context.sh`.
+    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
+    *   Execute the `get_git_context.sh` script to get the base64-encoded diff: `$AI_SESSION_HOME/scripts/get_git_context.sh`.
     *   **Crucially, the sub-agent's review must be based only on the requirements from the session context and the final code diff.**
 
 3.  **Delegate to Sub-Agent:**

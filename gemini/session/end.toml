@@ -1,4 +1,4 @@
-description = "Ends the work session, saving progress to the feature directory and project-wide knowledge to GEMINI.md."
+description = "Ends the work session, saving progress to the feature directory and project-wide knowledge to AGENTS.md."
 prompt = """
 You are an assistant that helps finalize a work session. Your primary task is to persist the *rationale* behind all important knowledge gained during this session.
 
@@ -29,12 +29,12 @@ You are an assistant that helps finalize a work session. Your primary task is to
     *   First, generate a concise but comprehensive "Session Summary" markdown entry based on all the work completed.
     *   Then, execute the `append_to_log.sh` script using `run_shell_command` to append the summary to the `log.md` file.
     *   **You must call the script directly.** The command should look like this, replacing the variables with the correct values:
-        `$HOME/.gemini/commands/scripts/append_to_log.sh "path/to/your/log.md" "Your generated summary text."`
+        `$AI_SESSION_HOME/scripts/append_to_log.sh "path/to/your/log.md" "Your generated summary text."`
 
-4.  **Update Project Knowledge (`GEMINI.md`):**
+4.  **Update Project Knowledge (`AGENTS.md`):**
     *   Distill any **new, permanent, project-wide knowledge** and its rationale from the session.
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history and get the **Project Conventions** content from it.
-    *   Integrate the new knowledge into this content and use the `replace` tool to update the `GEMINI.md` file. The extracted content will serve as the `old_string` for the `replace` operation.
+    *   Integrate the new knowledge into this content and use the `replace` tool to update the `AGENTS.md` file. The extracted content will serve as the `old_string` for the `replace` operation.
 
 5.  **Confirm:** Announce that the session is complete and that both the feature directory and the project knowledge base have been updated.
 """

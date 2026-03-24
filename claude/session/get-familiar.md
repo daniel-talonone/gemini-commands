@@ -1,14 +1,15 @@
-description = "Gets familiar with the current code changes by having a subagent generate a summary."
-ephemeral = true
-prompt = """
-Use the `generalist` subagent to perform a review of the current code changes.
+---
+description: Gets familiar with the current code changes by having a sub-agent generate a summary.
+---
 
-Pass the following prompt to the generalist:
+Use the Agent tool (subagent_type: "general-purpose") to perform a review of the current code changes.
+
+Pass the following prompt to the sub-agent:
+
 "You are an expert code reviewer. Your task is to provide a concise summary of the code changes on the current branch.
 
 Follow these steps:
-1.  Execute the shell script using its full, absolute path: `$HOME/.gemini/commands/scripts/get_git_context.sh`.
+1.  Execute the shell script using the Bash tool with its full, absolute path: `$AI_SESSION_HOME/scripts/get_git_context.sh`.
 2.  The JSON output contains a `diff` field which is base64 encoded. You **must** decode this diff content before analyzing it.
 3.  If the decoded diff is empty, inform the user that there are no changes to review and stop.
 4.  If there are changes, analyze the decoded diff and provide a high-level, concise summary. Use bullet points and focus on the overall purpose and impact, not a line-by-line analysis."
-"""

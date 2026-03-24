@@ -53,7 +53,7 @@ This section provides a breakdown of individual session commands, their dependen
 
 ## `/session:end`
 
--   **Description:** Ends the work session, saving a final summary to the feature directory and persisting any project-wide knowledge to `GEMINI.md`.
+-   **Description:** Ends the work session, saving a final summary to the feature directory and persisting any project-wide knowledge to `AGENTS.md`.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Skills:** `yq YAML Processing`
@@ -68,7 +68,7 @@ This section provides a breakdown of individual session commands, their dependen
     -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
     -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
     -   Appends a final summary to `.vscode/<feature-dir>/log.md`.
-    -   Modifies `GEMINI.md` in-place.
+    -   Modifies `AGENTS.md` in-place.
 
 ## `/session:get-familiar`
 
@@ -118,7 +118,7 @@ This section provides a breakdown of individual session commands, their dependen
     -   **External Services:** Shortcut, Notion, GitHub
 -   **Inputs:**
     -   Delegates API calls to Shortcut, Notion, and GitHub to a sub-agent.
-    -   Reads `GEMINI.md`.
+    -   Reads `AGENTS.md`.
 -   **Outputs:**
     -   Creates a new directory and placeholder files.
     -   Delegates writing the `description.md` to a sub-agent.
@@ -202,13 +202,13 @@ This section provides a breakdown of individual session commands, their dependen
 
 ## `/session:start {FEATURE DIRECTORY NAME}`
 
--   **Description:** Starts a work session by loading context from a feature directory and the project's `GEMINI.md` file.
+-   **Description:** Starts a work session by loading context from a feature directory and the project's `AGENTS.md` file.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Scripts:** `scripts/load_context_files.sh`
     -   **Tools:** `run_shell_command`
 -   **Inputs:**
-    -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `GEMINI.md`.
+    -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `AGENTS.md`.
 -   **Outputs:**
     -   Outputs the "Session Context" block to the chat.
 

@@ -19,7 +19,7 @@ git fetch origin
 # This includes all committed, staged, and unstaged changes.
 # The diff is base64 encoded to handle special characters safely in JSON.
 diff_content=$(git diff "origin/$default_branch" -- . ':(exclude)vendor' ':(exclude)node_modules')
-encoded_diff=$(echo "$diff_content" | base64)
+encoded_diff=$(echo "$diff_content" | base64 | tr -d '\n')
 
 # Output as JSON
 cat <<EOF

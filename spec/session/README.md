@@ -2,17 +2,27 @@
 
 > **Note on Active Development:** This project is under active development and is used as a playground for exploring and experimenting with AI-assisted development concepts. As such, commands and workflows may change or break unexpectedly.
 
-> **Important Note on Feature Directories:** By default, feature directories are located in `.vscode/`. However, this can be overridden by a custom path defined in your project's `GEMINI.md`. For more details, refer to [A Note on the `.vscode` Directory](#a-note-on-the-vscode-directory).
+> **Important Note on Feature Directories:** By default, feature directories are located in `.vscode/`. However, this can be overridden by a custom path defined in your project's `AGENTS.md`. For more details, refer to [A Note on the `.vscode` Directory](#a-note-on-the-vscode-directory).
 
 ## Overview
 
-This document describes a suite of custom Gemini CLI commands for a structured, session-based workflow. The goal is to provide a semi-automated development loop that manages context by separating two types of knowledge:
+This document describes a suite of AI assistant commands for a structured, session-based workflow, compatible with both Gemini CLI and Claude Code. The goal is to provide a semi-automated development loop that manages context by separating two types of knowledge:
 
 1.  **Feature-Specific Knowledge:** The details, requirements, implementation plan, and progress related to a single user story. This context is ephemeral and only relevant for the duration of the task.
 2.  **Project-Wide Knowledge:** Architectural patterns, conventions, and learnings that should persist and be shared across all future development in the repository.
 
 This suite of commands orchestrates the flow of information between the user, the codebase, external tools, and dedicated documents that store these two types of knowledge. This creates persistent storage for both task-specific and project-wide information.
 
+
+## How to Invoke Commands
+
+Commands follow a `/namespace:command` syntax and are typed directly in your AI
+assistant's chat interface — not in the terminal.
+
+- **Gemini CLI:** type `/session:start sc-1234` in the Gemini chat prompt
+- **Claude Code:** type `/session:start sc-1234` in the Claude Code chat prompt
+
+Both tools use the same `/session:` prefix. Arguments are passed after the command name.
 
 ## Getting Started: Session Entry Points
 
@@ -26,7 +36,7 @@ To begin a work session, there are three primary commands:
 *   **`/session:new`**: Use this to **create a feature document from an existing user story ID or Notion page URL**. This command fetches information from external services (like Shortcut or Notion) to pre-populate your feature directory.
     ```bash
     # Creates feature document fetching user story sc-1234 from Shortcut
-    /session:new sc-12234
+    /session:new sc-1234
 
     # Creates feature document fetching user story from Notion
     /session:new https://notion_page_url.com
@@ -70,43 +80,62 @@ This lifecycle helps capture and utilize context, from initial requirements to f
 
 ## Dependencies
 
--   **`yq` command-line tool (v4+):** Used for modifying `.yml` state files. It must be installed and available in the system's PATH.
--   **[`yq-skill`](https://mcpmarket.com/tools/skills/yaml-processing-transformation) & `tdd-skill`:** Locally installed Gemini skills.
--   **External Services:** Integrations with Shortcut, Notion, Git, and GitHub are used for various commands. For documentation on the available commands and their usage, refer to the Gemini CLI documentation for [Shortcut](https://www.shortcut.com/blog/why-we-built-the-shortcut-mcp-server), [Notion](https://developers.notion.com/guides/mcp/get-started-with-mcp), [Git](https://pypi.org/project/mcp-server-git/), and [GitHub](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-gemini-cli.md).
-    To enable these integrations, configure your `.gemini/settings.json` with the following MCP servers:
+-   **`yq` v4+:** Used for modifying `.yml` state files (`brew install yq`). Make sure
+    you install [mikefarah/yq](https://github.com/mikefarah/yq), not the Python-based
+    `yq` — they have different syntax.
+-   **Node.js / `npx`:** Required for several MCP servers.
+-   **`uv` / `uvx`:** Required for the Git MCP server (`brew install uv`).
+-   **Gemini skills (Gemini CLI only):** Two skills need to be installed locally.
+    From the repo root, run:
+    ```bash
+    gemini skills install ~/.ai-session/gemini/tdd-skill
+    gemini skills install ~/.ai-session/gemini/yq-skill
+    ```
+-   **MCP Servers:** Integrations with Shortcut, Notion, Git, and GitHub are used by
+    several commands. Configure them in your tool's settings file.
+
+    **Gemini CLI** — add to `~/.gemini/settings.json` under `"mcpServers"`:
     ```json
     "shortcut": {
         "command": "npx",
-        "args": [
-        "-y",
-        " @shortcut/mcp@latest"
-        ],
+        "args": ["-y", "@shortcut/mcp@latest"],
         "env": {
-        "SHORTCUT_API_TOKEN": "{SHORTCUT_TOKEN}"
+            "SHORTCUT_API_TOKEN": "your_shortcut_api_token_here"
         }
     },
     "notion": {
         "command": "npx",
-        "args": [
-        "-y",
-        "mcp-remote",
-        "https://mcp.notion.com/mcp"
-        ]
+        "args": ["-y", "mcp-remote", "https://mcp.notion.com/mcp"]
+        // Note: requires browser-based OAuth on first run
     },
     "git": {
         "command": "uvx",
-        "args": [
-        "mcp-server-git"
-        ]
+        "args": ["mcp-server-git"]
+    },
+    "github": {
+        "command": "npx",
+        "args": ["-y", "@github/mcp-server"],
+        "env": {
+            "GITHUB_PERSONAL_ACCESS_TOKEN": "your_github_token_here"
+        }
     }
     ```
+
+    **Claude Code** — add the same block to `~/.claude/settings.json` under
+    `"mcpServers"`. The format is identical.
+
+    For more details see the docs for
+    [Shortcut](https://www.shortcut.com/blog/why-we-built-the-shortcut-mcp-server),
+    [Notion](https://developers.notion.com/guides/mcp/get-started-with-mcp),
+    [Git](https://pypi.org/project/mcp-server-git/), and
+    [GitHub](https://github.com/github/github-mcp-server).
 
 ## Commands
 
 - **/session:address-feedback**: Fetches and helps address feedback comments from a GitHub Pull Request.
 - **/session:checkpoint**: Saves a checkpoint of the work done by updating state files using the yq tool.
 - **/session:define {USER STORY DESCRIPTION}**: Starts a conversational session to define a new user story and create its feature directory.
-- **/session:end**: Ends the work session, saving progress and project-wide knowledge to GEMINI.md.
+- **/session:end**: Ends the work session, saving progress and project-wide knowledge to AGENTS.md.
 - **/session:get-familiar**: Gets familiar with the current code changes by having a subagent generate a summary.
 - **/session:log-research**: Logs a summary of research findings to log.md.
 - **/session:migration**: Migrates an old, single-file feature document to the new directory structure.
@@ -116,11 +145,11 @@ This lifecycle helps capture and utilize context, from initial requirements to f
 - **/session:review**: Performs a code review of the current branch using a focused sub-agent.
 - **/session:review-devops**: Performs a devops review of the current branch using a focused sub-agent.
 - **/session:review-docs**: Performs a documentation review of the current branch using a focused sub-agent.
-- **/session:start {FEATURE DIRECTORY NAME}**: Starts a work session by loading context from a feature directory and the project's GEMINI file.
+- **/session:start {FEATURE DIRECTORY NAME}**: Starts a work session by loading context from a feature directory and the project's AGENTS.md file.
 - **/session:summary**: Generates a human-readable Markdown summary of the entire feature's state.
 - **/session:verify-release**: Verifies a cherry-picked release on the current branch, providing an analysis of any changes found.
 
-Please check the file [Command Details](command_details.md) for more information.
+Please check the file [Command Details](command_details.md) for a full breakdown of each command's dependencies, inputs, and outputs.
 
 ## Core Concepts
 
@@ -129,7 +158,7 @@ Please check the file [Command Details](command_details.md) for more information
     In this workflow, a session is not only tied to the terminal or chat history. Instead, it is primarily defined by the feature directory, which stores the description, implementation plan, open questions, progress log, and review notes for the feature.
 
     The terminal session is still used during development, but the feature directory acts as a more stable source of context. This makes it easier to resume work across multiple days and allows the LLM to use structured information rather than incomplete conversational history.
--   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See the `example-feature-document/` directory for a complete example.
+-   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See [`spec/session/example-feature-document/`](example-feature-document/) in this repo for a complete example.
 
     Example:
     ```
@@ -140,9 +169,13 @@ Please check the file [Command Details](command_details.md) for more information
         log.md
         review.yml
     ```
--   **Project Document (`GEMINI.md`):** A global file that stores project-wide context, architectural guidelines, and conventions. This serves as the "project memory" and helps maintain and apply project knowledge consistently across all sessions.
+-   **Project Document (`AGENTS.md`):** A file at the root of **each of your own
+    repositories** (not this repo) that stores project-wide context, architectural
+    guidelines, and conventions. The AI reads this file to understand the project it
+    is helping with. This serves as the "project memory" and helps maintain consistency
+    across all sessions on that project.
 
-    Examples of knowledge to include in `GEMINI.md`:
+    Examples of knowledge to include in `AGENTS.md`:
     -   Architectural conventions and rules
     -   Testing standards and patterns
     -   Recurring development patterns
@@ -165,7 +198,7 @@ This evolution represents a shift from a conversation-driven to a state-driven w
 
 The choice to store feature artifacts in `.vscode/` is a practical one based on personal habit. Because the `.vscode` folder is ignored in many of our projects, I have been using it to keep personal, project-related files that I don't want to commit.
 
-To override this default, you can specify a different path in your project's `GEMINI.md` file. For example:
+To override this default, you can specify a different path in your project's `AGENTS.md` file. For example:
 
 > **Feature directories root is `.features/` instead of `.vscode/`**
 

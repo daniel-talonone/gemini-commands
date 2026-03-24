@@ -31,7 +31,7 @@ You are an orchestrator for logging research. Your goal is to review the session
     **Task:**
     1.  Based on the **Action Summary**, generate a **highly detailed, comprehensive report** in Markdown.
     2.  Do **not** summarize heavily; the goal is to expand on the provided points and preserve information for future reference. Elaborate on the "why" behind the actions.
-    3.  Call the `$HOME/.gemini/commands/scripts/append_to_log.sh` script to append your detailed report to the provided **Log File Path**.
+    3.  Call the `$AI_SESSION_HOME/scripts/append_to_log.sh` script to append your detailed report to the provided **Log File Path**.
     4.  Confirm that the log entry has been added. Do not output the report itself.
     ---
 

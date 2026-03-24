@@ -1,5 +1,7 @@
-description = "Performs a critical, context-aware code review of the current branch using a focused sub-agent."
-prompt = """
+---
+description: Performs a critical, context-aware code review of the current branch using a focused sub-agent.
+---
+
 You are an orchestrator for conducting a code review. Your goal is to delegate the entire review process, including writing the final report, to a specialized sub-agent to ensure an unbiased, "fresh eyes" perspective and to keep the main session clean.
 
 **Orchestration Process:**
@@ -7,13 +9,13 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
 1.  **Identify Active Feature:** Determine the current feature directory from the session context (e.g., `.vscode/sc-12345`) and construct the full path to its `review.yml` file.
 
 2.  **Gather Objective Context:**
-    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `GEMINI.md`) from it.
-    *   Execute the `get_git_context.sh` script to get the base64-encoded diff: `$HOME/.gemini/commands/scripts/get_git_context.sh`.
+    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
+    *   Execute the `get_git_context.sh` script using the Bash tool: `$AI_SESSION_HOME/scripts/get_git_context.sh`.
     *   **Crucially, the sub-agent's review must be based only on the requirements from the session context and the final code diff.**
 
 3.  **Delegate to Sub-Agent:**
-    *   Use the `generalist` tool to perform the review and save the results.
-    *   Construct and pass the following detailed prompt to the `generalist`. You must embed the gathered context and the target file path directly into the prompt.
+    *   Use the Agent tool (subagent_type: "general-purpose") to perform the review and save the results.
+    *   Embed the gathered context and the target file path directly into the sub-agent prompt.
 
     ---
     **Sub-Agent Prompt:**
@@ -33,27 +35,25 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
         ```
 
     *   **Code Diff (base64 encoded):** `{{base64 encoded diff}}`
-    
+
     *   **Target File Path:** `{{path to review.yml}}`
 
     **Review Process:**
 
     1.  **Decode Diff:** Decode the base64 `diff` content to get the code changes.
-    2.  **Perform Review:** Analyze the decoded `diff` in the context of the feature and project documents provided. Scrutinize every change for bugs, misalignment with requirements, architectural issues, style violations, and any other nitpicks.
-    3.  **Format Feedback as YAML:** Compile all your findings into a list of YAML objects.
-        *   Each object **must** have `id`, `file`, `line`, `feedback`, and `status` fields.
-        *   `id`: A short, human-readable, unique identifier in 'kebab-case'.
+    2.  **Perform Review:** Analyze the decoded diff against the feature and project context. Scrutinize every change for bugs, misalignment with requirements, architectural issues, style violations, and any other nitpicks.
+    3.  **Format Feedback as YAML:** Compile all findings into a list of YAML objects. Each object **must** have:
+        *   `id`: A short, unique, kebab-case identifier.
         *   `file`: The path to the relevant file.
         *   `line`: The relevant line number.
         *   `feedback`: The critical feedback text.
-        *   `status`: Always 'open'.
-    4.  **Save Feedback:** Use the `write_file` tool to save your YAML-formatted list of feedback directly to the provided **Target File Path**.
+        *   `status`: Always `'open'`.
+    4.  **Save Feedback:** Use the Write tool to save the YAML-formatted list directly to the **Target File Path**.
 
     ---
 
 4.  **Verify and Familiarize:**
-    *   After the sub-agent task is complete, use the `read_file` tool to read the content of the `review.yml` file that the sub-agent created.
+    *   After the sub-agent completes, use the Read tool to read the content of the `review.yml` file.
     *   This verifies that the process was successful and loads the review into the main session context.
 
 **Begin.**
-"""

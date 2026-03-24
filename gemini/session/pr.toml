@@ -5,9 +5,10 @@ You are an orchestrator for creating pull requests. You will gather all necessar
 **Process:**
 
 1.  **Gather All Context:**
-    *   **Git Context:** Call `$HOME/.gemini/commands/scripts/get_git_context.sh` to get the diff (decode it from base64) and current branch name.
+    *   **Git Context:** Call `$AI_SESSION_HOME/scripts/get_git_context.sh` to get the diff (decode it from base64) and current branch name.
     *   **Feature Context:** Identify the active feature directory and read the content of `plan.yml` and `log.md`.
-    *   **Session Context:** Find the `### ✨ Session Context Loaded for...` block and extract the **Description** (which may contain the original user story) and **Project Conventions**.
+    *   **Session Context:** Find the `### ✨ Session Context Loaded for...` block and extract the **Description** (which may contain the original user story).
+    *   **Project Conventions:** Read the `AGENTS.md` file. Its content is for your internal use and should be retained in your working memory. **DO NOT display its content.**
     *   **PR Template:** Read the content of `.git/pull_request_template.md`.
 
 2.  **Delegate Description Generation to Sub-Agent:**
@@ -25,7 +26,7 @@ You are an orchestrator for creating pull requests. You will gather all necessar
     *   **Implementation Plan:** `{{content of plan.yml}}`
     *   **Development Log:** `{{content of log.md}}`
     *   **Code Diff:** `{{decoded diff}}`
-    *   **Project Conventions:** `{{content of GEMINI.md from session context}}`
+    *   **Project Conventions:** `{{content of AGENTS.md from session context}}`
 
     **Task:**
     1.  Fill out the PR template using all the provided context. The `plan.yml` is useful for summarizing completed tasks.
@@ -38,10 +39,15 @@ You are an orchestrator for creating pull requests. You will gather all necessar
     *   Use the `current_branch` from the git context.
     *   Use `search_pull_requests` with `head:[branch_name] is:open` to find an open PR for the current branch.
 
-4.  **Update or Create the Pull Request:**
-    *   Use the description text returned by the sub-agent.
-    *   **If a PR exists:** Update its body.
-    *   **If no PR exists:** Ask the user for approval to create one. If approved, create it. If denied, run the fallback (Step 6).
+4.  **Review, and then Update or Create the Pull Request:**
+    *   You have the PR description from the sub-agent.
+    *   **If a PR exists:**
+        *   Update its body with the new description.
+    *   **If no PR exists:**
+        *   **CRITICAL: First, display the full generated PR description to the user for review.**
+        *   Then, ask the user for approval to create a new pull request.
+        *   If approved, create it using the generated description.
+        *   If denied, run the fallback (Step 6).
 
 5.  **CRITICAL: Save PR Link & Update Session Context:**
     *   Get the URL of the pull request from the tool output.
@@ -55,9 +61,6 @@ You are an orchestrator for creating pull requests. You will gather all necessar
 
         **Description:**
         > {{new content of description.md}}
-
-        **Project Conventions (from GEMINI.md):**
-        > {{Project Conventions extracted earlier from the session context}}
 
         This context is now available for all subsequent commands.
         ```

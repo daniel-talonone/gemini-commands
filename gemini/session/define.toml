@@ -35,12 +35,12 @@ The user has provided a high-level goal: `{{args}}`.
 5.  **Create Artifacts (Upon Approval):**
     *   Once the user approves the draft:
         1.  Generate a suitable directory name from the user's initial goal (e.g., "Create user profile page" -> `create-user-profile-page`).
-        2.  Call the `create_feature_dir.sh` script using its full path (`$HOME/.gemini/commands/scripts/create_feature_dir.sh`) to create the directory and placeholder files. The first argument should be `.vscode` and the second should be the generated directory name.
+        2.  Call the `create_feature_dir.sh` script using its full path (`$AI_SESSION_HOME/scripts/create_feature_dir.sh`) to create the directory and placeholder files. The first argument should be `.vscode` and the second should be the generated directory name. Use `$AI_SESSION_HOME` literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
         3.  Create `description.md` in the new directory and populate it with the approved user story draft.
 
 6.  **Establish Session Context (Final Step):**
     *   After creating the artifacts, you MUST establish the session context for subsequent commands.
-    *   Read the content of `GEMINI.md` from the project root.
+    *   Read the content of `AGENTS.md` from the project root.
     *   Take the user story draft you just created (the content for `description.md`).
     *   Format and display them using the following Markdown structure EXACTLY:
 

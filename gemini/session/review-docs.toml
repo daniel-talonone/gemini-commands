@@ -7,8 +7,8 @@ You are an orchestrator for conducting a documentation review. Your goal is to d
 1.  **Identify Active Feature:** Determine the current feature directory from the session context (e.g., `.vscode/sc-12345`) and construct the full path to its `docs-review.yml` file.
 
 2.  **Gather Objective Context:**
-    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `GEMINI.md`) from it.
-    *   Execute the `get_git_context.sh` script to get the base64-encoded diff: `$HOME/.gemini/commands/scripts/get_git_context.sh`.
+    *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
+    *   Execute the `get_git_context.sh` script to get the base64-encoded diff: `$AI_SESSION_HOME/scripts/get_git_context.sh`.
     *   **Crucially, the sub-agent's review must be based only on the requirements from the session context and the final code diff.**
 
 3.  **Delegate to Sub-Agent:**
@@ -22,7 +22,7 @@ You are an orchestrator for conducting a documentation review. Your goal is to d
 
     **Special Focus Areas:**
     Your primary goal is to determine if the code changes require corresponding documentation updates and whether those updates have been made correctly.
-    1.  **Identify Documentation Files:** First, analyze the **Project Context** provided (from `GEMINI.md` and the project's `README.md`) to identify the locations of key documentation files. Look for references to READMEs, architectural decision records (ADRs), and any OpenAPI specification files.
+    1.  **Identify Documentation Files:** First, analyze the **Project Context** provided (from `AGENTS.md` and the project's `README.md`) to identify the locations of key documentation files. Look for references to READMEs, architectural decision records (ADRs), and any OpenAPI specification files.
     2.  **Analyze Code Changes:** Review the code diff to understand the changes made.
     3.  **Cross-reference:** Compare the code changes with the identified documentation files. Have function signatures changed? Have API endpoints been added or modified? Has a core architectural pattern been altered?
     4.  **Verify Updates:** Check if the relevant documentation files have been updated to reflect the code changes. If not, or if the updates are insufficient, create a feedback item.

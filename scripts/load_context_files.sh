@@ -27,6 +27,7 @@ FILES_TO_LOAD=(
   "plan.yml"
   "questions.yml"
   "review.yml"
+  "devops-review.yml"
   "log.md"
   "pr.md"
 )
@@ -44,12 +45,23 @@ done
 
 # Also load the project context file (AGENTS.md takes precedence as the LLM-agnostic standard,
 # falling back to GEMINI.md for backward compatibility).
-if [ -f "AGENTS.md" ]; then
-    echo "--- FILE: AGENTS.md ---"
-    cat "AGENTS.md"
-    echo ""
-elif [ -f "GEMINI.md" ]; then
-    echo "--- FILE: GEMINI.md ---"
-    cat "GEMINI.md"
+# Search order: project root (CWD), then the parent of the feature directory (e.g. .vscode/).
+AGENTS_FILE=""
+AGENTS_LABEL=""
+for candidate_dir in "." "$(dirname "$FEATURE_DIR")"; do
+    if [ -f "$candidate_dir/AGENTS.md" ]; then
+        AGENTS_FILE="$candidate_dir/AGENTS.md"
+        AGENTS_LABEL="AGENTS.md"
+        break
+    elif [ -f "$candidate_dir/GEMINI.md" ]; then
+        AGENTS_FILE="$candidate_dir/GEMINI.md"
+        AGENTS_LABEL="GEMINI.md"
+        break
+    fi
+done
+
+if [ -n "$AGENTS_FILE" ]; then
+    echo "--- FILE: $AGENTS_LABEL ---"
+    cat "$AGENTS_FILE"
     echo ""
 fi

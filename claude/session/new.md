@@ -1,0 +1,72 @@
+---
+description: Creates a new feature directory from a Shortcut story ID or a Notion page URL.
+---
+
+You are an assistant who bootstraps feature development by delegating context gathering to a specialized sub-agent. The user has provided an identifier: `$ARGUMENTS`.
+
+**Orchestration Actions:**
+
+1.  **Determine Identifier Type and Feature Name:**
+    *   If `$ARGUMENTS` starts with "sc-", it is a Shortcut story ID. The `feature_name` is `$ARGUMENTS`.
+    *   If `$ARGUMENTS` is a URL containing "notion.so", it is a Notion page. The `feature_name` should be derived from the last part of the URL path (the slug, e.g., from `https://www.notion.so/t1rnd/My-Page-Title-a1b2c3d4` the name would be `My-Page-Title-a1b2c3d4`).
+
+2.  **Scaffold Directory:**
+    *   Call the `create_feature_dir.sh` helper script using the Bash tool to create the directory and all placeholder files.
+    *   Example: `$AI_SESSION_HOME/scripts/create_feature_dir.sh ".vscode" "YOUR_DERIVED_FEATURE_NAME"`. Use `$AI_SESSION_HOME` literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
+
+3.  **Delegate Context Gathering to Sub-Agent:**
+    *   Use the Agent tool (subagent_type: "general-purpose") to fetch all primary and linked content and synthesize it into a single description file.
+    *   Construct and pass the following detailed prompt to the sub-agent, embedding `$ARGUMENTS` and the full path to the `description.md` file you just created.
+
+    ---
+    **Sub-Agent Prompt:**
+
+    You are a research assistant responsible for gathering all context for a new feature and summarizing it in a single file.
+
+    **Inputs:**
+    *   **Identifier:** `$ARGUMENTS`
+    *   **Target File:** `.vscode/{{feature_name}}/description.md`
+
+    **Task:**
+
+    1.  **Fetch Primary Content:**
+        *   If the identifier is a Shortcut story ID (e.g., "sc-12345"), use the Shortcut MCP to fetch the story.
+        *   If the identifier is a Notion URL, use the Notion MCP to fetch the page.
+
+    2.  **Extract Key Information & Find Linked Resources:**
+        *   Extract the title, description, comments, and canonical URL.
+        *   Scan the description and comments for any Markdown links or raw URLs. Create a list of these linked URLs.
+
+    3.  **Fetch Linked Resources:**
+        *   For each linked URL:
+            *   If it's a Shortcut link, use the Shortcut MCP.
+            *   If it's a Notion link, use the Notion MCP.
+            *   If it's a GitHub link to a file, use the GitHub MCP to fetch file contents.
+            *   If it's any other HTTP link, use the WebFetch tool.
+        *   Limit recursion to 1 level deep.
+
+    4.  **Synthesize the Final Description:**
+        *   Combine all gathered information into a single, comprehensive Markdown document.
+        *   At the very top, add a "Source:" line with the original identifier link.
+        *   Add the title as a main heading.
+        *   Include the full description and comments.
+        *   Create a "## Linked Resources" section with a sub-section per linked resource.
+
+    5.  **Save the Output:**
+        *   Use the Write tool to save the synthesized Markdown to the **Target File**. Confirm without showing the content.
+    ---
+
+4.  **Establish Session Context (Final Step):**
+    *   Read the content of the `description.md` file the sub-agent just created.
+    *   Read the content of `AGENTS.md` from the project root (fall back to `GEMINI.md` if not present).
+    *   Format and display using the following Markdown structure EXACTLY:
+
+        ```markdown
+        ### ✨ Session Context Loaded for `{{feature_name}}`
+
+        **Description:**
+        > {{The synthesized description from the new description.md}}
+
+        This context is now available for all subsequent commands.
+        ```
+    *   After printing this block, the command is complete.
