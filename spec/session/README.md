@@ -85,11 +85,10 @@ This lifecycle helps capture and utilize context, from initial requirements to f
     `yq` — they have different syntax.
 -   **Node.js / `npx`:** Required for several MCP servers.
 -   **`uv` / `uvx`:** Required for the Git MCP server (`brew install uv`).
--   **Gemini skills (Gemini CLI only):** Two skills need to be installed locally.
+-   **Gemini skills (Gemini CLI only):** One skill needs to be installed locally.
     From the repo root, run:
     ```bash
     gemini skills install ~/.ai-session/gemini/tdd-skill
-    gemini skills install ~/.ai-session/gemini/yq-skill
     ```
 -   **MCP Servers:** Integrations with Shortcut, Notion, Git, and GitHub are used by
     several commands. Configure them in your tool's settings file.
@@ -133,7 +132,7 @@ This lifecycle helps capture and utilize context, from initial requirements to f
 ## Commands
 
 - **/session:address-feedback**: Fetches and helps address feedback comments from a GitHub Pull Request.
-- **/session:checkpoint**: Saves a checkpoint of the work done by updating state files using the yq tool.
+- **/session:checkpoint**: Saves a checkpoint of the work done by updating state files.
 - **/session:define {USER STORY DESCRIPTION}**: Starts a conversational session to define a new user story and create its feature directory.
 - **/session:end**: Ends the work session, saving progress and project-wide knowledge to AGENTS.md.
 - **/session:get-familiar**: Gets familiar with the current code changes by having a subagent generate a summary.

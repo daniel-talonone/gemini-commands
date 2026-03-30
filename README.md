@@ -50,7 +50,6 @@ source ~/.zshrc
 **Gemini CLI users:** also install the required skills after setup:
 ```bash
 gemini skills install ~/.ai-session/gemini/tdd-skill
-gemini skills install ~/.ai-session/gemini/yq-skill
 ```
 
 `setup.sh` does two things:

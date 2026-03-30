@@ -11,7 +11,6 @@ Your primary directive is to follow a strict Red-Green-Refactor cycle. The `plan
 
 1.  **Identify Test Command:** Find the project's testing script.
 2.  **Identify Feature Directory:** Find the active feature directory and the `plan.yml` file within it.
-3.  **Activate yq-skill:** Use `activate_skill` to load the `yq-skill` for YAML manipulation.
 
 ## 2. TDD Execution Loop
 

@@ -17,11 +17,12 @@ You are an assistant that helps finalize a work session. Your primary task is to
     *   The instruction payload for the `generalist` tool should be a prompt like this:
         \"\"\"
         You are a YAML file specialist performing a final update. Your task is to update session state files using `yq`.
-        1. Activate the `yq` skill.
-        2. Change into the provided feature directory.
-        3. For each task ID provided, update its status in `plan.yml`.
-        4. For each question object provided, update its status to 'resolved' and set its `answer` in `questions.yml`.
-        5. Confirm when you have successfully updated all files. Do not output the `yq` skill instructions.
+        1. Change into the provided feature directory.
+        2. For each task ID provided, run the `yq` command to update its status in `plan.yml`.
+           Example: `yq -i '(.[] | select(.id == "task-id")).status = "done"' plan.yml`
+        3. For each question object provided, run the `yq` command to update its status to 'resolved' and set its `answer` in `questions.yml`.
+           Example: `yq -i '(.[] | select(.id == "question-id")).status = "resolved" | .[] | select(.id == "question-id").answer = "The answer text."' questions.yml`
+        4. Confirm when you have successfully updated all files.
         \"\"\"
     *   Call the `generalist` tool with the composed request.
 

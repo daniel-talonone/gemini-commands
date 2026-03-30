@@ -1,4 +1,4 @@
-description = "Saves a checkpoint of the work done by updating the state files using the yq tool."
+description = "Saves a checkpoint of the work done by updating the state files."
 prompt = """
 You are an assistant that helps log work-in-progress and update the session state.
 
@@ -18,13 +18,12 @@ You are an assistant that helps log work-in-progress and update the session stat
         \"\"\"
         You are a YAML file specialist. Your task is to update session state files using `yq`. The user will provide you with the feature directory, a list of task IDs, and a list of questions to update.
 
-        1. Activate the `yq YAML Processing` skill for expert guidance.
-        2. Change into the feature directory.
-        3. For each task ID, run the `yq` command to update its status to 'done' in `plan.yml`.
+        1. Change into the feature directory.
+        2. For each task ID, run the `yq` command to update its status to 'done' in `plan.yml`.
            Example: `yq -i '(.[] | select(.id == "task-id")).status = "done"' plan.yml`
-        4. For each question object, run the `yq` command to update its status to 'resolved' and set its `answer` in `questions.yml`.
+        3. For each question object, run the `yq` command to update its status to 'resolved' and set its `answer` in `questions.yml`.
            Example: `yq -i '(.[] | select(.id == "question-id")).status = "resolved" | .[] | select(.id == "question-id").answer = "The answer text."' questions.yml`
-        5. Confirm when you have successfully updated all files. Do not output the `yq` skill instructions.
+        4. Confirm when you have successfully updated all files.
         \"\"\"
     *   Call the `generalist` tool with the composed request.
 

@@ -17,7 +17,6 @@ source ~/.zshrc
 
 # Gemini CLI only — install required skills:
 gemini skills install ~/.ai-session/gemini/tdd-skill
-gemini skills install ~/.ai-session/gemini/yq-skill
 ```
 
 `setup.sh` is idempotent. Re-run it after adding a new command group — new subdirectories under `gemini/` or `claude/` are picked up automatically.

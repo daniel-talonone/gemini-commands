@@ -22,7 +22,7 @@ scripts/          ← Shared shell scripts used by both tools
 ## Commands
 
 - `/session:address-feedback` — Fetches and helps address feedback from the active PR.
-- `/session:checkpoint` — Saves a checkpoint by updating state files with yq.
+- `/session:checkpoint` — Saves a checkpoint by updating state files.
 - `/session:define` — Conversational session to define a new user story from scratch.
 - `/session:end` — Ends the session, saving progress and project-wide knowledge to AGENTS.md.
 - `/session:get-familiar` — Sub-agent summarizes the current branch's code changes.
