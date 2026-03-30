@@ -10,8 +10,6 @@ You are an orchestrator for conducting a DevOps review. Your goal is to delegate
 
 2.  **Gather Objective Context:**
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
-    *   Execute the `get_git_context.sh` script using the Bash tool: `$AI_SESSION_HOME/scripts/get_git_context.sh`.
-    *   **Crucially, the sub-agent's review must be based only on the requirements from the session context and the final code diff.**
 
 3.  **Delegate to Sub-Agent:**
     *   Use the Agent tool (subagent_type: "general-purpose") to perform the review and save the results.
@@ -43,21 +41,20 @@ You are an orchestrator for conducting a DevOps review. Your goal is to delegate
         {{extracted Description from session context}}
         ```
 
-    *   **Code Diff (base64 encoded):** `{{base64 encoded diff}}`
-
     *   **Target File Path:** `{{path to devops-review.yml}}`
 
     **Review Process:**
 
-    1.  **Decode Diff:** Decode the base64 `diff` content to get the code changes.
-    2.  **Perform Review:** Analyze the decoded diff against the feature and project context. Pay special attention to the focus areas above.
-    3.  **Format Feedback as YAML:** Compile all findings into a list of YAML objects. Each object **must** have:
+    1.  **Fetch the Diff:** Execute `$AI_SESSION_HOME/scripts/get_git_context.sh` using the Bash tool. Use `$AI_SESSION_HOME` literally — the shell will expand it. This outputs a base64-encoded diff.
+    2.  **Decode Diff:** Decode the base64 output to get the code changes.
+    3.  **Perform Review:** Analyze the decoded diff against the feature and project context. Pay special attention to the focus areas above.
+    4.  **Format Feedback as YAML:** Compile all findings into a list of YAML objects. Each object **must** have:
         *   `id`: A short, unique, kebab-case identifier.
         *   `file`: The path to the relevant file.
         *   `line`: The relevant line number.
         *   `feedback`: The critical feedback text.
         *   `status`: Always `'open'`.
-    4.  **Save Feedback:** Use the Write tool to save the YAML-formatted list directly to the **Target File Path**.
+    5.  **Save Feedback:** Use the Write tool to save the YAML-formatted list directly to the **Target File Path**.
 
     ---
 

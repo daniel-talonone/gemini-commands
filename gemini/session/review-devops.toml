@@ -8,8 +8,6 @@ You are an orchestrator for conducting a devops review. Your goal is to delegate
 
 2.  **Gather Objective Context:**
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
-    *   Execute the `get_git_context.sh` script to get the base64-encoded diff: `$AI_SESSION_HOME/scripts/get_git_context.sh`.
-    *   **Crucially, the sub-agent's review must be based only on the requirements from the session context and the final code diff.**
 
 3.  **Delegate to Sub-Agent:**
     *   Use the `generalist` tool to perform the review and save the results.
@@ -41,22 +39,21 @@ You are an orchestrator for conducting a devops review. Your goal is to delegate
         {{extracted Description from session context}}
         ```
 
-    *   **Code Diff (base64 encoded):** `{{base64 encoded diff}}`
-    
     *   **Target File Path:** `{{path to devops-review.yml}}`
 
     **Review Process:**
 
-    1.  **Decode Diff:** Decode the base64 `diff` content to get the code changes.
-    2.  **Perform Review:** Analyze the decoded `diff` in the context of the feature and project documents provided. Scrutinize every change for bugs, misalignment with requirements, architectural issues, style violations, and any other nitpicks, paying special attention to the focus areas mentioned above.
-    3.  **Format Feedback as YAML:** Compile all your findings into a list of YAML objects.
+    1.  **Fetch the Diff:** Execute `$AI_SESSION_HOME/scripts/get_git_context.sh` using `run_shell_command`. Use `$AI_SESSION_HOME` literally — the shell will expand it. This outputs a base64-encoded diff.
+    2.  **Decode Diff:** Decode the base64 output to get the code changes.
+    3.  **Perform Review:** Analyze the decoded `diff` in the context of the feature and project documents provided. Scrutinize every change for bugs, misalignment with requirements, architectural issues, style violations, and any other nitpicks, paying special attention to the focus areas mentioned above.
+    4.  **Format Feedback as YAML:** Compile all your findings into a list of YAML objects.
         *   Each object **must** have `id`, `file`, `line`, `feedback`, and `status` fields.
         *   `id`: A short, human-readable, unique identifier in 'kebab-case'.
         *   `file`: The path to the relevant file.
         *   `line`: The relevant line number.
         *   `feedback`: The critical feedback text.
         *   `status`: Always 'open'.
-    4.  **Save Feedback:** Use the `write_file` tool to save your YAML-formatted list of feedback directly to the provided **Target File Path**.
+    5.  **Save Feedback:** Use the `write_file` tool to save your YAML-formatted list of feedback directly to the provided **Target File Path**.
 
     ---
 

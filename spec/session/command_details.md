@@ -163,11 +163,11 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Description:** Performs a code review of the current branch using a focused sub-agent.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
-    -   **Scripts:** `scripts/get_git_context.sh`
-    -   **Tools:** `run_shell_command`, `read_file`, `generalist`
+    -   **Scripts:** `scripts/get_git_context.sh` (called by the sub-agent, not the main session)
+    -   **Tools:** `read_file`, `generalist`
 -   **Inputs:**
     -   The "Session Context" block from chat history.
-    -   Git repository state.
+    -   Git repository state (fetched by the sub-agent).
     -   Reads back the `.features/<feature-dir>/review.yml` for verification.
 -   **Outputs:**
     -   Delegates writing `.features/<feature-dir>/review.yml` to a sub-agent.
@@ -177,11 +177,11 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Description:** Performs a devops review of the current branch using a focused sub-agent.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
-    -   **Scripts:** `scripts/get_git_context.sh`
-    -   **Tools:** `run_shell_command`, `read_file`, `generalist`
+    -   **Scripts:** `scripts/get_git_context.sh` (called by the sub-agent, not the main session)
+    -   **Tools:** `read_file`, `generalist`
 -   **Inputs:**
     -   The "Session Context" block from chat history.
-    -   Git repository state.
+    -   Git repository state (fetched by the sub-agent).
     -   Reads back the `.features/<feature-dir>/devops-review.yml` for verification.
 -   **Outputs:**
     -   Delegates writing `.features/<feature-dir>/devops-review.yml` to a sub-agent.
@@ -191,11 +191,11 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Description:** Performs a documentation review of the current branch using a focused sub-agent.
 -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
-    -   **Scripts:** `scripts/get_git_context.sh`
-    -   **Tools:** `run_shell_command`, `read_file`, `generalist`
+    -   **Scripts:** `scripts/get_git_context.sh` (called by the sub-agent, not the main session)
+    -   **Tools:** `read_file`, `generalist`
 -   **Inputs:**
     -   The "Session Context" block from chat history.
-    -   Git repository state.
+    -   Git repository state (fetched by the sub-agent).
     -   Reads back the `.features/<feature-dir>/docs-review.yml` for verification.
 -   **Outputs:**
     -   Delegates writing `.features/<feature-dir>/docs-review.yml` to a sub-agent.
