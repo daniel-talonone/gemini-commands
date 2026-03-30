@@ -1,0 +1,83 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What This Repo Is
+
+`ai-session` is a session-based development workflow framework for AI assistants. It provides 16 `/session:*` commands that manage persistent state (feature description, implementation plan, open questions, log, reviews) across sessions via structured files — replacing reliance on chat history.
+
+It supports both **Gemini CLI** (`.toml` files) and **Claude Code** (`.md` files). Commands are symlinked into each tool's native commands directory via `setup.sh`.
+
+## Setup
+
+```bash
+chmod +x setup.sh
+./setup.sh          # Adds AI_SESSION_HOME to .zshrc, creates symlinks
+source ~/.zshrc
+
+# Gemini CLI only — install required skills:
+gemini skills install ~/.ai-session/gemini/tdd-skill
+gemini skills install ~/.ai-session/gemini/yq-skill
+```
+
+`setup.sh` is idempotent. Re-run it after adding a new command group — new subdirectories under `gemini/` or `claude/` are picked up automatically.
+
+## Prerequisites
+
+- `yq` v4+ (`brew install yq`) — must be [mikefarah/yq](https://github.com/mikefarah/yq), not the Python-based one
+- `Node.js` and `uv` (for MCP servers)
+- MCP servers configured in `~/.gemini/settings.json` or `~/.claude/settings.json`: `shortcut`, `notion`, `git`, `github`
+
+## Repo Structure
+
+```
+spec/session/     # LLM-agnostic documentation, schemas, and example feature document
+gemini/session/   # Gemini CLI implementation (*.toml)
+claude/session/   # Claude Code implementation (*.md)
+scripts/          # Shared shell scripts referenced via $AI_SESSION_HOME/scripts/
+```
+
+## Architecture & Key Conventions
+
+### Feature Directory Structure
+
+Each feature gets a directory (default: `.vscode/<feature-id>/`) in the **target project** (not this repo):
+
+```
+.vscode/sc-12345/
+  description.md   # User story and acceptance criteria (Markdown, unstructured)
+  plan.yml         # Task list: id, task, status (todo/in-progress/done)
+  questions.yml    # Open questions: id, question, status, answer
+  log.md           # Append-only progress log
+  review.yml       # Code review findings: id, file, line, feedback, status
+  pr.md            # Pull request link and description
+```
+
+YAML files are always modified via `yq` — never direct text replacement.
+
+### Session Context Pattern
+
+Commands follow producer/consumer roles to minimize token usage:
+- **Producers** (`/session:start`, `/session:new`, `/session:define`): Read files from disk and output a `### ✨ Session Context Loaded for <feature-id>` block with `description.md` + `AGENTS.md` content.
+- **Consumers** (`/session:plan`, `/session:review`, etc.): Read the context block from chat history — do NOT re-read files from disk.
+- **Updaters** (`/session:pr`): After modifying a context file, output a new updated context block.
+
+### Two Command Patterns
+
+- **LLM Orchestrator**: Agent orchestrates helper scripts directly for interactive workflows (e.g., `/session:define`).
+- **Sub-agent Pattern**: Agent delegates focused one-off tasks to an isolated sub-agent to keep the main session clean (e.g., `/session:review`, `/session:pr`, `/session:checkpoint`).
+
+### Project-Wide Context (`AGENTS.md`)
+
+`AGENTS.md` in each **target project** (not this repo) stores architectural patterns, conventions, and learnings. `/session:end` updates it; `/session:start` reads it as part of the context block.
+
+## Testing Commands
+
+Commands are tested by delegating to a sub-agent using `spec/session/example-feature-document/` as the active feature context. Reference `spec/session/command_details.md` for expected behavior per command. There is no automated test runner — testing is manual via sub-agent delegation.
+
+## Adding or Modifying Commands
+
+- **Gemini**: edit/add `.toml` files in `gemini/session/`
+- **Claude**: edit/add `.md` files in `claude/session/`
+- **Shared scripts**: add to `scripts/`, reference via `$AI_SESSION_HOME/scripts/<name>.sh`
+- Both implementations must stay behaviorally equivalent — same inputs, same outputs, same state mutations
