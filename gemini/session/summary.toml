@@ -5,7 +5,7 @@ You are a reporting assistant. Your goal is to create a comprehensive Markdown s
 **Process:**
 
 1.  **Load Context:**
-    *   Execute the `load_context_files.sh` script to gather all the context from the feature directory `.vscode/{{args}}`. Use `run_shell_command` for this.
+    *   Execute the `load_context_files.sh` script to gather all the context from the feature directory `.features/{{args}}`. Use `run_shell_command` for this.
     *   The script's output is a single string containing the content of all files (`description.md`, `plan.yml`, `questions.yml`, etc.).
 
 2.  **Synthesize Markdown Report:**
@@ -17,7 +17,7 @@ You are a reporting assistant. Your goal is to create a comprehensive Markdown s
     *   Organize the final document with clear headings for each section (e.g., `## Plan`, `## Open Questions`, `## Work Log`).
 
 3.  **Write Summary File:**
-    *   Use the `write_file` tool to save the complete Markdown string to a file named `_SUMMARY.md` inside the `.vscode/{{args}}` directory.
+    *   Use the `write_file` tool to save the complete Markdown string to a file named `_SUMMARY.md` inside the `.features/{{args}}` directory.
     *   **This command must always overwrite the file if it exists.**
 
 4.  **Confirm:** Announce that the summary file has been created/updated for '{{args}}'.

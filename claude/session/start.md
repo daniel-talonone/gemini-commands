@@ -10,7 +10,7 @@ The user will provide a feature directory name as an argument (e.g., `sc-12345`)
 
 1.  **Execute Script:** Run the `load_context_files.sh` helper script using the Bash tool.
     *   Full path: `$AI_SESSION_HOME/scripts/load_context_files.sh`. Use this variable literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
-    *   Pass the feature directory path as argument: `.vscode/$ARGUMENTS`
+    *   Pass the feature directory path as argument: `.features/$ARGUMENTS`
 
 2.  **Parse Script Output:** The script returns a block of text with each file's content preceded by `--- FILE: <filename> ---`.
     *   Find and extract the content under `--- FILE: description.md ---`.

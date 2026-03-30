@@ -2,7 +2,7 @@
 
 > **Note on Active Development:** This project is under active development and is used as a playground for exploring and experimenting with AI-assisted development concepts. As such, commands and workflows may change or break unexpectedly.
 
-> **Important Note on Feature Directories:** By default, feature directories are located in `.vscode/`. However, this can be overridden by a custom path defined in your project's `AGENTS.md`. For more details, refer to [A Note on the `.vscode` Directory](#a-note-on-the-vscode-directory).
+> **Important Note on Feature Directories:** By default, feature directories are located in `.features/`. This can be overridden by a custom path defined in your project's `AGENTS.md`. For more details, refer to [A Note on the Feature Directory Root](#a-note-on-the-feature-directory-root).
 
 ## Overview
 
@@ -44,7 +44,7 @@ To begin a work session, there are three primary commands:
 
 *   **`/session:start`**: Use this to **resume work on an existing feature**. This command loads context from a previously created feature directory into your current session.
     ```bash
-    # Open feature directory in default path .vscode/sc-1234
+    # Open feature directory in default path .features/sc-1234
     /session:start sc-1234
     
     # Open feature directory located in a custom path
@@ -157,11 +157,11 @@ Please check the file [Command Details](command_details.md) for a full breakdown
     In this workflow, a session is not only tied to the terminal or chat history. Instead, it is primarily defined by the feature directory, which stores the description, implementation plan, open questions, progress log, and review notes for the feature.
 
     The terminal session is still used during development, but the feature directory acts as a more stable source of context. This makes it easier to resume work across multiple days and allows the LLM to use structured information rather than incomplete conversational history.
--   **Feature Directory:** A directory located in `.vscode/` (e.g., `.vscode/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See [`spec/session/example-feature-document/`](example-feature-document/) in this repo for a complete example.
+-   **Feature Directory:** A directory located in `.features/` (e.g., `.features/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See [`spec/session/example-feature-document/`](example-feature-document/) in this repo for a complete example.
 
     Example:
     ```
-    .vscode/sc-12345/
+    .features/sc-12345/
         description.md
         plan.yml
         questions.yml
@@ -193,13 +193,13 @@ This evolution represents a shift from a conversation-driven to a state-driven w
 
 ## Design Notes & Conventions
 
-### A Note on the `.vscode` Directory
+### A Note on the Feature Directory Root
 
-The choice to store feature artifacts in `.vscode/` is a practical one based on personal habit. Because the `.vscode` folder is ignored in many of our projects, I have been using it to keep personal, project-related files that I don't want to commit.
+The default root for feature directories is `.features/`. This is a neutral, purpose-named location that is easy to add to `.gitignore` if you don't want to commit feature state files.
 
 To override this default, you can specify a different path in your project's `AGENTS.md` file. For example:
 
-> **Feature directories root is `.features/` instead of `.vscode/`**
+> **Feature directories root is `.tmp/features/` instead of `.features/`**
 
 ### Architectural Rationale
 

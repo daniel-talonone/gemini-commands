@@ -15,7 +15,7 @@ This section provides a breakdown of individual session commands, their dependen
     -   The "Session Context" block from chat history.
     -   GitHub API (to get review comments).
 -   **Outputs:**
-    -   Appends a summary to `.vscode/<feature-dir>/log.md`.
+    -   Appends a summary to `.features/<feature-dir>/log.md`.
     -   Modifies project source files to address feedback.
 
 ## `/session:checkpoint`
@@ -28,12 +28,12 @@ This section provides a breakdown of individual session commands, their dependen
     -   **Tools:** `run_shell_command`, `generalist`
 -   **Inputs:**
     -   The active feature directory path from the conversation.
-    -   `.vscode/<feature-dir>/plan.yml`
-    -   `.vscode/<feature-dir>/questions.yml`
+    -   `.features/<feature-dir>/plan.yml`
+    -   `.features/<feature-dir>/questions.yml`
 -   **Outputs:**
-    -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
-    -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
-    -   Appends a summary to `.vscode/<feature-dir>/log.md`.
+    -   Modifies `.features/<feature-dir>/plan.yml` in-place.
+    -   Modifies `.features/<feature-dir>/questions.yml` in-place.
+    -   Appends a summary to `.features/<feature-dir>/log.md`.
 
 ## `/session:define "{USER STORY DESCRIPTION}"`
 
@@ -47,8 +47,8 @@ This section provides a breakdown of individual session commands, their dependen
     -   User's command-line arguments (`{{args}}`).
     -   Project source code via `glob` and `grep_search`.
 -   **Outputs:**
-    -   Creates a new feature directory (e.g., `.vscode/create-user-profile-page/`).
-    -   `.vscode/<feature-dir>/description.md` and other placeholder files.
+    -   Creates a new feature directory (e.g., `.features/create-user-profile-page/`).
+    -   `.features/<feature-dir>/description.md` and other placeholder files.
     -   Outputs the "Session Context" block to the chat.
 
 ## `/session:end`
@@ -62,12 +62,12 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Inputs:**
     -   Session conversation history.
     -   The "Session Context" block from chat history.
-    -   `.vscode/<feature-dir>/plan.yml`
-    -   `.vscode/<feature-dir>/questions.yml`
+    -   `.features/<feature-dir>/plan.yml`
+    -   `.features/<feature-dir>/questions.yml`
 -   **Outputs:**
-    -   Modifies `.vscode/<feature-dir>/plan.yml` in-place.
-    -   Modifies `.vscode/<feature-dir>/questions.yml` in-place.
-    -   Appends a final summary to `.vscode/<feature-dir>/log.md`.
+    -   Modifies `.features/<feature-dir>/plan.yml` in-place.
+    -   Modifies `.features/<feature-dir>/questions.yml` in-place.
+    -   Appends a final summary to `.features/<feature-dir>/log.md`.
     -   Modifies `AGENTS.md` in-place.
 
 ## `/session:get-familiar`
@@ -92,7 +92,7 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Inputs:**
     -   Session conversation history.
 -   **Outputs:**
-    -   Delegates appending a timestamped report to `.vscode/<feature-dir>/log.md` to a sub-agent.
+    -   Delegates appending a timestamped report to `.features/<feature-dir>/log.md` to a sub-agent.
 
 ## `/session:migration`
 
@@ -135,8 +135,8 @@ This section provides a breakdown of individual session commands, their dependen
     -   Codebase files via `glob` and `grep_search`.
     -   User input during interactive planning.
 -   **Outputs:**
-    -   Generates and writes initial `.vscode/<feature-dir>/plan.yml`
-    -   Generates and writes initial `.vscode/<feature-dir>/questions.yml`
+    -   Generates and writes initial `.features/<feature-dir>/plan.yml`
+    -   Generates and writes initial `.features/<feature-dir>/questions.yml`
 
 ## `/session:pr`
 
@@ -154,9 +154,9 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Outputs:**
     -   Delegates PR description generation to a sub-agent.
     -   Creates or updates a pull request on GitHub.
-    -   Writes the PR link to `.vscode/<feature-dir>/description.md`.
+    -   Writes the PR link to `.features/<feature-dir>/description.md`.
     -   Outputs an updated "Session Context" block to the chat.
-    -   Saves `pull_request_descr.md` to `.vscode/<feature-dir>/` (as a fallback).
+    -   Saves `pull_request_descr.md` to `.features/<feature-dir>/` (as a fallback).
 
 ## `/session:review`
 
@@ -168,9 +168,9 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Inputs:**
     -   The "Session Context" block from chat history.
     -   Git repository state.
-    -   Reads back the `.vscode/<feature-dir>/review.yml` for verification.
+    -   Reads back the `.features/<feature-dir>/review.yml` for verification.
 -   **Outputs:**
-    -   Delegates writing `.vscode/<feature-dir>/review.yml` to a sub-agent.
+    -   Delegates writing `.features/<feature-dir>/review.yml` to a sub-agent.
 
 ## `/session:review-devops`
 
@@ -182,9 +182,9 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Inputs:**
     -   The "Session Context" block from chat history.
     -   Git repository state.
-    -   Reads back the `.vscode/<feature-dir>/devops-review.yml` for verification.
+    -   Reads back the `.features/<feature-dir>/devops-review.yml` for verification.
 -   **Outputs:**
-    -   Delegates writing `.vscode/<feature-dir>/devops-review.yml` to a sub-agent.
+    -   Delegates writing `.features/<feature-dir>/devops-review.yml` to a sub-agent.
 
 ## `/session:review-docs`
 
@@ -196,9 +196,9 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Inputs:**
     -   The "Session Context" block from chat history.
     -   Git repository state.
-    -   Reads back the `.vscode/<feature-dir>/docs-review.yml` for verification.
+    -   Reads back the `.features/<feature-dir>/docs-review.yml` for verification.
 -   **Outputs:**
-    -   Delegates writing `.vscode/<feature-dir>/docs-review.yml` to a sub-agent.
+    -   Delegates writing `.features/<feature-dir>/docs-review.yml` to a sub-agent.
 
 ## `/session:start {FEATURE DIRECTORY NAME}`
 
@@ -222,7 +222,7 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Inputs:**
     -   The output of the `load_context_files.sh` script.
 -   **Outputs:**
-    -   `.vscode/<feature-dir>/_SUMMARY.md`
+    -   `.features/<feature-dir>/_SUMMARY.md`
 
 ## `/session:verify-release`
 

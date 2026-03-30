@@ -6,7 +6,7 @@
 #   ./append_to_log.sh <log_file_path> <log_message>
 #
 # Arguments:
-#   $1 (log_file_path): The path to the log file (e.g., .vscode/sc-12345/log.md).
+#   $1 (log_file_path): The path to the log file (e.g., .features/sc-12345/log.md).
 #   $2 (log_message): The message to append.
 
 set -e

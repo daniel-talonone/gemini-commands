@@ -6,7 +6,7 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
 
 **Orchestration Process:**
 
-1.  **Identify Active Feature:** Determine the current feature directory from the session context (e.g., `.vscode/sc-12345`) and construct the full path to its `review.yml` file.
+1.  **Identify Active Feature:** Determine the current feature directory from the session context (e.g., `.features/sc-12345`) and construct the full path to its `review.yml` file.
 
 2.  **Gather Objective Context:**
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.

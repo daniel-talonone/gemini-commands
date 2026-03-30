@@ -5,7 +5,7 @@ session-based workflow for software development, compatible with both Gemini CLI
 Claude Code. The commands orchestrate a lifecycle for feature development, from
 creation and planning to review and pull request generation.
 
-The core of the workflow revolves around a "feature directory" (stored in `.vscode/`
+The core of the workflow revolves around a "feature directory" (stored in `.features/`
 by default) which acts as a single source of truth for a given task, and an `AGENTS.md`
 file in each project which provides global context. See
 `spec/session/example-feature-document/` for a complete example of a feature directory.

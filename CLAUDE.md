@@ -40,10 +40,10 @@ scripts/          # Shared shell scripts referenced via $AI_SESSION_HOME/scripts
 
 ### Feature Directory Structure
 
-Each feature gets a directory (default: `.vscode/<feature-id>/`) in the **target project** (not this repo):
+Each feature gets a directory (default: `.features/<feature-id>/`) in the **target project** (not this repo):
 
 ```
-.vscode/sc-12345/
+.features/sc-12345/
   description.md   # User story and acceptance criteria (Markdown, unstructured)
   plan.yml         # Task list: id, task, status (todo/in-progress/done)
   questions.yml    # Open questions: id, question, status, answer

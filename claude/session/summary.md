@@ -9,8 +9,8 @@ The user has provided a feature directory name as an argument: `$ARGUMENTS`.
 **Process:**
 
 1.  **Load Context:**
-    *   Execute the `load_context_files.sh` script using the Bash tool to gather all the context from the feature directory `.vscode/$ARGUMENTS`.
-    *   Example: `$AI_SESSION_HOME/scripts/load_context_files.sh ".vscode/$ARGUMENTS"`
+    *   Execute the `load_context_files.sh` script using the Bash tool to gather all the context from the feature directory `.features/$ARGUMENTS`.
+    *   Example: `$AI_SESSION_HOME/scripts/load_context_files.sh ".features/$ARGUMENTS"`
     *   The script's output is a single string containing the content of all files (`description.md`, `plan.yml`, `questions.yml`, etc.) each preceded by `--- FILE: <filename> ---`.
 
 2.  **Synthesize Markdown Report:**
@@ -22,7 +22,7 @@ The user has provided a feature directory name as an argument: `$ARGUMENTS`.
     *   Organize the final document with clear headings for each section (e.g., `## Plan`, `## Open Questions`, `## Work Log`).
 
 3.  **Write Summary File:**
-    *   Use the Write tool to save the complete Markdown string to `_SUMMARY.md` inside the `.vscode/$ARGUMENTS` directory.
+    *   Use the Write tool to save the complete Markdown string to `_SUMMARY.md` inside the `.features/$ARGUMENTS` directory.
     *   **This command must always overwrite the file if it exists.**
 
 4.  **Confirm:** Announce that the summary file has been created/updated for `$ARGUMENTS`.

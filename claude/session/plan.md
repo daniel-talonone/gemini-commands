@@ -8,7 +8,7 @@ This is a **planning phase only**. Do not write or modify any code.
 
 Please perform the following steps:
 
-1.  **Identify Directory:** Identify the active feature directory from our conversation (e.g., `.vscode/sc-1234/`).
+1.  **Identify Directory:** Identify the active feature directory from our conversation (e.g., `.features/sc-1234/`).
 2.  **Gather Context:** Find the `### ✨ Session Context Loaded for...` block in the conversation history. This block contains the feature **Description** and **Project Conventions**. Use this as your primary context.
 3.  **Analyze Codebase:** Perform a high-level analysis using the Glob and Grep tools to understand relevant files and functions.
 4.  **Generate Plan:**
