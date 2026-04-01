@@ -209,7 +209,7 @@ The design principles of this project emphasize using deterministic tools (`yq`,
 This pattern is for complex, interactive commands. The agent acts as an "orchestrator," using `run_shell_command` to execute small helper scripts for predictable steps, while handling the stateful or interactive parts of the workflow itself. This separates procedural tasks (handled by scripts) from analytical tasks (handled by the LLM). `/session:define` is a good example.
 
 #### Subagent Pattern for Focused Tasks
-This is the preferred pattern for delegating a complex, one-off task. The main agent instructs the `generalist` sub-agent to execute the task in an isolated session. This provides efficiency and context isolation. Commands like `/session:get-familiar`, `/session:checkpoint`, and `/session:pr` use this pattern.
+This is the preferred pattern for delegating a complex, one-off task. The main agent instructs the `generalist` sub-agent to execute the task in an isolated session. This provides efficiency and context isolation. Commands like `/session:get-familiar`, `/session:review`, and `/session:pr` use this pattern.
 
 
 ## Current Limitations and Future Considerations

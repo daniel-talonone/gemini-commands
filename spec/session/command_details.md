@@ -21,11 +21,11 @@ This section provides a breakdown of individual session commands, their dependen
 ## `/session:checkpoint`
 
 -   **Description:** Saves a snapshot of the work-in-progress by updating the status of tasks and questions and logging a summary of the progress.
--   **Orchestration Pattern:** Subagent Pattern
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/append_to_log.sh`
-    -   **Tools:** `run_shell_command`, `generalist`
+    -   **Tools:** `run_shell_command`
 -   **Inputs:**
     -   The active feature directory path from the conversation.
     -   `.features/<feature-dir>/plan.yml`
@@ -54,11 +54,11 @@ This section provides a breakdown of individual session commands, their dependen
 ## `/session:end`
 
 -   **Description:** Ends the work session, saving a final summary to the feature directory and persisting any project-wide knowledge to `AGENTS.md`.
--   **Orchestration Pattern:** Subagent Pattern
+-   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
     -   **Skills:** None
     -   **Scripts:** `scripts/append_to_log.sh`
-    -   **Tools:** `read_file`, `run_shell_command`, `replace`, `generalist`
+    -   **Tools:** `run_shell_command`, `replace`
 -   **Inputs:**
     -   Session conversation history.
     -   The "Session Context" block from chat history.

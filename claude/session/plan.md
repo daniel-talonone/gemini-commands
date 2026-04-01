@@ -8,32 +8,51 @@ This is a **planning phase only**. Do not write or modify any code.
 
 Please perform the following steps:
 
-1.  **Identify Directory:** Identify the active feature directory from our conversation (e.g., `.features/sc-1234/`).
+1.  **Identify Directory:** Identify the active feature directory from our conversation (e.g., `.features/sc-1234/`). If a scope argument is provided (e.g., "for the frontend", "for the backend"), save files into the matching subdirectory (e.g., `frontend/plan.yml`). Otherwise save directly in the feature directory.
+
 2.  **Gather Context:** Find the `### ✨ Session Context Loaded for...` block in the conversation history. This block contains the feature **Description** and **Project Conventions**. Use this as your primary context.
-3.  **Analyze Codebase:** Perform a high-level analysis using the Glob and Grep tools to understand relevant files and functions.
-4.  **Generate Plan:**
-    *   Create a detailed, step-by-step implementation plan. Steps must be small, verifiable, and testable.
+
+3.  **Read Existing Plan:** If `plan.yml` already exists in the target directory, read it before proceeding. **Never overwrite** — only extend with new tasks. Preserve all existing entries and their statuses.
+
+4.  **Analyze Codebase:** Perform a high-level analysis using the Glob and Grep tools to understand relevant files and functions.
+    *   Look for analogous implementations (sibling routes, similar handlers) to use as reference patterns.
+    *   Read `AGENTS.md` (or `CLAUDE.md`) in the project root to understand the verification commands for this repo — these will apply to all tasks.
+
+5.  **Generate Questions (before writing the plan):**
+    *   Identify ambiguities or missing information.
+    *   **Attempt to answer each question by reading the codebase first.** Only emit a question as `open` if the answer cannot be determined from existing code.
+    *   Self-answered questions should have `status: resolved` and a populated `answer`.
+    *   **Questions answered here may change the plan** — incorporate those findings before finalizing tasks.
+
+6.  **Generate Plan:**
+    *   Create a detailed, step-by-step implementation plan. Steps must be small and independently verifiable.
+    *   **The plan will be executed in a future session with no memory of this conversation.** Every task must be fully self-contained: include the exact file path, function/component name, line range, and before/after code snippets where the change is non-trivial. A developer must be able to implement the task by reading only the task description.
     *   **Format the plan as a YAML list of objects.** Each object must have:
         *   `id`: A short, unique, kebab-case identifier (e.g., `add-profile-route`).
-        *   `task`: A description of the task.
+        *   `task`: A full description of the change, including file, function, and code context.
         *   `status`: Always `'todo'` initially.
     *   Example `plan.yml`:
         ```yaml
         - id: 'add-profile-route'
-          task: 'Add route for /profile/{id}'
-          status: 'todo'
-        - id: 'test-non-existent-user'
-          task: 'Create test for non-existent user, expect 404'
+          task: >
+            FILE: src/routes/profile.ts FUNCTION: router.get('/profile/:id')
+
+            Add a new GET route that fetches a user by ID from the DB and returns 404
+            if not found.
+
+            CURRENT CODE: (route does not exist)
+
+            ADD:
+              router.get('/profile/:id', async (req, res) => {
+                const user = await db.users.findById(req.params.id)
+                if (!user) return res.status(404).json({ error: 'Not found' })
+                res.json(user)
+              })
           status: 'todo'
         ```
-5.  **Generate Questions:**
-    *   Identify any ambiguities or missing information.
-    *   **Format as a YAML list of objects.** Each object must have:
-        *   `id`: A short, unique, kebab-case identifier.
-        *   `question`: The question text.
-        *   `status`: Always `'open'` initially.
-        *   `answer`: Always `null` initially.
-6.  **Save Files:**
-    *   Use the Write tool to save the YAML-formatted plan to `plan.yml` in the feature directory.
-    *   Use the Write tool to save the YAML-formatted questions to `questions.yml` in the feature directory.
-7.  **Confirm:** Announce that the structured plan and questions have been saved.
+
+7.  **Save Files:**
+    *   Use the Write tool to save the YAML-formatted plan to `plan.yml` in the target directory.
+    *   Use the Write tool to save the YAML-formatted questions to `questions.yml` in the target directory.
+
+8.  **Confirm:** Announce that the structured plan and questions have been saved.

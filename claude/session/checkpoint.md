@@ -1,5 +1,5 @@
 ---
-description: Saves a checkpoint of the work done by updating the state files using the yq tool.
+description: Saves a checkpoint of the work done by updating the state files.
 ---
 
 You are an assistant that helps log work-in-progress and update the session state.
@@ -10,28 +10,15 @@ You are an assistant that helps log work-in-progress and update the session stat
     *   Identify the active feature directory path from our conversation.
     *   Review our conversation since the last checkpoint to determine which tasks were completed and which questions were answered.
 
-2.  **Delegate State Update:**
-    *   Delegate the file modifications to a sub-agent (Agent tool, subagent_type: "general-purpose") to keep this session clean.
-    *   The request must contain all necessary information for the sub-agent, including:
-        *   The path to the feature directory.
-        *   A list of task IDs to be marked as 'done'.
-        *   A list of question objects, each containing an `id` and the `answer` text.
-    *   The instruction payload for the sub-agent should be a prompt like this:
-        """
-        You are a YAML file specialist. Your task is to update session state files using `yq`. The user will provide you with the feature directory, a list of task IDs, and a list of questions to update.
+2.  **Update State Files:**
+    *   For each completed task ID, run the `yq` command using the Bash tool to update its status to 'done' in `plan.yml`.
+        Example: `yq -i '(.[] | select(.id == "task-id")).status = "done"' path/to/plan.yml`
+    *   For each answered question, run the `yq` command to update its status to 'resolved' and set its `answer` in `questions.yml`.
+        Example: `yq -i '(.[] | select(.id == "question-id")).status = "resolved" | (.[] | select(.id == "question-id")).answer = "The answer text."' path/to/questions.yml`
 
-        1. For each task ID, run the `yq` command using the Bash tool to update its status to 'done' in `plan.yml`.
-           Example: `yq -i '(.[] | select(.id == "task-id")).status = "done"' plan.yml`
-        2. For each question object, run the `yq` command to update its status to 'resolved' and set its `answer` in `questions.yml`.
-           Example: `yq -i '(.[] | select(.id == "question-id")).status = "resolved" | (.[] | select(.id == "question-id")).answer = "The answer text."' questions.yml`
-        3. Confirm when you have successfully updated all files.
-        """
-
-3.  **Generate Log Summary:**
-    *   Based on the items you just sent to the sub-agent, generate a concise Markdown summary of the work done for the log file.
-
-4.  **Update Log (`log.md`):**
+3.  **Update Log (`log.md`):**
+    *   Generate a concise Markdown summary of the work done.
     *   Call the `append_to_log.sh` script using the Bash tool.
-    *   Example: `$AI_SESSION_HOME/scripts/append_to_log.sh "path/to/your/log.md" "Your generated summary text."`
+        Example: `$AI_SESSION_HOME/scripts/append_to_log.sh "path/to/your/log.md" "Your generated summary text."`
 
-5.  **Confirm:** State that the checkpoint has been saved.
+4.  **Confirm:** State that the checkpoint has been saved.
