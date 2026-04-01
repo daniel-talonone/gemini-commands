@@ -14,7 +14,7 @@ Please perform the following steps:
 
 3.  **Read Existing Files:** If `plan.yml` or `architecture.md` already exist in the target directory, read them before proceeding. **Never overwrite plan.yml** — only extend with new tasks. Preserve all existing entries and their statuses. `architecture.md` may be updated or replaced as part of this session.
 
-4.  **Analyze Codebase:** Perform a high-level analysis using the `glob` and `grep_search` tools to understand relevant files and functions.
+4.  **Analyze Codebase:** Perform a high-level analysis using the glob and grep_search tools to understand relevant files and functions.
     *   Look for analogous implementations (sibling routes, similar handlers) to use as reference patterns.
     *   Read `AGENTS.md` (or `GEMINI.md`) in the project root to understand the verification commands for this repo — these will apply to all tasks.
 
@@ -29,7 +29,7 @@ Please perform the following steps:
         *   **Challenge the user's answers.** If the approach seems risky, say so. Offer alternatives. Surface tradeoffs they may not have considered.
         *   **This is a discussion, not a questionnaire.** Push back, propose options, argue for a better approach if you see one.
         *   Continue until you reach a shared understanding of the implementation strategy.
-        *   Once alignment is reached, use the `write_file` tool to save `architecture.md` in the target directory with this structure:
+        *   Once alignment is reached, use the write_file tool to save `architecture.md` in the target directory with this structure:
             ```markdown
             ## Strategy
             (additive/refactor/migration, which layers change and why)
@@ -102,10 +102,10 @@ Please perform the following steps:
         ```
 
 8.  **Save Files:**
-    *   Use the `write_file` tool to save the YAML-formatted plan to `plan.yml` in the target directory.
-    *   Use the `write_file` tool to save the YAML-formatted questions to `questions.yml` in the target directory.
+    *   Use the write_file tool to save the YAML-formatted plan to `plan.yml` in the target directory.
+    *   Use the write_file tool to save the YAML-formatted questions to `questions.yml` in the target directory.
 
-9.  **Trigger Background Enrichment:** After saving, fire the enrichment script as a detached background process using the `run_shell_command` tool:
+9.  **Trigger Background Enrichment:** After saving, fire the enrichment script as a detached background process using the run_shell_command tool:
     ```
     nohup $AI_SESSION_HOME/scripts/enrich_tasks.sh "<feature_dir>" >> "<feature_dir>/log.md" 2>&1 &
     ```

@@ -9,8 +9,15 @@ The user has provided a feature directory name as an argument: `$ARGUMENTS`.
 **Process:**
 
 1.  **Load Context:**
-    *   Execute the `load_context_files.sh` script using the Bash tool to gather all the context from the feature directory `.features/$ARGUMENTS`.
-    *   Example: `$AI_SESSION_HOME/scripts/load_context_files.sh ".features/$ARGUMENTS"`
+    *   Resolve the feature directory, then execute the `load_context_files.sh` script using the Bash tool:
+        ```bash
+        FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "$ARGUMENTS")"
+        if [ ! -d "$FEATURE_DIR" ]; then
+          echo "Error: Feature directory not found for '$ARGUMENTS'." >&2
+          exit 1
+        fi
+        $AI_SESSION_HOME/scripts/load_context_files.sh "$FEATURE_DIR"
+        ```
     *   The script's output is a single string containing the content of all files (`description.md`, `plan.yml`, `questions.yml`, etc.) each preceded by `--- FILE: <filename> ---`.
 
 2.  **Synthesize Markdown Report:**
@@ -22,7 +29,7 @@ The user has provided a feature directory name as an argument: `$ARGUMENTS`.
     *   Organize the final document with clear headings for each section (e.g., `## Plan`, `## Open Questions`, `## Work Log`).
 
 3.  **Write Summary File:**
-    *   Use the Write tool to save the complete Markdown string to `_SUMMARY.md` inside the `.features/$ARGUMENTS` directory.
+    *   Use the Write tool to save the complete Markdown string to `_SUMMARY.md` inside the resolved `$FEATURE_DIR` directory.
     *   **This command must always overwrite the file if it exists.**
 
 4.  **Confirm:** Announce that the summary file has been created/updated for `$ARGUMENTS`.

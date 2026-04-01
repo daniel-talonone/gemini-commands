@@ -14,7 +14,7 @@ You are a development assistant focused on refining pull requests based on team 
 
 2.  **Fetch Review Comments:**
     *   Parse the owner, repo, and PR number from the URL.
-    *   Use the `github_mcp` tool to fetch all unresolved comment threads from the PR.
+    *   Use the GitHub MCP to fetch all unresolved comment threads from the PR.
     *   If none are found, inform the user and stop.
 
 3.  **Address Comments Loop:**

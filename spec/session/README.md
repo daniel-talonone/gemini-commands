@@ -204,15 +204,19 @@ To override this default, you can specify a different path in your project's `AG
 **To add or modify a command:**
 
 1.  Edit (or create) the `.md` file in `claude/session/`.
-2.  Run the generator to rebuild all Gemini commands:
+2.  Run the generator — only changed files will be processed:
     ```bash
     scripts/gen_gemini.sh
     ```
-3.  Commit both the `.md` source and the generated `.toml` files.
+    To force regeneration of all commands regardless of changes:
+    ```bash
+    scripts/gen_gemini.sh --force
+    ```
+3.  Commit the `.md` source, the generated `.toml` files, and `gemini/session/.checksums`.
 
 **How the generator works:**
 
-The script (`scripts/gen_gemini.sh`) reads each `claude/session/*.md` file, extracts the `description` from the YAML frontmatter and the prompt body from the content. It then passes the body through `gemini -p` with an adapter prompt (`scripts/gemini_adapter_prompt.md`) that translates Claude-specific conventions to their Gemini equivalents — tool names (`write_file`, `read_file`, `run_shell_command`, `generalist`, etc.), argument placeholders (`$ARGUMENTS` → `{{args}}`), and file references (`CLAUDE.md` → `GEMINI.md`). The adapted body is written into the `prompt` field of the corresponding `.toml` file.
+The script (`scripts/gen_gemini.sh`) reads each `claude/session/*.md` file and computes a SHA-256 checksum. It compares this against checksums stored in `gemini/session/.checksums` — files whose hash hasn't changed (and whose `.toml` already exists) are skipped. For changed or new files, it extracts the `description` from the YAML frontmatter and the prompt body from the content, then passes the body through `gemini -p` with an adapter prompt (`scripts/gemini_adapter_prompt.md`) that translates Claude-specific conventions to their Gemini equivalents — tool names (`write_file`, `read_file`, `run_shell_command`, `generalist`, etc.), argument placeholders (`$ARGUMENTS` → `{{args}}`), and file references (`CLAUDE.md` → `GEMINI.md`). The adapted body is written into the `prompt` field of the corresponding `.toml` file. Checksums are updated at the end of each run.
 
 ### Architectural Rationale
 

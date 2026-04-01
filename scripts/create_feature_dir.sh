@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
-# Usage: ./create_feature_dir.sh <base-dir> <story-id>
-# Example: ./create_feature_dir.sh .features sc-12345
+# Usage: ./create_feature_dir.sh <full-feature-path>
+# Example: ./create_feature_dir.sh ~/.ai-session/features/org/repo/sc-12345
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-  echo "Error: Base directory and Story ID are required." >&2
+if [ -z "$1" ]; then
+  echo "Error: Full feature directory path is required." >&2
   exit 1
 fi
 
-BASE_DIR="$1"
-STORY_ID="$2"
-DIR_PATH="$BASE_DIR/$STORY_ID"
+DIR_PATH="$1"
 
 if [ -d "$DIR_PATH" ]; then
   echo "Warning: Directory $DIR_PATH already exists." >&2

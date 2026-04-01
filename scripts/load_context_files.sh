@@ -32,20 +32,16 @@ done < <(find "$FEATURE_DIR" -maxdepth 1 \( -name "*.md" -o -name "*.yml" -o -na
 
 # Also load the project context file (AGENTS.md takes precedence as the LLM-agnostic standard,
 # falling back to GEMINI.md for backward compatibility).
-# Search order: project root (CWD), then the parent of the feature directory (e.g. .features/).
+# Search order: project root (CWD) only.
 AGENTS_FILE=""
 AGENTS_LABEL=""
-for candidate_dir in "." "$(dirname "$FEATURE_DIR")"; do
-    if [ -f "$candidate_dir/AGENTS.md" ]; then
-        AGENTS_FILE="$candidate_dir/AGENTS.md"
-        AGENTS_LABEL="AGENTS.md"
-        break
-    elif [ -f "$candidate_dir/GEMINI.md" ]; then
-        AGENTS_FILE="$candidate_dir/GEMINI.md"
-        AGENTS_LABEL="GEMINI.md"
-        break
-    fi
-done
+if [ -f "./AGENTS.md" ]; then
+    AGENTS_FILE="./AGENTS.md"
+    AGENTS_LABEL="AGENTS.md"
+elif [ -f "./GEMINI.md" ]; then
+    AGENTS_FILE="./GEMINI.md"
+    AGENTS_LABEL="GEMINI.md"
+fi
 
 if [ -n "$AGENTS_FILE" ]; then
     echo "--- FILE: $AGENTS_LABEL ---"

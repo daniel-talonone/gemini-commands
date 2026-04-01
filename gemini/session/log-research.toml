@@ -18,7 +18,7 @@ You are an orchestrator for logging research. Your goal is to review the session
         *   Key insights or conclusions reached.
 
 3.  **Delegate Report Generation:**
-    *   use the `generalist` tool to take your structured summary and generate the final, detailed log entry.
+    *   Use the `generalist` tool to take your structured summary and generate the final, detailed log entry.
     *   Construct and pass the following detailed prompt to the sub-agent.
 
     ---

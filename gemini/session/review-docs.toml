@@ -12,7 +12,7 @@ You are an orchestrator for conducting a documentation review. Your goal is to d
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
 
 3.  **Delegate to Sub-Agent:**
-    *   use the `generalist` tool to perform the review and save the results.
+    *   Use the `generalist` tool to perform the review and save the results.
     *   Embed the gathered context and the target file path directly into the sub-agent prompt.
 
     ---

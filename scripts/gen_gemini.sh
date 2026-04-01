@@ -11,10 +11,18 @@
 
 set -euo pipefail
 
+FORCE=0
+for arg in "$@"; do
+    case "$arg" in
+        --force) FORCE=1 ;;
+    esac
+done
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLAUDE_DIR="$REPO_DIR/claude/session"
 GEMINI_DIR="$REPO_DIR/gemini/session"
 ADAPTER_PROMPT_FILE="$REPO_DIR/scripts/gemini_adapter_prompt.md"
+CHECKSUMS_FILE="$GEMINI_DIR/.checksums"
 
 if ! command -v gemini &>/dev/null; then
     echo "Error: 'gemini' CLI not found in PATH. Install Gemini CLI to use this script." >&2
@@ -28,14 +36,29 @@ fi
 
 mkdir -p "$GEMINI_DIR"
 
+# Load existing checksums into an associative array
+declare -A stored_checksums
+if [ -f "$CHECKSUMS_FILE" ]; then
+    while IFS=' ' read -r hash filename; do
+        stored_checksums["$filename"]="$hash"
+    done < "$CHECKSUMS_FILE"
+fi
+
 adapter_prompt="$(cat "$ADAPTER_PROMPT_FILE")"
 
 count=0
+skipped=0
 for md_file in "$CLAUDE_DIR"/*.md; do
     [ -f "$md_file" ] || continue
 
     name="$(basename "$md_file" .md)"
     toml_file="$GEMINI_DIR/$name.toml"
+
+    current_hash="$(shasum -a 256 "$md_file" | awk '{print $1}')"
+    if [ "$FORCE" -eq 0 ] && [ "${stored_checksums[$name]+set}" = "set" ] && [ "${stored_checksums[$name]}" = "$current_hash" ] && [ -f "$toml_file" ]; then
+        skipped=$((skipped + 1))
+        continue
+    fi
 
     # Extract description value from YAML frontmatter
     description="$(awk '
@@ -73,8 +96,20 @@ for md_file in "$CLAUDE_DIR"/*.md; do
         printf '"""\n'
     } > "$toml_file"
 
+    stored_checksums["$name"]="$current_hash"
     count=$((count + 1))
 done
 
+# Persist updated checksums
+{
+    for name in "${!stored_checksums[@]}"; do
+        printf '%s %s\n' "${stored_checksums[$name]}" "$name"
+    done
+} | sort > "$CHECKSUMS_FILE"
+
 echo ""
-echo "Generated $count Gemini command(s) in gemini/session/."
+if [ "$skipped" -gt 0 ]; then
+    echo "Generated $count Gemini command(s), skipped $skipped unchanged."
+else
+    echo "Generated $count Gemini command(s) in gemini/session/."
+fi

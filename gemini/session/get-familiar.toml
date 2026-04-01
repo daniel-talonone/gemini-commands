@@ -2,7 +2,9 @@
 # Run scripts/gen_gemini.sh to regenerate.
 description = "Gets familiar with the current code changes by having a sub-agent generate a summary."
 prompt = """
-Use the `generalist` tool with the following request:
+Use the `generalist` tool to perform a review of the current code changes.
+
+Pass the following prompt to the sub-agent:
 
 "You are an expert code reviewer. Your task is to provide a concise summary of the code changes on the current branch.
 

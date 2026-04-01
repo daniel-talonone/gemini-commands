@@ -10,7 +10,15 @@ The user will provide a feature directory name as an argument (e.g., `sc-12345`)
 
 1.  **Execute Script:** Run the `load_context_files.sh` helper script using the `run_shell_command` tool.
     *   Full path: `$AI_SESSION_HOME/scripts/load_context_files.sh`. Use this variable literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
-    *   Pass the feature directory path as argument: `.features/{{args}}`
+    *   Resolve the feature directory first, then pass it:
+        ```bash
+        FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "{{args}}")"
+        if [ ! -d "$FEATURE_DIR" ]; then
+          echo "Error: Feature directory not found for '{{args}}'." >&2
+          exit 1
+        fi
+        $AI_SESSION_HOME/scripts/load_context_files.sh "$FEATURE_DIR"
+        ```
 
 2.  **Parse Script Output:** The script returns a block of text with each file's content preceded by `--- FILE: <filename> ---`.
     *   Find and extract the content under `--- FILE: description.md ---`.

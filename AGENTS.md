@@ -5,10 +5,11 @@ session-based workflow for software development, compatible with both Gemini CLI
 Claude Code. The commands orchestrate a lifecycle for feature development, from
 creation and planning to review and pull request generation.
 
-The core of the workflow revolves around a "feature directory" (stored in `.features/`
-by default) which acts as a single source of truth for a given task, and an `AGENTS.md`
-file in each project which provides global context. See
-`spec/session/example-feature-document/` for a complete example of a feature directory.
+The core of the workflow revolves around a "feature directory" (stored by default in
+`~/.ai-session/features/<org>/<repo>/<feature-id>/`) which acts as a single source
+of truth for a given task, and an `AGENTS.md` file in each project which provides
+global context. See `spec/session/example-feature-document/` for a complete example
+of a feature directory.
 
 ## Repo Structure
 
@@ -63,6 +64,7 @@ terminal. Both tools use the same `/session:` prefix.
 
 - **Command files:** `claude/session/*.md` is the single source of truth. `gemini/session/*.toml`
   files are generated from them via `scripts/gen_gemini.sh` — do not edit `.toml` files directly.
+  The script is incremental (checksum-based); use `--force` to regenerate all. Commit `.checksums` alongside `.toml` files.
 - **Scripts:** Shared helper scripts live in `scripts/` and are referenced via
   `$AI_SESSION_HOME/scripts/` in all commands.
 - **Session Context Pattern:** To reduce token consumption, session commands use an
