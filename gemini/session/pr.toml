@@ -7,11 +7,11 @@ You are an orchestrator for creating pull requests. You will gather all necessar
 **Process:**
 
 1.  **Gather All Context:**
-    *   **Git Context:** run_shell_command(command: "$AI_SESSION_HOME/scripts/get_git_context.sh") to get the diff (decode it from base64) and the current branch name.
-    *   **Feature Context:** Identify the active feature directory and read_file(file_path: "plan.yml") and read_file(file_path: "log.md").
+    *   **Git Context:** Call `$AI_SESSION_HOME/scripts/get_git_context.sh` using `run_shell_command` to get the diff (decode it from base64) and the current branch name.
+    *   **Feature Context:** Identify the active feature directory and read the content of `plan.yml` and `log.md` using `read_file`.
     *   **Session Context:** Find the `### ✨ Session Context Loaded for...` block and extract the **Description**.
-    *   **Project Conventions:** read_file(file_path: "AGENTS.md"). Its content is for your internal use and should be retained in your working memory. **DO NOT display its content.**
-    *   **PR Template:** read_file(file_path: ".git/pull_request_template.md").
+    *   **Project Conventions:** Read the `AGENTS.md` file using `read_file`. Its content is for your internal use and should be retained in your working memory. **DO NOT display its content.**
+    *   **PR Template:** Read the content of `.git/pull_request_template.md` using `read_file`.
 
 2.  **Delegate Description Generation to Sub-Agent:**
     *   Use the `generalist` tool to generate the PR description.
@@ -53,9 +53,9 @@ You are an orchestrator for creating pull requests. You will gather all necessar
 
 5.  **CRITICAL: Save PR Link & Update Session Context:**
     *   Get the URL of the pull request.
-    *   read_file(file_path: "description.md").
+    *   Read the current content of `description.md` from the feature directory using `read_file`.
     *   Append the PR URL to the content you just read.
-    *   write_file(file_path: "description.md", content: "{{new_description_content}}").
+    *   Use the `write_file` tool to save the new combined content back to `description.md`.
     *   **CRITICAL:** Output a new "Session Context" block to reflect the change, formatted exactly like this:
 
         ```markdown
@@ -68,5 +68,5 @@ You are an orchestrator for creating pull requests. You will gather all necessar
         ```
 
 6.  **Fallback - Create Local File:**
-    *   If instructed not to create a PR, write_file(file_path: "pull_request_descr.md", content: "{{generated_description}}") in the feature directory.
+    *   If instructed not to create a PR, save the generated description to `pull_request_descr.md` in the feature directory using `write_file`.
 """

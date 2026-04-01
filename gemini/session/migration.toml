@@ -8,7 +8,7 @@ The user has provided a file path as an argument: `{{args}}`.
 
 **Steps:**
 
-1.  Run the migration helper script using the `run_shell_command` tool, passing the provided file path as the argument:
+1.  Run the migration helper script using `run_shell_command`, passing the provided file path as the argument:
     ```
     $AI_SESSION_HOME/scripts/migrate_feature_file.sh "{{args}}"
     ```
