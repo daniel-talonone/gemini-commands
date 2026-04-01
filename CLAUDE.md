@@ -44,12 +44,13 @@ Each feature gets a directory (default: `.features/<feature-id>/`) in the **targ
 
 ```
 .features/sc-12345/
-  description.md   # User story and acceptance criteria (Markdown, unstructured)
-  plan.yml         # Task list: id, task, status (todo/in-progress/done)
-  questions.yml    # Open questions: id, question, status, answer
-  log.md           # Append-only progress log
-  review.yml       # Code review findings: id, file, line, feedback, status
-  pr.md            # Pull request link and description
+  description.md    # User story and acceptance criteria (Markdown, unstructured)
+  architecture.md   # Optional: implementation strategy, pattern refs, constraints, slice hints
+  plan.yml          # Execution plan: slices (id, description, status, depends_on) containing tasks (id, task, status)
+  questions.yml     # Open questions: id, question, status, answer
+  log.md            # Append-only progress log
+  review.yml        # Code review findings: id, file, line, feedback, status
+  pr.md             # Pull request link and description
 ```
 
 YAML files are always modified via `yq` — never direct text replacement.
@@ -64,7 +65,7 @@ Commands follow producer/consumer roles to minimize token usage:
 ### Two Command Patterns
 
 - **LLM Orchestrator**: Agent orchestrates helper scripts directly for interactive workflows (e.g., `/session:define`).
-- **Sub-agent Pattern**: Agent delegates focused one-off tasks to an isolated sub-agent to keep the main session clean (e.g., `/session:review`, `/session:pr`, `/session:checkpoint`).
+- **Sub-agent Pattern**: Agent delegates focused one-off tasks to an isolated sub-agent to keep the main session clean (e.g., `/session:review`, `/session:pr`).
 
 ### Project-Wide Context (`AGENTS.md`)
 

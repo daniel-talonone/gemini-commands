@@ -1,22 +1,48 @@
 # This is a sample plan file for testing purposes.
-- id: 'add-membership-endpoint'
-  task: 'Create a new backend endpoint at /api/users/{id}/membership'
-  status: 'done'
-- id: 'mock-membership-api'
-  task: 'Configure the mock server for the membership status endpoint'
-  status: 'done'
-- id: 'implement-frontend-component'
-  task: 'Build the UI component to display the membership status'
-  status: 'todo'
-- id: 'connect-frontend-to-backend'
-  task: 'Connect the new UI component to the backend API endpoint'
-  status: 'todo'
-- id: 'handle-non-member-case'
-  task: 'Implement UI logic to display "Not a member" when appropriate'
-  status: 'todo'
-- id: 'add-error-handling'
-  task: 'Add error handling for API failures'
-  status: 'todo'
-- id: 'write-unit-tests'
-  task: 'Write unit tests for the new backend endpoint and frontend component'
-  status: 'todo'
+- id: backend-foundation
+  description: 'Endpoint exists, service function is tested, mock is registered.'
+  status: done
+  depends_on: []
+  tasks:
+    - id: add-membership-endpoint
+      task: 'Create a new backend endpoint at /api/users/{id}/membership'
+      status: done
+    - id: mock-membership-api
+      task: 'Configure the mock server for the membership status endpoint'
+      status: done
+
+- id: frontend-component
+  description: 'MembershipStatus component renders correctly in isolation with prop-driven data.'
+  status: todo
+  depends_on: []
+  tasks:
+    - id: implement-frontend-component
+      task: 'Build the UI component to display the membership status'
+      status: todo
+
+- id: frontend-wiring
+  description: 'MembershipStatus fetches live data and handles all states.'
+  status: todo
+  depends_on:
+    - backend-foundation
+    - frontend-component
+  tasks:
+    - id: connect-frontend-to-backend
+      task: 'Connect the new UI component to the backend API endpoint'
+      status: todo
+    - id: handle-non-member-case
+      task: 'Implement UI logic to display "Not a member" when appropriate'
+      status: todo
+
+- id: cleanup
+  description: 'No hardcoded values remain; edge-case tests are in place.'
+  status: todo
+  depends_on:
+    - frontend-wiring
+  tasks:
+    - id: add-error-handling
+      task: 'Add error handling for API failures'
+      status: todo
+    - id: write-unit-tests
+      task: 'Write unit tests for the new backend endpoint and frontend component'
+      status: todo

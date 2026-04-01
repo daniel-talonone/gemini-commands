@@ -126,17 +126,19 @@ This section provides a breakdown of individual session commands, their dependen
 
 ## `/session:plan`
 
--   **Description:** Analyzes codebase and feature requirements to create an implementation plan.
+-   **Description:** Analyzes codebase and feature requirements to create a detailed implementation plan. Optionally conducts a collaborative architecture discussion before planning, producing `architecture.md`.
 -   **Orchestration Pattern:** LLM Orchestrator
 -   **Dependencies:**
     -   **Tools:** `read_file`, `glob`, `grep_search`, `write_file`
 -   **Inputs:**
     -   The "Session Context" block from chat history.
     -   Codebase files via `glob` and `grep_search`.
-    -   User input during interactive planning.
+    -   User input (architecture discussion gate + optional interactive discussion).
+    -   Existing `plan.yml` and `architecture.md` if present (never overwrites plan, may update architecture).
 -   **Outputs:**
-    -   Generates and writes initial `.features/<feature-dir>/plan.yml`
-    -   Generates and writes initial `.features/<feature-dir>/questions.yml`
+    -   Generates and writes `.features/<feature-dir>/plan.yml` using the nested slice/task schema defined in `$AI_SESSION_HOME/spec/session/schemas/plan.schema.yml` (extends if already exists).
+    -   Generates and writes `.features/<feature-dir>/questions.yml`
+    -   Optionally generates `.features/<feature-dir>/architecture.md` (strategy, pattern refs, constraints, slice hints)
 
 ## `/session:pr`
 

@@ -19,6 +19,14 @@ spec/session/     ← LLM-agnostic documentation and examples
 scripts/          ← Shared shell scripts used by both tools
 ```
 
+Feature directories contain:
+- `description.md` — requirements (what)
+- `architecture.md` — optional: implementation strategy, pattern refs, constraints, slice hints (how)
+- `plan.yml` — execution plan: slices (id, description, status, depends_on) containing tasks (id, task, status). Schema: `$AI_SESSION_HOME/spec/session/schemas/plan.schema.yml`.
+- `questions.yml` — unresolved items
+- `log.md` — append-only session history
+- `review.yml`, `pr.md` — review and delivery artifacts
+
 ## Commands
 
 - `/session:address-feedback` — Fetches and helps address feedback from the active PR.

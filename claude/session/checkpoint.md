@@ -12,7 +12,8 @@ You are an assistant that helps log work-in-progress and update the session stat
 
 2.  **Update State Files:**
     *   For each completed task ID, run the `yq` command using the Bash tool to update its status to 'done' in `plan.yml`.
-        Example: `yq -i '(.[] | select(.id == "task-id")).status = "done"' path/to/plan.yml`
+        Task update: `yq -i '(.[] | .tasks[] | select(.id == "task-id")).status = "done"' path/to/plan.yml`
+        Slice update: `yq -i '(.[] | select(.id == "slice-id")).status = "done"' path/to/plan.yml`
     *   For each answered question, run the `yq` command to update its status to 'resolved' and set its `answer` in `questions.yml`.
         Example: `yq -i '(.[] | select(.id == "question-id")).status = "resolved" | (.[] | select(.id == "question-id")).answer = "The answer text."' path/to/questions.yml`
 

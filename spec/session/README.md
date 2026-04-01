@@ -157,16 +157,17 @@ Please check the file [Command Details](command_details.md) for a full breakdown
     In this workflow, a session is not only tied to the terminal or chat history. Instead, it is primarily defined by the feature directory, which stores the description, implementation plan, open questions, progress log, and review notes for the feature.
 
     The terminal session is still used during development, but the feature directory acts as a more stable source of context. This makes it easier to resume work across multiple days and allows the LLM to use structured information rather than incomplete conversational history.
--   **Feature Directory:** A directory located in `.features/` (e.g., `.features/sc-12345/`). It contains a mix of Markdown files (like `description.md`, `log.md`) and structured YAML files (`plan.yml`, `questions.yml`, `review.yml`) that hold the state for a specific feature. This serves as the "session memory." See [`spec/session/example-feature-document/`](example-feature-document/) in this repo for a complete example.
+-   **Feature Directory:** A directory located in `.features/` (e.g., `.features/sc-12345/`). It acts as a structured scratchpad for the duration of a feature — disposable working memory, not permanent documentation. See [`spec/session/example-feature-document/`](example-feature-document/) in this repo for a complete example.
 
     Example:
     ```
     .features/sc-12345/
-        description.md
-        plan.yml
-        questions.yml
-        log.md
-        review.yml
+        description.md     # what: requirements and acceptance criteria
+        architecture.md    # how: optional implementation strategy, pattern refs, constraints, slice hints
+        plan.yml           # in what order: execution steps
+        questions.yml      # what is still unclear
+        log.md             # what happened
+        review.yml         # review findings
     ```
 -   **Project Document (`AGENTS.md`):** A file at the root of **each of your own
     repositories** (not this repo) that stores project-wide context, architectural
