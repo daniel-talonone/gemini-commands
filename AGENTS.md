@@ -13,9 +13,9 @@ file in each project which provides global context. See
 ## Repo Structure
 
 ```
-gemini/session/   ← Gemini CLI implementation (*.toml)
-claude/session/   ← Claude Code implementation (*.md)
-spec/session/     ← LLM-agnostic documentation and examples
+claude/session/   ← Claude Code commands (*.md) — single source of truth for all prompts
+gemini/session/   ← Gemini CLI commands (*.toml) — generated via scripts/gen_gemini.sh
+spec/session/     ← LLM-agnostic documentation, schemas, and examples
 scripts/          ← Shared shell scripts used by both tools
 ```
 
@@ -61,8 +61,8 @@ terminal. Both tools use the same `/session:` prefix.
 
 # Development Conventions
 
-- **Command files:** Gemini commands are `.toml` files in `gemini/session/`. Claude
-  commands are `.md` files in `claude/session/`. Both implement the same concepts.
+- **Command files:** `claude/session/*.md` is the single source of truth. `gemini/session/*.toml`
+  files are generated from them via `scripts/gen_gemini.sh` — do not edit `.toml` files directly.
 - **Scripts:** Shared helper scripts live in `scripts/` and are referenced via
   `$AI_SESSION_HOME/scripts/` in all commands.
 - **Session Context Pattern:** To reduce token consumption, session commands use an

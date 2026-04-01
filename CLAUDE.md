@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `ai-session` is a session-based development workflow framework for AI assistants. It provides 16 `/session:*` commands that manage persistent state (feature description, implementation plan, open questions, log, reviews) across sessions via structured files — replacing reliance on chat history.
 
-It supports both **Gemini CLI** (`.toml` files) and **Claude Code** (`.md` files). Commands are symlinked into each tool's native commands directory via `setup.sh`.
+It supports both **Gemini CLI** and **Claude Code**. Claude commands (`.md` files) are the single source of truth; Gemini commands (`.toml` files) are generated from them via `scripts/gen_gemini.sh`. Commands are symlinked into each tool's native commands directory via `setup.sh`.
 
 ## Setup
 
@@ -14,9 +14,6 @@ It supports both **Gemini CLI** (`.toml` files) and **Claude Code** (`.md` files
 chmod +x setup.sh
 ./setup.sh          # Adds AI_SESSION_HOME to .zshrc, creates symlinks
 source ~/.zshrc
-
-# Gemini CLI only — install required skills:
-gemini skills install ~/.ai-session/gemini/tdd-skill
 ```
 
 `setup.sh` is idempotent. Re-run it after adding a new command group — new subdirectories under `gemini/` or `claude/` are picked up automatically.
@@ -31,8 +28,8 @@ gemini skills install ~/.ai-session/gemini/tdd-skill
 
 ```
 spec/session/     # LLM-agnostic documentation, schemas, and example feature document
-gemini/session/   # Gemini CLI implementation (*.toml)
-claude/session/   # Claude Code implementation (*.md)
+claude/session/   # Claude Code commands (*.md) — single source of truth for all prompts
+gemini/session/   # Gemini CLI commands (*.toml) — generated from claude/session/ via scripts/gen_gemini.sh
 scripts/          # Shared shell scripts referenced via $AI_SESSION_HOME/scripts/
 ```
 
@@ -77,7 +74,7 @@ Commands are tested by delegating to a sub-agent using `spec/session/example-fea
 
 ## Adding or Modifying Commands
 
-- **Gemini**: edit/add `.toml` files in `gemini/session/`
-- **Claude**: edit/add `.md` files in `claude/session/`
+- Edit/add `.md` files in `claude/session/` — this is the single source of truth.
+- Run `scripts/gen_gemini.sh` to regenerate all Gemini `.toml` files from the Claude `.md` files.
 - **Shared scripts**: add to `scripts/`, reference via `$AI_SESSION_HOME/scripts/<name>.sh`
-- Both implementations must stay behaviorally equivalent — same inputs, same outputs, same state mutations
+- Do not edit `gemini/session/*.toml` directly — changes will be overwritten by the generator.

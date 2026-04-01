@@ -1,3 +1,5 @@
+# Generated from claude/session/review-docs.md — do not edit directly.
+# Run scripts/gen_gemini.sh to regenerate.
 description = "Performs a critical, context-aware documentation review of the current branch using a focused sub-agent."
 prompt = """
 You are an orchestrator for conducting a documentation review. Your goal is to delegate the entire review process to a specialized sub-agent.
@@ -10,8 +12,8 @@ You are an orchestrator for conducting a documentation review. Your goal is to d
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
 
 3.  **Delegate to Sub-Agent:**
-    *   Use the `generalist` tool to perform the review and save the results.
-    *   Construct and pass the following detailed prompt to the `generalist`. You must embed the gathered context and the target file path directly into the prompt.
+    *   use the `generalist` tool to perform the review and save the results.
+    *   Embed the gathered context and the target file path directly into the sub-agent prompt.
 
     ---
     **Sub-Agent Prompt:**
@@ -20,10 +22,10 @@ You are an orchestrator for conducting a documentation review. Your goal is to d
 
     **Special Focus Areas:**
     Your primary goal is to determine if the code changes require corresponding documentation updates and whether those updates have been made correctly.
-    1.  **Identify Documentation Files:** First, analyze the **Project Context** provided (from `AGENTS.md` and the project's `README.md`) to identify the locations of key documentation files. Look for references to READMEs, architectural decision records (ADRs), and any OpenAPI specification files.
+    1.  **Identify Documentation Files:** Analyze the **Project Context** to identify the locations of key documentation files (READMEs, ADRs, OpenAPI specs).
     2.  **Analyze Code Changes:** Review the code diff to understand the changes made.
     3.  **Cross-reference:** Compare the code changes with the identified documentation files. Have function signatures changed? Have API endpoints been added or modified? Has a core architectural pattern been altered?
-    4.  **Verify Updates:** Check if the relevant documentation files have been updated to reflect the code changes. If not, or if the updates are insufficient, create a feedback item.
+    4.  **Verify Updates:** Check if the relevant documentation files have been updated to reflect the code changes.
 
     **Context:**
 
@@ -41,23 +43,20 @@ You are an orchestrator for conducting a documentation review. Your goal is to d
 
     **Review Process:**
 
-    1.  **Fetch the Diff:** Execute `$AI_SESSION_HOME/scripts/get_git_context.sh` using `run_shell_command`. Use `$AI_SESSION_HOME` literally — the shell will expand it. This outputs a base64-encoded diff.
+    1.  **Fetch the Diff:** Execute `$AI_SESSION_HOME/scripts/get_git_context.sh` using the `run_shell_command` tool. Use `$AI_SESSION_HOME` literally — the shell will expand it. This outputs a base64-encoded diff.
     2.  **Decode Diff:** Decode the base64 output to get the code changes.
-    3.  **Perform Review:** Following the process outlined above, analyze the changes and their impact on documentation.
-    4.  **Format Feedback as YAML:** Compile all your findings into a list of YAML objects.
-        *   Each object **must** have `id`, `file`, `line`, `feedback`, and `status` fields.
-        *   `id`: A short, human-readable, unique identifier in 'kebab-case' (e.g., `missing-readme-update`).
+    3.  **Perform Review:** Following the process above, analyze the changes and their impact on documentation.
+    4.  **Format Feedback as YAML:** Compile all findings into a list of YAML objects. Each object **must** have:
+        *   `id`: A short, unique, kebab-case identifier (e.g., `missing-readme-update`).
         *   `file`: The path to the documentation file that needs changes.
         *   `line`: The relevant line number (or 0 if it's a general file issue).
-        *   `feedback`: The critical feedback text (e.g., "The README has not been updated to reflect the new '--force' flag in the CLI.").
-        *   `status`: Always 'open'.
-    5.  **Save Feedback:** Use the `write_file` tool to save your YAML-formatted list of feedback directly to the provided **Target File Path**.
+        *   `feedback`: The critical feedback text.
+        *   `status`: Always `'open'`.
+    5.  **Save Feedback:** Use the `write_file` tool to save the YAML-formatted list directly to the **Target File Path**.
 
     ---
 
 4.  **Verify and Familiarize:**
-    *   After the sub-agent task is complete, use the `read_file` tool to read the content of the `docs-review.yml` file that the sub-agent created.
+    *   After the sub-agent completes, use the `read_file` tool to read the content of the `docs-review.yml` file.
     *   This verifies that the process was successful and loads the review into the main session context.
-
-**Begin.**
 """

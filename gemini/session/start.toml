@@ -1,23 +1,24 @@
-description = "Starts a work session by loading context from a feature directory and the project's GEMINI file."
+# Generated from claude/session/start.md — do not edit directly.
+# Run scripts/gen_gemini.sh to regenerate.
+description = "Starts a work session by loading context from a feature directory and the project's AGENTS.md file."
 prompt = """
 You are the orchestrator of the `/session:start` command. Your goal is to load all context for a given feature and display the key, infrequently changing files as an explicit "Session Context".
 
-The user will provide a feature directory name as an argument (e.g., `sc-12345`).
+The user will provide a feature directory name as an argument (e.g., `sc-12345`). It is available as `{{args}}`.
 
 **Workflow:**
 
-1.  **Execute Script:** Call the `load_context_files.sh` helper script to get the content of all context files from the feature directory.
-    *   The script path is `$AI_SESSION_HOME/scripts/load_context_files.sh`. Use this variable literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
-    *   It requires the feature directory path as an argument: `.features/{{args}}`.
-    *   Run the script using the `run_shell_command` tool.
+1.  **Execute Script:** Run the `load_context_files.sh` helper script using the `run_shell_command` tool.
+    *   Full path: `$AI_SESSION_HOME/scripts/load_context_files.sh`. Use this variable literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
+    *   Pass the feature directory path as argument: `.features/{{args}}`
 
-2.  **Parse Script Output:** The script will return a single block of text containing the contents of all feature files, each preceded by `--- FILE: <filename> ---`.
-    *   You MUST parse this output to find the content for `description.md`.
-    *   Also find and retain the content under `--- FILE: AGENTS.md ---` (or `--- FILE: GEMINI.md ---` as fallback) — this is your project context (see step 3).
+2.  **Parse Script Output:** The script returns a block of text with each file's content preceded by `--- FILE: <filename> ---`.
+    *   Find and extract the content under `--- FILE: description.md ---`.
+    *   **CRITICAL:** The output ends at the next `--- FILE: ---` delimiter or end of output.
 
-3.  **Retain Project Context:** From the script output, use the `AGENTS.md` (or `GEMINI.md`) content you found in step 2. This is for your internal use only — retain it in your working memory for the duration of the session. **DO NOT display its content. Do NOT read the file again manually.**
+3.  **Retain Project Context:** From the same script output, find the content under `--- FILE: AGENTS.md ---` (or `--- FILE: GEMINI.md ---` as fallback). This is for your internal use only — retain it in your working memory for the duration of the session. **DO NOT display its content.**
 
-4.  **Display Session Context:** Display only the `description.md` content to the user in a structured format. This makes the context explicit and reusable for subsequent commands. Use the following Markdown format EXACTLY:
+4.  **Display Session Context:** Use the following Markdown format EXACTLY:
 
     ```markdown
     ### ✨ Session Context Loaded for `{{args}}`
@@ -28,5 +29,5 @@ The user will provide a feature directory name as an argument (e.g., `sc-12345`)
     This context is now available for all subsequent commands.
     ```
 
-**CRITICAL:** It is vital that you extract the content for `description.md` from the script output and place it inside the formatted block. The rest of the file content from the `load_context_files.sh` script is loaded into the session's memory automatically for your own use and **MUST NOT be displayed**.
+**CRITICAL:** Only the `description.md` content goes inside the formatted block. All other file contents from the script output are for your internal memory and must not be displayed.
 """

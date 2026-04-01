@@ -85,11 +85,6 @@ This lifecycle helps capture and utilize context, from initial requirements to f
     `yq` — they have different syntax.
 -   **Node.js / `npx`:** Required for several MCP servers.
 -   **`uv` / `uvx`:** Required for the Git MCP server (`brew install uv`).
--   **Gemini skills (Gemini CLI only):** One skill needs to be installed locally.
-    From the repo root, run:
-    ```bash
-    gemini skills install ~/.ai-session/gemini/tdd-skill
-    ```
 -   **MCP Servers:** Integrations with Shortcut, Notion, Git, and GitHub are used by
     several commands. Configure them in your tool's settings file.
 
@@ -201,6 +196,23 @@ The default root for feature directories is `.features/`. This is a neutral, pur
 To override this default, you can specify a different path in your project's `AGENTS.md` file. For example:
 
 > **Feature directories root is `.tmp/features/` instead of `.features/`**
+
+### Adding or Modifying Commands
+
+`claude/session/*.md` is the **single source of truth** for all command prompts. The `gemini/session/*.toml` files are generated from them and must not be edited directly.
+
+**To add or modify a command:**
+
+1.  Edit (or create) the `.md` file in `claude/session/`.
+2.  Run the generator to rebuild all Gemini commands:
+    ```bash
+    scripts/gen_gemini.sh
+    ```
+3.  Commit both the `.md` source and the generated `.toml` files.
+
+**How the generator works:**
+
+The script (`scripts/gen_gemini.sh`) reads each `claude/session/*.md` file, extracts the `description` from the YAML frontmatter and the prompt body from the content. It then passes the body through `gemini -p` with an adapter prompt (`scripts/gemini_adapter_prompt.md`) that translates Claude-specific conventions to their Gemini equivalents — tool names (`write_file`, `read_file`, `run_shell_command`, `generalist`, etc.), argument placeholders (`$ARGUMENTS` → `{{args}}`), and file references (`CLAUDE.md` → `GEMINI.md`). The adapted body is written into the `prompt` field of the corresponding `.toml` file.
 
 ### Architectural Rationale
 

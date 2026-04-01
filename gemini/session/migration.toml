@@ -1,4 +1,6 @@
-description = "Migrates an old, single-file feature document to the new directory structure by calling a dedicated helper script."
+# Generated from claude/session/migration.md — do not edit directly.
+# Run scripts/gen_gemini.sh to regenerate.
+description = "Migrates an old, single-file feature document to the new directory structure."
 prompt = """
 Your task is to migrate a legacy single-file feature Markdown document to the multi-file directory structure.
 
@@ -6,8 +8,10 @@ The user has provided a file path as an argument: `{{args}}`.
 
 **Steps:**
 
-1.  Run the migration helper script using `run_shell_command`, passing the provided file path as the argument:
-    `$AI_SESSION_HOME/scripts/migrate_feature_file.sh "{{args}}"`
+1.  Run the migration helper script using the `run_shell_command` tool, passing the provided file path as the argument:
+    ```
+    $AI_SESSION_HOME/scripts/migrate_feature_file.sh "{{args}}"
+    ```
 
 2.  Report the outcome to the user: confirm the new directory was created, the files were populated, and the original file was archived with a `.migrated` extension.
 """
