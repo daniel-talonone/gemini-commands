@@ -43,16 +43,20 @@ enricher_prompt="$(cat "$PROMPT_FILE")"
 # Build input: plan.yml + any source files mentioned in task descriptions.
 # We grep for patterns like "FILE: src/..." or "src/..." in the task text and
 # collect those files from the current working directory (the target project).
-input="$(printf '--- plan.yml ---\n%s\n' "$(cat "$PLAN_FILE")")"
+input="--- plan.yml ---
+$(cat "$PLAN_FILE")"
 
 while IFS= read -r file_path; do
     if [ -f "$file_path" ]; then
-        input="$(printf '%s\n\n--- FILE: %s ---\n%s' "$input" "$file_path" "$(cat "$file_path")")"
+        input="$input
+
+--- FILE: $file_path ---
+$(cat "$file_path")"
     fi
 done < <(grep -oE '(src|lib|app|test|tests|spec|packages)/[^[:space:]]+\.[a-z]+' "$PLAN_FILE" | sort -u)
 
 # Run enrichment via LLM. Stderr suppressed to hide Gemini CLI startup noise.
-printf '%s' "$input" | gemini -p "$enricher_prompt" 2>/dev/null > "$TEMP_FILE"
+printf '%s\n' "$input" | gemini -p "$enricher_prompt" 2>/dev/null > "$TEMP_FILE"
 
 # Validate the output is non-empty before replacing
 if [ ! -s "$TEMP_FILE" ]; then

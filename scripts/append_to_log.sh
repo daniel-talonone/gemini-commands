@@ -40,4 +40,3 @@ printf "## [%s]
 %s
 " "$TIMESTAMP" "$LOG_MESSAGE" >> "$LOG_FILE"
 
-echo "Log entry added to $LOG_FILE"
