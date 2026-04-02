@@ -56,6 +56,19 @@ else
 fi
 echo ""
 
+# ── 1b. Add scripts/ to PATH ─────────────────────────────────────────────────
+# Uses a guard to avoid duplicate PATH entries on each shell start.
+PATH_LINE='[[ ":$PATH:" != *":$AI_SESSION_HOME/scripts:"* ]] && export PATH="$AI_SESSION_HOME/scripts:$PATH"'
+
+for rc_file in "$ZSHENV" "$ZSHRC"; do
+    if grep -q "AI_SESSION_HOME/scripts" "$rc_file" 2>/dev/null; then
+        echo "✓ scripts/ already in PATH in $(basename "$rc_file")"
+    else
+        printf "\n# ai-session scripts\n%s\n" "$PATH_LINE" >> "$rc_file"
+        echo "✓ Added scripts/ to PATH in $(basename "$rc_file")"
+    fi
+done
+echo ""
 
 # ── 2. Create symlinks ────────────────────────────────────────────────────────
 # ~/.gemini/commands/ and ~/.claude/commands/ stay as real directories so you
