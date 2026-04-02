@@ -69,7 +69,12 @@ terminal. Both tools use the same `/session:` prefix.
   - `headless/session/*.md` — generated via `scripts/gen_headless.sh` (LLM-agnostic headless pipeline variants, Gemini tool names, no interactivity, no sub-agents). Do not edit directly except `plan.md` which is hand-written.
   Both scripts are incremental (checksum-based); use `--force` to regenerate all. Commit `.checksums` alongside generated files.
 - **Scripts:** Shared helper scripts live in `scripts/` and are referenced via
-  `$AI_SESSION_HOME/scripts/` in all commands.
+  `$AI_SESSION_HOME/scripts/` in all commands. Added to `$PATH` via `setup.sh`.
+  Key scripts:
+  - `orchestrate.sh <story-id> --plan|--implement|--review|--pr` — invokes a single headless
+    pipeline step with precondition checks and `status.yaml` writes. Run from inside the target repo.
+  - `orchestrate.sh --status <story-id>` — prints raw `status.yaml` for a feature.
+  - `test_orchestrate.sh` — smoke test for `orchestrate.sh` (arg parsing, preconditions, --status).
 - **Session Context Pattern:** To reduce token consumption, session commands use an
   explicit context-passing pattern:
   - **Producers** (`/session:start`, `/session:define`, `/session:new`): Output a
