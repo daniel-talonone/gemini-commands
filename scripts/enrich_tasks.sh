@@ -56,11 +56,22 @@ $(cat "$file_path")"
 done < <(grep -oE '(src|lib|app|test|tests|spec|packages)/[^[:space:]]+\.[a-z]+' "$PLAN_FILE" | sort -u)
 
 # Run enrichment via LLM. Stderr suppressed to hide Gemini CLI startup noise.
-printf '%s\n' "$input" | gemini -p "$enricher_prompt" 2>/dev/null > "$TEMP_FILE"
+# Strip markdown code fences defensively — the LLM occasionally wraps output in ```yaml
+# despite the prompt instruction, and fences make the file invalid YAML.
+printf '%s\n' "$input" | gemini -p "$enricher_prompt" 2>/dev/null | sed '/^```/d' > "$TEMP_FILE"
 
-# Validate the output is non-empty before replacing
+# Validate the output is non-empty and is valid YAML with the expected structure
 if [ ! -s "$TEMP_FILE" ]; then
+    "$REPO_DIR/scripts/append_to_log.sh" "$FEATURE_DIR/log.md" \
+        "Error: LLM returned empty output — plan.yml not modified."
     echo "Error: LLM returned empty output — plan.yml not modified." >&2
+    exit 1
+fi
+
+if ! yq '.[0].id' "$TEMP_FILE" &>/dev/null; then
+    "$REPO_DIR/scripts/append_to_log.sh" "$FEATURE_DIR/log.md" \
+        "Error: LLM output is not valid plan.yml YAML — plan.yml not modified"
+    echo "Error: LLM output is not valid plan.yml YAML — plan.yml not modified." >&2
     exit 1
 fi
 
