@@ -14,7 +14,8 @@ of a feature directory.
 ## Repo Structure
 
 ```
-claude/session/   ← Claude Code commands (*.md) — single source of truth for all prompts
+claude/session/          ← Claude Code commands (*.md) — single source of truth for all prompts
+headless/session/        ← LLM-agnostic headless pipeline variants — generated via scripts/gen_headless.sh
 gemini/session/   ← Gemini CLI commands (*.toml) — generated via scripts/gen_gemini.sh
 spec/session/     ← LLM-agnostic documentation, schemas, and examples
 scripts/          ← Shared shell scripts used by both tools
@@ -62,9 +63,10 @@ terminal. Both tools use the same `/session:` prefix.
 
 # Development Conventions
 
-- **Command files:** `claude/session/*.md` is the single source of truth. `gemini/session/*.toml`
-  files are generated from them via `scripts/gen_gemini.sh` — do not edit `.toml` files directly.
-  The script is incremental (checksum-based); use `--force` to regenerate all. Commit `.checksums` alongside `.toml` files.
+- **Command files:** `claude/session/*.md` is the single source of truth. Two generated outputs:
+  - `gemini/session/*.toml` — generated via `scripts/gen_gemini.sh` (Gemini CLI commands). Do not edit directly.
+  - `headless/session/*.md` — generated via `scripts/gen_headless.sh` (LLM-agnostic headless pipeline variants, Gemini tool names, no interactivity, no sub-agents). Do not edit directly except `plan.md` which is hand-written.
+  Both scripts are incremental (checksum-based); use `--force` to regenerate all. Commit `.checksums` alongside generated files.
 - **Scripts:** Shared helper scripts live in `scripts/` and are referenced via
   `$AI_SESSION_HOME/scripts/` in all commands.
 - **Session Context Pattern:** To reduce token consumption, session commands use an

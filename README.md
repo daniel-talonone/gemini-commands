@@ -70,6 +70,8 @@ gemini skills install ~/.ai-session/gemini/tdd-skill
 │   └── session/
 ├── claude/        # Claude Code implementation (*.md)
 │   └── session/
+├── headless/
+│   └── session/   # LLM-agnostic headless pipeline variants (generated via gen_headless.sh)
 ├── scripts/       # Shared helper scripts used by both tools
 ├── roadmap/       # Project roadmap and reviews
 ├── AGENTS.md      # Project-wide AI context

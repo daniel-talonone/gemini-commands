@@ -213,10 +213,25 @@ To override this default, you can specify a different path in your project's `AG
     scripts/gen_gemini.sh --force
     ```
 3.  Commit the `.md` source, the generated `.toml` files, and `gemini/session/.checksums`.
+4.  Regenerate headless pipeline variants (if applicable):
+    ```bash
+    scripts/gen_headless.sh
+    ```
+    Commands in the deny list are skipped automatically. `headless/session/plan.md`
+    is hand-written and excluded via deny list — do not overwrite it.
+    Commit the generated `.md` files and `headless/session/.checksums`.
 
-**How the generator works:**
+**How the Gemini generator works:**
 
 The script (`scripts/gen_gemini.sh`) reads each `claude/session/*.md` file and computes a SHA-256 checksum. It compares this against checksums stored in `gemini/session/.checksums` — files whose hash hasn't changed (and whose `.toml` already exists) are skipped. For changed or new files, it extracts the `description` from the YAML frontmatter and the prompt body from the content, then passes the body through `gemini -p` with an adapter prompt (`scripts/gemini_adapter_prompt.md`) that translates Claude-specific conventions to their Gemini equivalents — tool names (`write_file`, `read_file`, `run_shell_command`, `generalist`, etc.), argument placeholders (`$ARGUMENTS` → `{{args}}`), and file references (`CLAUDE.md` → `GEMINI.md`). The adapted body is written into the `prompt` field of the corresponding `.toml` file. Checksums are updated at the end of each run.
+
+**How the headless generator works:**
+
+The script (`scripts/gen_headless.sh`) follows the same checksum-based pattern but produces `headless/session/*.md` — self-contained prompts for use in the orchestrator pipeline via `gemini -p "$(cat headless/session/<name>.md)"`. The `headless/` directory sits at the repo root alongside `claude/` and `gemini/`, with subdirectories per command group to support future groups beyond `session/`.
+
+The headless adapter prompt (`scripts/headless_adapter_prompt.md`) combines two transformations in one pass: (1) Claude tool names are translated to Gemini equivalents (same mapping as the Gemini adapter), and (2) all interactive gates are stripped — confirmation prompts, architecture discussions, sub-agent delegation — replaced with auto-defaults and direct inline execution.
+
+Commands that are inherently interactive or have no headless equivalent are excluded via a deny list: `define`, `start`, `end`, `get-familiar`, `log-research`, `migration`, `checkpoint`. `plan` is also excluded because it has a purpose-built hand-written variant (`headless/session/plan.md`) that auto-proceeds through architecture decisions without user input.
 
 ### Architectural Rationale
 
