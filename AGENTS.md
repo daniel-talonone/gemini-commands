@@ -36,6 +36,7 @@ Feature directories contain:
 - `/session:define` — Conversational session to define a new user story from scratch.
 - `/session:end` — Ends the session, saving progress and project-wide knowledge to AGENTS.md.
 - `/session:get-familiar` — Sub-agent summarizes the current branch's code changes.
+- `/session:implement` — Executes all plan.yml tasks autonomously; verifies after each task; stops and logs on any unrecoverable failure. Headless only.
 - `/session:log-research` — Logs a detailed summary of research findings to log.md.
 - `/session:migration` — Migrates a legacy single-file feature document to the directory structure.
 - `/session:new` — Creates a feature directory from a Shortcut story ID or Notion URL.
@@ -105,3 +106,7 @@ Typical approach:
 3. Have the sub-agent execute the command under test and report the outcome.
 4. Evaluate whether the output matches the expected behaviour described in
    `spec/session/command_details.md`.
+
+## Verification
+Run: ls scripts/gen_headless.sh
+

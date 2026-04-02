@@ -63,7 +63,7 @@ Here is a typical workflow:
 2.  **Plan the Work**:
     *   `/session:plan`: The agent analyzes the requirements and codebase to produce an implementation plan (`plan.yml`).
 3.  **Implement**:
-    *   The developer writes the code to implement the tasks defined in the plan.
+    *   `/session:implement`: The agent executes all tasks in `plan.yml` autonomously — verifies after each task, retries up to 5 times on failure, and logs all outcomes. Headless only; requires a `## Verification` section in the project's `AGENTS.md`.
 4.  **Track Progress** (Optional, as needed):
     *   `/session:checkpoint`: Save a snapshot of the work, update task statuses, and log progress.
     *   `/session:log-research`: Add research notes to the session log.
@@ -135,6 +135,7 @@ This lifecycle helps capture and utilize context, from initial requirements to f
 - **/session:migration**: Migrates an old, single-file feature document to the new directory structure.
 - **/session:new {SHORTCUT ID}**: Creates a new feature directory from a Shortcut story ID or Notion page URL.
 - **/session:plan**: Analyzes codebase and feature requirements to create an implementation plan.
+- **/session:implement {FEATURE ID}**: Executes all plan.yml tasks autonomously; verifies after each task; stops and logs on any unrecoverable failure. Headless only.
 - **/session:pr**: Generates a pull request description, creates/updates the PR on GitHub, and saves the link to the feature directory.
 - **/session:review**: Performs a code review of the current branch using a focused sub-agent.
 - **/session:review-devops**: Performs a devops review of the current branch using a focused sub-agent.
