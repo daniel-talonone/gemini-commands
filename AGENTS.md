@@ -19,6 +19,7 @@ headless/session/        ← LLM-agnostic headless pipeline variants — generat
 gemini/session/   ← Gemini CLI commands (*.toml) — generated via scripts/gen_gemini.sh
 spec/session/     ← LLM-agnostic documentation, schemas, and examples
 scripts/          ← Shared shell scripts used by both tools
+cmd/ai-session/   ← Go CLI for deterministic file operations
 ```
 
 Feature directories contain:
@@ -86,8 +87,8 @@ terminal. Both tools use the same `/session:` prefix.
     outputs a new updated "Session Context" block.
 - **State Management:**
   - Unstructured: `description.md` and `log.md` (plain Markdown).
-  - Structured: `plan.yml`, `questions.yml`, `review.yml` (YAML, modified via `yq`).
-  - All YAML modifications use `yq` commands executed via shell for deterministic,
+  - Structured: `plan.yml`, `questions.yml`, `review.yml` (YAML, modified via `ai-session` CLI).
+  - All YAML modifications use `ai-session update-task` or `ai-session update-slice` for deterministic,
     atomic updates.
 - **Command Patterns:**
   - **LLM Orchestrator:** For interactive tasks, the agent orchestrates helper scripts
@@ -113,5 +114,5 @@ Typical approach:
    `spec/session/command_details.md`.
 
 ## Verification
-Run: ls scripts/gen_headless.sh
+Run: make build && make test && make lint
 

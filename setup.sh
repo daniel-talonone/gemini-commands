@@ -70,6 +70,19 @@ for rc_file in "$ZSHENV" "$ZSHRC"; do
 done
 echo ""
 
+# ── 1c. Add bin/ to PATH ──────────────────────────────────────────────────────
+PATH_LINE_BIN='[[ ":$PATH:" != *":$AI_SESSION_HOME/go-session/bin:"* ]] && export PATH="$AI_SESSION_HOME/go-session/bin:$PATH"'
+
+for rc_file in "$ZSHENV" "$ZSHRC"; do
+    if grep -q "AI_SESSION_HOME/go-session/bin" "$rc_file" 2>/dev/null; then
+        echo "✓ go-session/bin/ already in PATH in $(basename "$rc_file")"
+    else
+        printf "\n# ai-session bin\n%s\n" "$PATH_LINE_BIN" >> "$rc_file"
+        echo "✓ Added go-session/bin/ to PATH in $(basename "$rc_file")"
+    fi
+done
+echo ""
+
 # ── 2. Create symlinks ────────────────────────────────────────────────────────
 # ~/.gemini/commands/ and ~/.claude/commands/ stay as real directories so you
 # can add personal commands freely alongside the repo-managed ones.

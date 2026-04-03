@@ -1,4 +1,7 @@
 .DS_Store
 roadmap/
-features/
-.features/
+/features/
+/.features/
+
+# Go build output
+/go-session/bin/

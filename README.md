@@ -32,6 +32,7 @@ concepts in that tool's native format.
 
 Before running setup, make sure you have:
 
+- **[Go](https://go.dev/doc/install)** (v1.21+)
 - **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** and/or **[Claude Code](https://github.com/anthropics/claude-code)** — install whichever tools you plan to use
 - **[yq](https://github.com/mikefarah/yq) v4+** — used to update YAML state files (`brew install yq`)
 - **[Node.js](https://nodejs.org/)** — required for `npx` (used by MCP servers)
@@ -66,6 +67,7 @@ gemini skills install ~/.ai-session/gemini/tdd-skill
 .
 ├── spec/          # LLM-agnostic: documentation, schemas, examples
 │   └── session/
+├── cmd/ai-session/# Go CLI for file operations
 ├── gemini/        # Gemini CLI implementation (*.toml)
 │   └── session/
 ├── claude/        # Claude Code implementation (*.md)

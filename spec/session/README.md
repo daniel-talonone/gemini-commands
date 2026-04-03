@@ -80,9 +80,10 @@ This lifecycle helps capture and utilize context, from initial requirements to f
 
 ## Dependencies
 
+-   **[Go](https://go.dev/doc/install)** (v1.21+)
 -   **`yq` v4+:** Used for modifying `.yml` state files (`brew install yq`). Make sure
     you install [mikefarah/yq](https://github.com/mikefarah/yq), not the Python-based
-    `yq` — they have different syntax.
+    `yq` — they have different syntax. *Note: `yq` is being phased out in favor of the `ai-session` Go CLI.*
 -   **Node.js / `npx`:** Required for several MCP servers.
 -   **`uv` / `uvx`:** Required for the Git MCP server (`brew install uv`).
 -   **MCP Servers:** Integrations with Shortcut, Notion, Git, and GitHub are used by
