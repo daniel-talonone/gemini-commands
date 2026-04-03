@@ -84,6 +84,8 @@ This lifecycle helps capture and utilize context, from initial requirements to f
 -   **`yq` v4+:** Used for modifying `.yml` state files (`brew install yq`). Make sure
     you install [mikefarah/yq](https://github.com/mikefarah/yq), not the Python-based
     `yq` — they have different syntax. *Note: `yq` is being phased out in favor of the `ai-session` Go CLI.*
+    `plan.yml` writes now go through `ai-session plan-write` (schema validation + atomic write) and
+    per-task enrichment uses `ai-session plan-enrich-task` (field-level guard, status protection).
 -   **Node.js / `npx`:** Required for several MCP servers.
 -   **`uv` / `uvx`:** Required for the Git MCP server (`brew install uv`).
 -   **MCP Servers:** Integrations with Shortcut, Notion, Git, and GitHub are used by

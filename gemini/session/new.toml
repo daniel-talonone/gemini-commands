@@ -57,8 +57,8 @@ You are an assistant who bootstraps feature development by delegating context ga
     ---
 
 4.  **Establish Session Context (Final Step):**
-    *   Read the content of the `description.md` file the sub-agent just created using the `read_file` tool.
-    *   Read the content of `AGENTS.md` from the project root (fall back to `GEMINI.md` if not present) using the `read_file` tool.
+    *   Read the content of the `description.md` file the sub-agent just created.
+    *   Read the content of `AGENTS.md` from the project root (fall back to `GEMINI.md` if not present).
     *   Format and display using the following Markdown structure EXACTLY:
 
         ```markdown

@@ -12,7 +12,7 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
 
 3.  **Delegate to Sub-Agent:**
-    *   Use the `generalist` tool to perform the review and save the results.
+    *   use the `generalist` tool to perform the review and save the results.
     *   Embed the gathered context and the target file path directly into the sub-agent prompt.
 
     ---
@@ -52,6 +52,4 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
 4.  **Verify and Familiarize:**
     *   After the sub-agent completes, use the `read_file` tool to read the content of the `review.yml` file.
     *   This verifies that the process was successful and loads the review into the main session context.
-
-**Begin.**
 """

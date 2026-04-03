@@ -90,6 +90,10 @@ terminal. Both tools use the same `/session:` prefix.
   - Structured: `plan.yml`, `questions.yml`, `review.yml` (YAML, modified via `ai-session` CLI).
   - All YAML modifications use `ai-session update-task` or `ai-session update-slice` for deterministic,
     atomic updates.
+  - `plan.yml` writes are gated through `ai-session plan-write` — validates schema before writing,
+    rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs.
+  - Per-task enrichment uses `ai-session plan-enrich-task --slice <id> --task <id>` — updates only
+    the `task:` field of a single todo task, protected by an injection guard and status lock.
 - **Command Patterns:**
   - **LLM Orchestrator:** For interactive tasks, the agent orchestrates helper scripts
     directly (e.g., `/session:define`).

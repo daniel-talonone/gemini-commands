@@ -41,10 +41,11 @@ The feature identifier is: {{args}}
    Follow the schema in `$AI_SESSION_HOME/spec/session/schemas/plan.schema.yml`.
 
 7. **Save Files:**
-   Use `write_file` to save:
-   - `plan.yml` to `$FEATURE_DIR/plan.yml`
-   - `questions.yml` to `$FEATURE_DIR/questions.yml`
-   - `architecture.md` to `$FEATURE_DIR/architecture.md`
+   - **Do NOT use `write_file` for `plan.yml`.** Instead, pipe through `plan-write` via `run_shell_command`:
+       printf '%s\n' "$PLAN_YAML" | ai-session plan-write "$FEATURE_DIR"
+     If the command exits non-zero, output the error and stop — do not trigger enrichment.
+   - Use `write_file` to save `questions.yml` to `$FEATURE_DIR/questions.yml`.
+   - Use `write_file` to save `architecture.md` to `$FEATURE_DIR/architecture.md`.
 
 8. **Trigger Enrichment:**
    Run via `run_shell_command` (detached):

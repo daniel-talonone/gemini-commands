@@ -36,26 +36,40 @@ fi
 
 mkdir -p "$GEMINI_DIR"
 
-# Load existing checksums into an associative array
-declare -A stored_checksums
+# Use a temp file instead of associative array (bash 3.2 compat — macOS default)
+UPDATED_CHECKSUMS="$(mktemp)"
+trap 'rm -f "$UPDATED_CHECKSUMS"' EXIT
 if [ -f "$CHECKSUMS_FILE" ]; then
-    while IFS=' ' read -r hash filename; do
-        stored_checksums["$filename"]="$hash"
-    done < "$CHECKSUMS_FILE"
+    cp "$CHECKSUMS_FILE" "$UPDATED_CHECKSUMS"
+else
+    touch "$UPDATED_CHECKSUMS"
 fi
 
+# Return stored checksum for a given name, or empty string
+get_stored_checksum() {
+    grep " $1$" "$UPDATED_CHECKSUMS" 2>/dev/null | awk '{print $1}' || true
+}
+
 adapter_prompt="$(cat "$ADAPTER_PROMPT_FILE")"
+
+echo "DEBUG: CLAUDE_DIR=$CLAUDE_DIR"
+echo "DEBUG: CHECKSUMS_FILE=$CHECKSUMS_FILE (exists=$([ -f "$CHECKSUMS_FILE" ] && echo yes || echo no))"
+echo "DEBUG: UPDATED_CHECKSUMS=$UPDATED_CHECKSUMS"
+echo "DEBUG: FORCE=$FORCE"
+echo "DEBUG: md files: $(ls "$CLAUDE_DIR"/*.md 2>/dev/null | wc -l | tr -d ' ') found"
 
 count=0
 skipped=0
 for md_file in "$CLAUDE_DIR"/*.md; do
-    [ -f "$md_file" ] || continue
+    [ -f "$md_file" ] || { echo "DEBUG: no .md files matched glob"; continue; }
 
     name="$(basename "$md_file" .md)"
     toml_file="$GEMINI_DIR/$name.toml"
 
     current_hash="$(shasum -a 256 "$md_file" | awk '{print $1}')"
-    if [ "$FORCE" -eq 0 ] && [ "${stored_checksums[$name]+set}" = "set" ] && [ "${stored_checksums[$name]}" = "$current_hash" ] && [ -f "$toml_file" ]; then
+    stored_hash="$(get_stored_checksum "$name")"
+    echo "DEBUG: $name — stored='$stored_hash' current='$current_hash' toml=$([ -f "$toml_file" ] && echo exists || echo missing)"
+    if [ "$FORCE" -eq 0 ] && [ -n "$stored_hash" ] && [ "$stored_hash" = "$current_hash" ] && [ -f "$toml_file" ]; then
         skipped=$((skipped + 1))
         continue
     fi
@@ -67,6 +81,7 @@ for md_file in "$CLAUDE_DIR"/*.md; do
         f==1 && /^description:/ { sub(/^description: */, ""); print; exit }
     ' "$md_file")"
 
+    echo "DEBUG: $name — description='$description'"
     if [ -z "$description" ]; then
         echo "  ⚠ Skipping $name.md — no description found in frontmatter"
         continue
@@ -96,16 +111,15 @@ for md_file in "$CLAUDE_DIR"/*.md; do
         printf '"""\n'
     } > "$toml_file"
 
-    stored_checksums["$name"]="$current_hash"
+    # Update checksum in temp file: remove old entry (grep -v exits 1 on empty file — suppress)
+    { grep -v " $name$" "$UPDATED_CHECKSUMS" || true; } > "${UPDATED_CHECKSUMS}.tmp"
+    mv "${UPDATED_CHECKSUMS}.tmp" "$UPDATED_CHECKSUMS"
+    printf '%s %s\n' "$current_hash" "$name" >> "$UPDATED_CHECKSUMS"
     count=$((count + 1))
 done
 
 # Persist updated checksums
-{
-    for name in "${!stored_checksums[@]}"; do
-        printf '%s %s\n' "${stored_checksums[$name]}" "$name"
-    done
-} | sort > "$CHECKSUMS_FILE"
+sort "$UPDATED_CHECKSUMS" > "$CHECKSUMS_FILE"
 
 echo ""
 if [ "$skipped" -gt 0 ]; then

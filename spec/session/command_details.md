@@ -155,16 +155,18 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Description:** Analyzes codebase and feature requirements to create a detailed implementation plan. Optionally conducts a collaborative architecture discussion before planning, producing `architecture.md`.
 -   **Orchestration Pattern:** LLM Orchestrator
 -   **Dependencies:**
-    -   **Tools:** `read_file`, `glob`, `grep_search`, `write_file`
+    -   **Scripts:** `ai-session plan-write` (validates schema + atomic write of `plan.yml`), `scripts/enrich_tasks.sh` (background per-task enrichment via `ai-session plan-enrich-task`)
+    -   **Tools:** `read_file`, `glob`, `grep_search`, `write_file`, `run_shell_command`
 -   **Inputs:**
     -   The "Session Context" block from chat history.
     -   Codebase files via `glob` and `grep_search`.
     -   User input (architecture discussion gate + optional interactive discussion).
     -   Existing `plan.yml` and `architecture.md` if present (never overwrites plan, may update architecture).
 -   **Outputs:**
-    -   Generates and writes `.features/<feature-dir>/plan.yml` using the nested slice/task schema defined in `$AI_SESSION_HOME/spec/session/schemas/plan.schema.yml` (extends if already exists).
+    -   Generates and writes `.features/<feature-dir>/plan.yml` via `ai-session plan-write` — schema-validated, atomic. If validation fails the error is shown and nothing is written.
     -   Generates and writes `.features/<feature-dir>/questions.yml`
     -   Optionally generates `.features/<feature-dir>/architecture.md` (strategy, pattern refs, constraints, slice hints)
+    -   Triggers `scripts/enrich_tasks.sh` as a detached background process — iterates todo tasks one at a time, pipes LLM output through `ai-session plan-enrich-task` (field-level write, injection guard, status protection)
 
 ## `/session:pr`
 

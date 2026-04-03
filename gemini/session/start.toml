@@ -36,6 +36,4 @@ The user will provide a feature directory name as an argument (e.g., `sc-12345`)
 
     This context is now available for all subsequent commands.
     ```
-
-**CRITICAL:** Only the `description.md` content goes inside the formatted block. All other file contents from the script output are for your internal memory and must not be displayed.
 """

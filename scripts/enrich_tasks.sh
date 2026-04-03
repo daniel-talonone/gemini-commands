@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # enrich_tasks.sh — Enrich plan.yml task descriptions with FILE/FUNCTION/code context.
 #
-# Reads plan.yml from the feature directory, collects source files referenced in
-# task descriptions, passes everything through an LLM adapter prompt, and writes
-# back an enriched plan.yml atomically (temp file + mv to prevent corruption).
+# Iterates over todo tasks one at a time using the ai-session CLI.
+# Updates each task body individually via `ai-session plan-enrich-task` —
+# no full-file overwrite, no schema corruption possible.
 #
 # Intended to run as a detached background process after /session:plan:
 #   nohup $AI_SESSION_HOME/scripts/enrich_tasks.sh ".features/sc-1234" >> ".features/sc-1234/log.md" 2>&1 &
@@ -23,7 +23,6 @@ fi
 
 FEATURE_DIR="$1"
 PLAN_FILE="$FEATURE_DIR/plan.yml"
-TEMP_FILE="$FEATURE_DIR/plan.yml.enriching"
 
 if [ ! -f "$PLAN_FILE" ]; then
     echo "Error: plan.yml not found at '$PLAN_FILE'" >&2
@@ -35,49 +34,81 @@ if ! command -v gemini &>/dev/null; then
     exit 1
 fi
 
-# Clean up temp file on exit (covers failures mid-run)
-trap 'rm -f "$TEMP_FILE"' EXIT
+if ! command -v ai-session &>/dev/null; then
+    echo "Error: 'ai-session' CLI not found in PATH. Run setup.sh to add go-session/bin/ to PATH." >&2
+    exit 1
+fi
 
 enricher_prompt="$(cat "$PROMPT_FILE")"
+enriched_count=0
+skipped_count=0
 
-# Build input: plan.yml + any source files mentioned in task descriptions.
-# We grep for patterns like "FILE: src/..." or "src/..." in the task text and
-# collect those files from the current working directory (the target project).
-input="--- plan.yml ---
-$(cat "$PLAN_FILE")"
+# Iterate slices
+while IFS= read -r slice_line; do
+    # plan-list output: "<id>  [<status>]" or "  <description>" — skip description lines
+    [[ "$slice_line" =~ ^[[:space:]] ]] && continue
+    [[ -z "$slice_line" ]] && continue
+    slice_id="$(echo "$slice_line" | awk '{print $1}')"
+    [ -z "$slice_id" ] && continue
 
-while IFS= read -r file_path; do
-    if [ -f "$file_path" ]; then
-        input="$input
+    # Iterate tasks in this slice
+    while IFS= read -r task_line; do
+        [[ -z "$task_line" ]] && continue
+        task_id="$(echo "$task_line" | awk '{print $1}')"
+        task_status="$(echo "$task_line" | grep -oE '\[.*\]' | tr -d '[]')"
+        [ -z "$task_id" ] && continue
+
+        # Only enrich todo tasks
+        if [ "$task_status" != "todo" ]; then
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
+
+        # Get the current task body
+        task_body="$(ai-session plan-get "$FEATURE_DIR" --slice "$slice_id" --task "$task_id" 2>/dev/null || true)"
+
+        # Skip if already enriched (contains FILE:)
+        if echo "$task_body" | grep -q "FILE:"; then
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
+
+        # Collect referenced source files from the task body
+        input="--- task: $slice_id/$task_id ---
+$task_body"
+
+        while IFS= read -r file_path; do
+            if [ -f "$file_path" ]; then
+                input="$input
 
 --- FILE: $file_path ---
 $(cat "$file_path")"
-    fi
-done < <(grep -oE '(src|lib|app|test|tests|spec|packages)/[^[:space:]]+\.[a-z]+' "$PLAN_FILE" | sort -u)
+            fi
+        done < <(echo "$task_body" | grep -oE '(src|lib|app|test|tests|spec|packages)/[^[:space:]]+\.[a-z]+' | sort -u)
 
-# Run enrichment via LLM. Stderr suppressed to hide Gemini CLI startup noise.
-# Strip markdown code fences defensively — the LLM occasionally wraps output in ```yaml
-# despite the prompt instruction, and fences make the file invalid YAML.
-printf '%s\n' "$input" | gemini -p "$enricher_prompt" 2>/dev/null | sed '/^```/d' > "$TEMP_FILE"
+        # Enrich via LLM and pipe directly into plan-enrich-task
+        new_body="$(printf '%s\n' "$input" | gemini -p "$enricher_prompt" 2>/dev/null | sed '/^```/d')"
 
-# Validate the output is non-empty and is valid YAML with the expected structure
-if [ ! -s "$TEMP_FILE" ]; then
-    "$REPO_DIR/scripts/append_to_log.sh" "$FEATURE_DIR/log.md" \
-        "Error: LLM returned empty output — plan.yml not modified."
-    echo "Error: LLM returned empty output — plan.yml not modified." >&2
-    exit 1
-fi
+        if [ -z "$new_body" ]; then
+            echo "Warning: LLM returned empty output for task $slice_id/$task_id — skipping." >&2
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
 
-if ! yq '.[0].id' "$TEMP_FILE" &>/dev/null; then
-    "$REPO_DIR/scripts/append_to_log.sh" "$FEATURE_DIR/log.md" \
-        "Error: LLM output is not valid plan.yml YAML — plan.yml not modified"
-    echo "Error: LLM output is not valid plan.yml YAML — plan.yml not modified." >&2
-    exit 1
-fi
+        if printf '%s' "$new_body" | ai-session plan-enrich-task "$FEATURE_DIR" \
+                --slice "$slice_id" --task "$task_id" 2>/tmp/enrich_err; then
+            enriched_count=$((enriched_count + 1))
+        else
+            err="$(cat /tmp/enrich_err)"
+            echo "Warning: plan-enrich-task failed for $slice_id/$task_id: $err" >&2
+            skipped_count=$((skipped_count + 1))
+        fi
 
-# Atomic replace
-mv "$TEMP_FILE" "$PLAN_FILE"
+    done < <(ai-session plan-list "$FEATURE_DIR" --slice "$slice_id" 2>/dev/null || true)
 
-# Log completion
+done < <(ai-session plan-list "$FEATURE_DIR" 2>/dev/null || true)
+
+rm -f /tmp/enrich_err
+
 "$REPO_DIR/scripts/append_to_log.sh" "$FEATURE_DIR/log.md" \
-    "**Background task enrichment complete.** \`plan.yml\` has been enriched with FILE/FUNCTION/code context. Review it before starting implementation."
+    "**Background task enrichment complete.** $enriched_count tasks enriched, $skipped_count skipped. Review \`plan.yml\` before starting implementation."
