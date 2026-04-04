@@ -2,8 +2,8 @@
 # enrich_tasks.sh — Enrich plan.yml task descriptions with FILE/FUNCTION/code context.
 #
 # Iterates over todo tasks one at a time using the ai-session CLI.
-# Updates each task body individually via `ai-session plan-enrich-task` —
-# no full-file overwrite, no schema corruption possible.
+# The LLM decides whether to ENRICH (clarify), SPLIT (into subtasks), or SKIP (already detailed).
+# No full-file overwrite, no schema corruption possible.
 #
 # Intended to run as a detached background process after /session:plan:
 #   nohup $AI_SESSION_HOME/scripts/enrich_tasks.sh ".features/sc-1234" >> ".features/sc-1234/log.md" 2>&1 &
@@ -67,16 +67,21 @@ while IFS= read -r slice_line; do
         # Get the current task body
         task_body="$(ai-session plan-get "$FEATURE_DIR" --slice "$slice_id" --task "$task_id" 2>/dev/null || true)"
 
-        # Skip if already enriched (contains FILE:)
-        if echo "$task_body" | grep -q "FILE:"; then
-            skipped_count=$((skipped_count + 1))
-            continue
-        fi
+        # Build slice context: sibling task IDs + first line of their body
+        slice_context="$(ai-session plan-list "$FEATURE_DIR" --slice "$slice_id" 2>/dev/null | \
+            grep -v '^[[:space:]]' | awk '{print $1}' | while IFS= read -r sid; do
+                body="$(ai-session plan-get "$FEATURE_DIR" --slice "$slice_id" --task "$sid" 2>/dev/null | head -1 || true)"
+                printf '%s: %s\n' "$sid" "$body"
+            done)"
 
-        # Collect referenced source files from the task body
-        input="--- task: $slice_id/$task_id ---
+        # Build prompt input with slice context prepended
+        input="--- slice context: $slice_id ---
+$slice_context
+---
+--- task: $slice_id/$task_id ---
 $task_body"
 
+        # Append referenced source files
         while IFS= read -r file_path; do
             if [ -f "$file_path" ]; then
                 input="$input
@@ -86,7 +91,7 @@ $(cat "$file_path")"
             fi
         done < <(echo "$task_body" | grep -oE '(src|lib|app|test|tests|spec|packages)/[^[:space:]]+\.[a-z]+' | sort -u)
 
-        # Enrich via LLM and pipe directly into plan-enrich-task
+        # Call LLM
         new_body="$(printf '%s\n' "$input" | gemini -p "$enricher_prompt" 2>/dev/null | sed '/^```/d')"
 
         if [ -z "$new_body" ]; then
@@ -95,12 +100,32 @@ $(cat "$file_path")"
             continue
         fi
 
-        if printf '%s' "$new_body" | ai-session plan-enrich-task "$FEATURE_DIR" \
-                --slice "$slice_id" --task "$task_id" 2>/tmp/enrich_err; then
-            enriched_count=$((enriched_count + 1))
+        # Detect ENRICH: / SPLIT: prefix and route to the correct command
+        first_line="$(printf '%s' "$new_body" | head -1)"
+        rest="$(printf '%s' "$new_body" | tail -n +2)"
+
+        if [ "$first_line" = "ENRICH:" ]; then
+            if printf '%s' "$rest" | ai-session plan-enrich-task "$FEATURE_DIR" \
+                    --slice "$slice_id" --task "$task_id" 2>/tmp/enrich_err; then
+                enriched_count=$((enriched_count + 1))
+            else
+                err="$(cat /tmp/enrich_err)"
+                echo "Warning: plan-enrich-task failed for $slice_id/$task_id: $err" >&2
+                skipped_count=$((skipped_count + 1))
+            fi
+        elif [ "$first_line" = "SPLIT:" ]; then
+            if printf '%s' "$rest" | ai-session plan-split-task "$FEATURE_DIR" \
+                    --slice "$slice_id" --task "$task_id" 2>/tmp/enrich_err; then
+                enriched_count=$((enriched_count + 1))
+            else
+                err="$(cat /tmp/enrich_err)"
+                echo "Warning: plan-split-task failed for $slice_id/$task_id: $err" >&2
+                skipped_count=$((skipped_count + 1))
+            fi
+        elif [ "$first_line" = "SKIP:" ]; then
+            skipped_count=$((skipped_count + 1))
         else
-            err="$(cat /tmp/enrich_err)"
-            echo "Warning: plan-enrich-task failed for $slice_id/$task_id: $err" >&2
+            echo "Warning: LLM output for $slice_id/$task_id missing ENRICH:/SPLIT:/SKIP: prefix — skipping." >&2
             skipped_count=$((skipped_count + 1))
         fi
 
