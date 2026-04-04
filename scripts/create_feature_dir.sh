@@ -31,4 +31,14 @@ cat <<EOF > "$DIR_PATH/pr.md"
 *(This section is intentionally left blank.)*
 EOF
 
+cat <<EOF > "$DIR_PATH/status.yaml"
+mode: ''
+repo: ''
+branch: ''
+pid: 0
+pipeline_step: ''
+started_at: ''
+updated_at: ''
+EOF
+
 echo "Created and populated placeholder files in $DIR_PATH"

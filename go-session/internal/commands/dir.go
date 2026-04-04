@@ -20,10 +20,14 @@ func CreateFeature(featureDir string) error {
 		"review.yml":    "[]\n",
 		"log.md":        "# Work Log\n*(This section is intentionally left blank.)*\n",
 		"pr.md":         "# Pull Request\n*(This section is intentionally left blank.)*\n",
+		"status.yaml":   "mode: ''\nrepo: ''\nbranch: ''\npid: 0\npipeline_step: ''\nstarted_at: ''\nupdated_at: ''\n",
 	}
 
 	for name, content := range files {
 		path := filepath.Join(featureDir, name)
+		if _, err := os.Stat(path); err == nil {
+			continue // file already exists — never overwrite live data
+		}
 		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 			return fmt.Errorf("writing %s: %w", name, err)
 		}

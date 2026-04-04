@@ -77,6 +77,7 @@ terminal. Both tools use the same `/session:` prefix.
   - `orchestrate.sh --status <story-id>` — prints raw `status.yaml` for a feature.
   - `test_orchestrate.sh` — smoke test for `orchestrate.sh` (arg parsing, preconditions, --status).
   - `scripts/load_context_files.sh` — **DEPRECATED**. Use `ai-session load-context <story-id>` instead.
+  - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.ai-session/features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`.
 - **Session Context Pattern:** To reduce token consumption, session commands use an
   explicit context-passing pattern:
   - **Producers** (`/session:start`, `/session:define`, `/session:new`): Output a

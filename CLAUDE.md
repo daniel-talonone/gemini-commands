@@ -74,6 +74,7 @@ Commands follow producer/consumer roles to minimize token usage:
 The `ai-session` binary handles all structured file I/O so prompts never need raw `yq`, `sed`, or shell scripts for data mutations. Key subcommands:
 
 ```bash
+ai-session serve [--port 1004]           # start read-only dashboard at http://localhost:1004
 ai-session load-context sc-1234          # outputs feature dir files as XML blocks (replaces scripts/load_context_files.sh)
 ai-session create-feature sc-1234        # scaffolds feature dir with placeholder files
 ai-session resolve-feature-dir sc-1234  # prints the resolved feature dir path
