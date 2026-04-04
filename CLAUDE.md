@@ -69,6 +69,26 @@ Commands follow producer/consumer roles to minimize token usage:
 
 `AGENTS.md` in each **target project** (not this repo) stores architectural patterns, conventions, and learnings. `/session:end` updates it; `/session:start` reads it as part of the context block.
 
+### Go CLI (`ai-session`) — Deterministic File Operations
+
+The `ai-session` binary handles all structured file I/O so prompts never need raw `yq`, `sed`, or shell scripts for data mutations. Key subcommands:
+
+```bash
+ai-session load-context sc-1234          # outputs feature dir files as XML blocks (replaces scripts/load_context_files.sh)
+ai-session create-feature sc-1234        # scaffolds feature dir with placeholder files
+ai-session resolve-feature-dir sc-1234  # prints the resolved feature dir path
+ai-session append-log sc-1234 "msg"     # appends timestamped entry to log.md
+ai-session update-task sc-1234 task-id --status done
+ai-session update-slice sc-1234 slice-id --status in-progress
+ai-session plan-list sc-1234            # lists slices (with --slice <id>: lists tasks)
+ai-session plan-get sc-1234 --slice s --task t  # prints full task body
+ai-session plan-write sc-1234           # validates + atomically writes plan.yml from stdin
+ai-session plan-enrich-task sc-1234 --slice s --task t  # updates task body (stdin), injection guard
+ai-session plan-split-task sc-1234 --slice s --task t   # replaces todo task with N subtasks (stdin YAML)
+```
+
+`scripts/load_context_files.sh` is **deprecated** — use `ai-session load-context` instead.
+
 ## Testing Commands
 
 Commands are tested by delegating to a sub-agent using `spec/session/example-feature-document/` as the active feature context. Reference `spec/session/command_details.md` for expected behavior per command. There is no automated test runner — testing is manual via sub-agent delegation.

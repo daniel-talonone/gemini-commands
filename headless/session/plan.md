@@ -15,10 +15,11 @@ The feature identifier is: {{args}}
 
 2. **Load Context:**
    Run via `run_shell_command`:
-     $AI_SESSION_HOME/scripts/load_context_files.sh "$FEATURE_DIR"
-   Parse the output to extract `description.md` and `AGENTS.md` content.
-   If `plan.yml` or `architecture.md` already exist in the feature directory, read them
-   before proceeding — never overwrite existing plan entries.
+     ai-session load-context "{{args}}"
+   The output contains all feature directory files wrapped in `<file name="...">...</file>`
+   XML blocks, sorted alphabetically. Parse the blocks to extract `description.md` content.
+   If `plan.yml` or `architecture.md` already exist in the feature directory, their content
+   will be included in the output — never overwrite existing plan entries.
 
 3. **Analyze Codebase:**
    Use `glob` and `grep_search` to identify files relevant to the feature description.

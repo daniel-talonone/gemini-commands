@@ -235,10 +235,11 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Description:** Starts a work session by loading context from a feature directory and the project's `AGENTS.md` file.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
-    -   **Scripts:** `scripts/load_context_files.sh`
+    -   **CLI:** `ai-session load-context` (replaces deprecated `scripts/load_context_files.sh`)
     -   **Tools:** `run_shell_command`
 -   **Inputs:**
-    -   The output of the `load_context_files.sh` script, which contains the content of all files in the feature directory and `AGENTS.md`.
+    -   The output of `ai-session load-context <story-id>`, which contains all feature directory
+        files as `<file name="...">content</file>` XML blocks, sorted alphabetically.
 -   **Outputs:**
     -   Outputs the "Session Context" block to the chat.
 
@@ -247,10 +248,10 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Description:** Generates a human-readable Markdown summary of the entire feature's state.
 -   **Orchestration Pattern:** LLM Orchestrator with Helper Scripts
 -   **Dependencies:**
-    -   **Scripts:** `scripts/load_context_files.sh`
+    -   **CLI:** `ai-session load-context` (replaces deprecated `scripts/load_context_files.sh`)
     -   **Tools:** `run_shell_command`, `write_file`
 -   **Inputs:**
-    -   The output of the `load_context_files.sh` script.
+    -   The output of `ai-session load-context <story-id>`, formatted as XML blocks.
 -   **Outputs:**
     -   `.features/<feature-dir>/_SUMMARY.md`
 

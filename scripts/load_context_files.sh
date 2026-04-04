@@ -6,6 +6,9 @@
 set -e
 set -u
 
+# DEPRECATED: use `ai-session load-context <story-id>` instead.
+# This script is kept as a fallback. Do not use in new prompts.
+
 # --- Argument Validation ---
 if [ -z "$1" ]; then
   echo "Error: No feature directory path provided." >&2

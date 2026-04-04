@@ -76,6 +76,7 @@ terminal. Both tools use the same `/session:` prefix.
     pipeline step with precondition checks and `status.yaml` writes. Run from inside the target repo.
   - `orchestrate.sh --status <story-id>` — prints raw `status.yaml` for a feature.
   - `test_orchestrate.sh` — smoke test for `orchestrate.sh` (arg parsing, preconditions, --status).
+  - `scripts/load_context_files.sh` — **DEPRECATED**. Use `ai-session load-context <story-id>` instead.
 - **Session Context Pattern:** To reduce token consumption, session commands use an
   explicit context-passing pattern:
   - **Producers** (`/session:start`, `/session:define`, `/session:new`): Output a
@@ -94,6 +95,8 @@ terminal. Both tools use the same `/session:` prefix.
     rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs.
   - Per-task enrichment uses `ai-session plan-enrich-task --slice <id> --task <id>` — updates only
     the `task:` field of a single todo task, protected by an injection guard and status lock.
+  - Context loading uses `ai-session load-context <story-id>` — outputs all feature dir files as
+    `<file name="...">content</file>` XML blocks, sorted alphabetically. Replaces `scripts/load_context_files.sh`.
 - **Command Patterns:**
   - **LLM Orchestrator:** For interactive tasks, the agent orchestrates helper scripts
     directly (e.g., `/session:define`).
