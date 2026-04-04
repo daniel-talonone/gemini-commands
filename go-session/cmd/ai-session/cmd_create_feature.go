@@ -14,6 +14,7 @@ func init() {
 	rootCmd.AddCommand(createFeatureCmd)
 	createFeatureCmd.Flags().String("repo", "", "org/repo slug to write into status.yaml (derived from git remote if omitted)")
 	createFeatureCmd.Flags().String("branch", "", "branch name to write into status.yaml (derived from git if omitted)")
+	createFeatureCmd.Flags().String("work-dir", "", "repo root path for status.yaml (derived from git if omitted)")
 }
 
 var createFeatureCmd = &cobra.Command{
@@ -46,6 +47,7 @@ Errors:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		repo, _ := cmd.Flags().GetString("repo")
 		branch, _ := cmd.Flags().GetString("branch")
+		workDir, _ := cmd.Flags().GetString("work-dir")
 
 		if repo == "" {
 			repo = gitOrgRepo()
@@ -53,8 +55,11 @@ Errors:
 		if branch == "" {
 			branch = gitCurrentBranch()
 		}
+		if workDir == "" {
+			workDir = gitWorkDir()
+		}
 
-		if err := commands.CreateFeature(args[0], repo, branch); err != nil {
+		if err := commands.CreateFeature(args[0], repo, branch, workDir); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
@@ -70,6 +75,15 @@ func gitOrgRepo() string {
 		return ""
 	}
 	return commands.ParseOrgRepo(remoteURL)
+}
+
+// gitWorkDir returns the repo root path from git rev-parse --show-toplevel, or "" if unavailable.
+func gitWorkDir() string {
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // gitCurrentBranch returns the current git branch name, or "" if unavailable.

@@ -9,19 +9,22 @@ import (
 )
 
 // CreateFeature creates a feature directory with placeholder files.
-// repo and branch are written into status.yaml if provided; pass "" to leave them empty.
+// repo, branch, and workDir are written into status.yaml if provided; pass "" to leave them empty.
 // Idempotent: succeeds if the directory already exists and never overwrites existing files.
-func CreateFeature(featureDir, repo, branch string) error {
+func CreateFeature(featureDir, repo, branch, workDir string) error {
 	if err := os.MkdirAll(featureDir, 0755); err != nil {
 		return fmt.Errorf("creating feature directory: %w", err)
 	}
 
-	repoVal, branchVal := "''", "''"
+	repoVal, branchVal, workDirVal := "''", "''", "''"
 	if repo != "" {
 		repoVal = repo
 	}
 	if branch != "" {
 		branchVal = branch
+	}
+	if workDir != "" {
+		workDirVal = workDir
 	}
 	now := time.Now().Format(time.RFC3339)
 
@@ -31,7 +34,7 @@ func CreateFeature(featureDir, repo, branch string) error {
 		"review.yml":    "[]\n",
 		"log.md":        "# Work Log\n*(This section is intentionally left blank.)*\n",
 		"pr.md":         "# Pull Request\n*(This section is intentionally left blank.)*\n",
-		"status.yaml":   fmt.Sprintf("mode: ''\nrepo: %s\nbranch: %s\npid: 0\npipeline_step: ''\nstarted_at: '%s'\nupdated_at: '%s'\n", repoVal, branchVal, now, now),
+		"status.yaml":   fmt.Sprintf("mode: ''\nrepo: %s\nbranch: %s\nwork_dir: %s\npid: 0\npipeline_step: ''\nstarted_at: '%s'\nupdated_at: '%s'\n", repoVal, branchVal, workDirVal, now, now),
 	}
 
 	for name, content := range files {

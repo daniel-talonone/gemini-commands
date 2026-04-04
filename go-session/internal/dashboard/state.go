@@ -5,6 +5,7 @@ type FeatureStatus struct {
 	Mode         string `yaml:"mode"`
 	Repo         string `yaml:"repo"`
 	Branch       string `yaml:"branch"`
+	WorkDir      string `yaml:"work_dir"`
 	PID          int    `yaml:"pid"`
 	PipelineStep string `yaml:"pipeline_step"`
 	StartedAt    string `yaml:"started_at"`
@@ -28,6 +29,7 @@ type FeatureState struct {
 	StoryID      string
 	Repo         string // org/repo — from status.yaml or derived from dir path
 	Mode         string
+	WorkDir      string // absolute path to repo root on disk, from status.yaml
 	PipelineStep string
 	IsRunning    bool
 	LastDoneTask string // ID of last done task in document order
@@ -49,6 +51,7 @@ func DeriveState(storyID string, repo string, status *FeatureStatus, plan []Plan
 		state.HasStatus = true
 		state.Mode = status.Mode
 		state.PipelineStep = status.PipelineStep
+		state.WorkDir = status.WorkDir
 		state.IsRunning = status.PID > 0 && isAlive(status.PID)
 		if status.Repo != "" {
 			state.Repo = status.Repo

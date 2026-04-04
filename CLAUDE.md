@@ -49,9 +49,12 @@ Each feature gets a directory, stored by default in `~/.ai-session/features/<org
   log.md            # Append-only progress log
   review.yml        # Code review findings: id, file, line, feedback, status
   pr.md             # Pull request link and description
+  status.yaml       # Orchestrator metadata: mode, repo, branch, work_dir, pid, pipeline_step, started_at, updated_at
 ```
 
-YAML files are always modified via `yq` — never direct text replacement.
+`status.yaml` is scaffolded by `ai-session create-feature` and `scripts/create_feature_dir.sh` with `repo`, `branch`, and `work_dir` derived from git at creation time. `pipeline_step` is updated automatically by `ai-session plan-write` (sets `plan-done`) and by `orchestrate.sh` (sets the current step).
+
+YAML files are always modified via `ai-session` CLI subcommands — never direct text replacement or raw `yq`.
 
 ### Session Context Pattern
 
@@ -74,19 +77,22 @@ Commands follow producer/consumer roles to minimize token usage:
 The `ai-session` binary handles all structured file I/O so prompts never need raw `yq`, `sed`, or shell scripts for data mutations. Key subcommands:
 
 ```bash
-ai-session serve [--port 1004]           # start read-only dashboard at http://localhost:1004
+ai-session serve [--port 1004]           # read-only dashboard at http://localhost:1004; shows all features with quick-launch icons
 ai-session load-context sc-1234          # outputs feature dir files as XML blocks (replaces scripts/load_context_files.sh)
-ai-session create-feature sc-1234        # scaffolds feature dir with placeholder files
+ai-session create-feature <dir>          # scaffolds feature dir; derives repo/branch/work_dir from git automatically
+ai-session create-feature <dir> --repo org/repo --branch sc-1 --work-dir /path  # explicit overrides
 ai-session resolve-feature-dir sc-1234  # prints the resolved feature dir path
 ai-session append-log sc-1234 "msg"     # appends timestamped entry to log.md
 ai-session update-task sc-1234 task-id --status done
 ai-session update-slice sc-1234 slice-id --status in-progress
 ai-session plan-list sc-1234            # lists slices (with --slice <id>: lists tasks)
 ai-session plan-get sc-1234 --slice s --task t  # prints full task body
-ai-session plan-write sc-1234           # validates + atomically writes plan.yml from stdin
+ai-session plan-write sc-1234           # validates + atomically writes plan.yml from stdin; sets pipeline_step=plan-done
 ai-session plan-enrich-task sc-1234 --slice s --task t  # updates task body (stdin), injection guard
 ai-session plan-split-task sc-1234 --slice s --task t   # replaces todo task with N subtasks (stdin YAML)
 ```
+
+**`plan-write` side-effect:** after a successful write, automatically sets `pipeline_step: plan-done` and updates `updated_at` in `status.yaml`. This applies to all clients (Claude, Gemini, headless) — no prompt changes needed.
 
 `scripts/load_context_files.sh` is **deprecated** — use `ai-session load-context` instead.
 

@@ -160,14 +160,30 @@ Please check the file [Command Details](command_details.md) for a full breakdown
 
     Example:
     ```
-    .features/sc-12345/
+    ~/.ai-session/features/org/repo/sc-12345/
         description.md     # what: requirements and acceptance criteria
         architecture.md    # how: optional implementation strategy, pattern refs, constraints, slice hints
         plan.yml           # in what order: execution steps
         questions.yml      # what is still unclear
         log.md             # what happened
         review.yml         # review findings
+        pr.md              # pull request link and description
+        status.yaml        # orchestrator metadata: mode, repo, branch, pid, pipeline_step, timestamps
     ```
+
+    `status.yaml` schema:
+    ```yaml
+    mode: ''                  # auto | manual — set at orchestrator invocation
+    repo: org/repo            # derived from git remote at creation time
+    branch: sc-1234           # derived from git at creation time
+    work_dir: /path/to/repo   # absolute repo root (git rev-parse --show-toplevel) at creation time
+    pid: 0                    # orchestrator PID; 0 if not running
+    pipeline_step: ''         # plan-done | implement | review | pr | done — updated by CLI and orchestrator
+    started_at: ''            # set at creation time
+    updated_at: ''            # updated on every pipeline_step change
+    ```
+
+    Lifecycle: scaffolded by `ai-session create-feature` (with `repo`, `branch`, `work_dir`, `started_at`, `updated_at` populated from git). `pipeline_step` is set to `plan-done` automatically by `ai-session plan-write` after a successful plan write. `orchestrate.sh` updates it at each pipeline step. The dashboard reads it to show running state, current step, and quick-launch icons (📁 Finder / `</>` VSCode / ⬛ Terminal) — icons appear when `work_dir` is set. Never overwritten if the file already exists (idempotent scaffolding).
 -   **Project Document (`AGENTS.md`):** A file at the root of **each of your own
     repositories** (not this repo) that stores project-wide context, architectural
     guidelines, and conventions. The AI reads this file to understand the project it

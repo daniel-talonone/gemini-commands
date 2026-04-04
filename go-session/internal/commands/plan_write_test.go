@@ -96,6 +96,21 @@ func TestWritePlan_SetsStatusToPlanDone(t *testing.T) {
 	assert.Contains(t, string(content), "pipeline_step: plan-done")
 }
 
+func TestWritePlan_PreservesWorkDirOnPipelineStepUpdate(t *testing.T) {
+	dir := t.TempDir()
+	statusPath := filepath.Join(dir, "status.yaml")
+	initial := "mode: ''\nrepo: org/repo\nbranch: main\nwork_dir: /home/user/code/repo\npid: 0\npipeline_step: plan\nstarted_at: '2026-01-01T00:00:00Z'\nupdated_at: '2026-01-01T00:00:00Z'\n"
+	require.NoError(t, os.WriteFile(statusPath, []byte(initial), 0644))
+
+	require.NoError(t, commands.WritePlan(dir, []byte(validPlanYAML)))
+
+	content, err := os.ReadFile(statusPath)
+	require.NoError(t, err)
+	s := string(content)
+	assert.Contains(t, s, "work_dir: /home/user/code/repo", "work_dir must not be dropped on marshal round-trip")
+	assert.Contains(t, s, "pipeline_step: plan-done")
+}
+
 func TestWritePlan_StatusUpdateBestEffortWhenNoFile(t *testing.T) {
 	dir := t.TempDir()
 	// No status.yaml — WritePlan must still succeed

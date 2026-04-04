@@ -12,6 +12,7 @@ type statusFile struct {
 	Mode         string `yaml:"mode"`
 	Repo         string `yaml:"repo"`
 	Branch       string `yaml:"branch"`
+	WorkDir      string `yaml:"work_dir"`
 	PID          int    `yaml:"pid"`
 	PipelineStep string `yaml:"pipeline_step"`
 	StartedAt    string `yaml:"started_at"`

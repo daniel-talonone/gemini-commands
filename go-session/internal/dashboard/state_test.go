@@ -95,6 +95,17 @@ func TestDeriveState_AllDoneRequiresAtLeastOneTask(t *testing.T) {
 	assert.False(t, result.AllDone, "plan with zero tasks across all slices must not be AllDone")
 }
 
+func TestDeriveState_WorkDirFromStatus(t *testing.T) {
+	status := &dashboard.FeatureStatus{WorkDir: "/home/user/code/repo"}
+	result := dashboard.DeriveState("sc-1", "org/repo", status, nil, neverAlive)
+	assert.Equal(t, "/home/user/code/repo", result.WorkDir)
+}
+
+func TestDeriveState_WorkDirEmptyWhenNoStatus(t *testing.T) {
+	result := dashboard.DeriveState("sc-1", "org/repo", nil, nil, neverAlive)
+	assert.Equal(t, "", result.WorkDir)
+}
+
 func TestDeriveState_AllDoneIgnoresEmptySliceWhenOthersDone(t *testing.T) {
 	// An empty-task slice alongside done tasks: all existing tasks are done → AllDone=true
 	plan := []dashboard.PlanSlice{

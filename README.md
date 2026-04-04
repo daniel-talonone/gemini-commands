@@ -65,19 +65,24 @@ gemini skills install ~/.ai-session/gemini/tdd-skill
 
 ```
 .
-├── spec/          # LLM-agnostic: documentation, schemas, examples
+├── spec/                  # LLM-agnostic: documentation, schemas, examples
 │   └── session/
-├── cmd/ai-session/# Go CLI for file operations
-├── gemini/        # Gemini CLI implementation (*.toml)
+├── go-session/            # Go CLI binary (ai-session)
+│   ├── cmd/ai-session/    # Cobra subcommands
+│   └── internal/
+│       ├── commands/      # File operations (plan, log, dir, load-context, …)
+│       ├── dashboard/     # Feature scanner + state derivation (for serve)
+│       └── server/        # HTTP server + HTML template (for serve)
+├── gemini/                # Gemini CLI implementation (*.toml)
 │   └── session/
-├── claude/        # Claude Code implementation (*.md)
+├── claude/                # Claude Code implementation (*.md)
 │   └── session/
 ├── headless/
-│   └── session/   # LLM-agnostic headless pipeline variants (generated via gen_headless.sh)
-├── scripts/       # Shared helper scripts used by both tools
-├── roadmap/       # Project roadmap and reviews
-├── AGENTS.md      # Project-wide AI context
-├── setup.sh       # Idempotent setup script
+│   └── session/           # LLM-agnostic headless pipeline variants (generated via gen_headless.sh)
+├── scripts/               # Shared helper scripts used by both tools
+├── roadmap/               # Project roadmap and design docs
+├── AGENTS.md              # Project-wide AI context
+├── setup.sh               # Idempotent setup script
 └── README.md
 ```
 
@@ -96,6 +101,38 @@ Adding a new command group (e.g. `gemini/transaction/`) is automatically picked 
 the next time `setup.sh` is run — no script changes needed.
 
 All commands reference shared scripts via `$AI_SESSION_HOME/scripts/`.
+
+## Dashboard
+
+`ai-session serve` starts a local read-only web dashboard that shows all features across all repos:
+
+```bash
+ai-session serve           # http://localhost:1004
+ai-session serve --port 8080
+```
+
+Filter by repo (`?repo=org/name`) or status (`?status=running|idle|done`). The page scans `~/.ai-session/features/` on every refresh — no caching, no background process.
+
+## Go CLI
+
+The `ai-session` binary provides deterministic file operations used by prompts and orchestrators:
+
+```bash
+ai-session serve                    # dashboard
+ai-session load-context sc-1234     # load feature files as XML blocks for LLM context
+ai-session create-feature sc-1234   # scaffold feature directory (includes status.yaml)
+ai-session resolve-feature-dir sc-1234
+ai-session append-log sc-1234 "msg"
+ai-session update-task sc-1234 task-id --status done
+ai-session update-slice sc-1234 slice-id --status in-progress
+ai-session plan-list sc-1234
+ai-session plan-get sc-1234 --slice s --task t
+ai-session plan-write sc-1234       # validate + atomically write plan.yml (stdin)
+ai-session plan-enrich-task sc-1234 --slice s --task t
+ai-session plan-split-task sc-1234 --slice s --task t
+```
+
+Build the binary: `cd go-session && make build` (output: `go-session/bin/ai-session`, added to `$PATH` by `setup.sh`).
 
 ## Session workflow
 

@@ -77,7 +77,8 @@ terminal. Both tools use the same `/session:` prefix.
   - `orchestrate.sh --status <story-id>` — prints raw `status.yaml` for a feature.
   - `test_orchestrate.sh` — smoke test for `orchestrate.sh` (arg parsing, preconditions, --status).
   - `scripts/load_context_files.sh` — **DEPRECATED**. Use `ai-session load-context <story-id>` instead.
-  - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.ai-session/features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`.
+  - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.ai-session/features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`. Each row shows 📁/`</>`/⬛ quick-launch icons when `work_dir` is set in `status.yaml`.
+  - `GET /action/terminal?path=<dir>` — dashboard endpoint that opens Terminal.app at the given directory (macOS only).
 - **Session Context Pattern:** To reduce token consumption, session commands use an
   explicit context-passing pattern:
   - **Producers** (`/session:start`, `/session:define`, `/session:new`): Output a
@@ -93,11 +94,15 @@ terminal. Both tools use the same `/session:` prefix.
   - All YAML modifications use `ai-session update-task` or `ai-session update-slice` for deterministic,
     atomic updates.
   - `plan.yml` writes are gated through `ai-session plan-write` — validates schema before writing,
-    rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs.
+    rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs. **Side-effect:** sets
+    `pipeline_step: plan-done` in `status.yaml` after every successful write.
   - Per-task enrichment uses `ai-session plan-enrich-task --slice <id> --task <id>` — updates only
     the `task:` field of a single todo task, protected by an injection guard and status lock.
   - Context loading uses `ai-session load-context <story-id>` — outputs all feature dir files as
     `<file name="...">content</file>` XML blocks, sorted alphabetically. Replaces `scripts/load_context_files.sh`.
+  - `status.yaml` is scaffolded at creation time with `repo`, `branch`, `work_dir` (from git), `started_at`, `updated_at`.
+    The `statusFile` Go struct in `internal/commands/status.go` **must** include every field present in `status.yaml`
+    or fields will be silently dropped on the read-unmarshal-marshal round-trip performed by `plan-write`.
 - **Command Patterns:**
   - **LLM Orchestrator:** For interactive tasks, the agent orchestrates helper scripts
     directly (e.g., `/session:define`).

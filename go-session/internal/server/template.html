@@ -20,6 +20,8 @@
     .done    { color: #0055aa; }
     .idle    { color: #888; }
     .empty   { color: #aaa; font-style: italic; }
+    .actions a { text-decoration: none; margin-right: 0.4rem; font-size: 1rem; }
+    .actions a:hover { opacity: 0.7; }
     footer   { margin-top: 1rem; color: #999; font-size: 0.8rem; }
   </style>
 </head>
@@ -50,6 +52,7 @@
   <table>
     <thead>
       <tr>
+        <th>Actions</th>
         <th>Story</th>
         <th>Repo</th>
         <th>Mode</th>
@@ -61,6 +64,13 @@
     <tbody>
       {{range .Features}}
       <tr>
+        <td class="actions">
+          {{if .WorkDir -}}
+          <a href="{{printf "file://%s" .WorkDir | safeURL}}" title="Open in Finder">📁</a>
+          <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode"><code>&lt;/&gt;</code></a>
+          <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
+          {{- else}}<span class="empty">—</span>{{end}}
+        </td>
         <td>{{.StoryID}}</td>
         <td>{{if .Repo}}{{.Repo}}{{else}}<span class="empty">—</span>{{end}}</td>
         <td>{{if .Mode}}{{.Mode}}{{else}}<span class="empty">—</span>{{end}}</td>
@@ -73,7 +83,7 @@
         <td>{{if .LastDoneTask}}{{.LastDoneTask}}{{else}}<span class="empty">—</span>{{end}}</td>
       </tr>
       {{else}}
-      <tr><td colspan="6" style="text-align:center; padding: 1.5rem; color:#aaa;">No features found.</td></tr>
+      <tr><td colspan="7" style="text-align:center; padding: 1.5rem; color:#aaa;">No features found.</td></tr>
       {{end}}
     </tbody>
   </table>

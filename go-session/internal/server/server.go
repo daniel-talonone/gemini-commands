@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
+	"os/exec"
 	"sort"
 
 	"github.com/daniel-talonone/gemini-commands/internal/dashboard"
@@ -37,13 +39,16 @@ func New(port int) *Server {
 // Start parses the template, registers routes, and begins listening.
 // Blocks until the server stops. Returns nil on clean shutdown (ErrServerClosed).
 func (s *Server) Start() error {
-	tmpl, err := template.New("dashboard").Parse(templateHTML)
+	tmpl, err := template.New("dashboard").Funcs(template.FuncMap{
+		"safeURL": func(s string) template.URL { return template.URL(s) },
+	}).Parse(templateHTML)
 	if err != nil {
 		return fmt.Errorf("parsing template: %w", err)
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.makeHandler(tmpl))
+	mux.HandleFunc("/action/terminal", TerminalHandler)
 
 	addr := fmt.Sprintf(":%d", s.port)
 	s.http = &http.Server{Addr: addr, Handler: mux}
@@ -61,6 +66,27 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	return s.http.Shutdown(ctx)
+}
+
+// TerminalHandler handles GET /action/terminal?path=<dir> by opening a new
+// Terminal.app window at the given directory. Returns 400 if path is missing
+// or not an existing directory, 500 if the open command fails, 204 on success.
+func TerminalHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		http.Error(w, "path parameter is required", http.StatusBadRequest)
+		return
+	}
+	info, err := os.Stat(path)
+	if err != nil || !info.IsDir() {
+		http.Error(w, "path is not an existing directory", http.StatusBadRequest)
+		return
+	}
+	if err := exec.Command("open", "-a", "Terminal", path).Run(); err != nil {
+		http.Error(w, "failed to open terminal: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) makeHandler(tmpl *template.Template) http.HandlerFunc {
