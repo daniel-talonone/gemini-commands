@@ -83,6 +83,25 @@ func TestWritePlan_WritesExactBytes(t *testing.T) {
 	assert.Equal(t, string(data), string(got), "bytes must be preserved exactly — no reformatting")
 }
 
+func TestWritePlan_SetsStatusToPlanDone(t *testing.T) {
+	dir := t.TempDir()
+	statusPath := filepath.Join(dir, "status.yaml")
+	initial := "mode: ''\nrepo: org/repo\nbranch: main\npid: 0\npipeline_step: plan\nstarted_at: '2026-01-01T00:00:00Z'\nupdated_at: '2026-01-01T00:00:00Z'\n"
+	require.NoError(t, os.WriteFile(statusPath, []byte(initial), 0644))
+
+	require.NoError(t, commands.WritePlan(dir, []byte(validPlanYAML)))
+
+	content, err := os.ReadFile(statusPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "pipeline_step: plan-done")
+}
+
+func TestWritePlan_StatusUpdateBestEffortWhenNoFile(t *testing.T) {
+	dir := t.TempDir()
+	// No status.yaml — WritePlan must still succeed
+	require.NoError(t, commands.WritePlan(dir, []byte(validPlanYAML)))
+}
+
 func TestWritePlan_InvalidDoesNotWrite(t *testing.T) {
 	dir := t.TempDir()
 	err := commands.WritePlan(dir, []byte("not: valid: yaml"))

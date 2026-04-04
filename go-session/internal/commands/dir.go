@@ -5,14 +5,25 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // CreateFeature creates a feature directory with placeholder files.
-// Idempotent: succeeds if the directory already exists.
-func CreateFeature(featureDir string) error {
+// repo and branch are written into status.yaml if provided; pass "" to leave them empty.
+// Idempotent: succeeds if the directory already exists and never overwrites existing files.
+func CreateFeature(featureDir, repo, branch string) error {
 	if err := os.MkdirAll(featureDir, 0755); err != nil {
 		return fmt.Errorf("creating feature directory: %w", err)
 	}
+
+	repoVal, branchVal := "''", "''"
+	if repo != "" {
+		repoVal = repo
+	}
+	if branch != "" {
+		branchVal = branch
+	}
+	now := time.Now().Format(time.RFC3339)
 
 	files := map[string]string{
 		"plan.yml":      "[]\n",
@@ -20,7 +31,7 @@ func CreateFeature(featureDir string) error {
 		"review.yml":    "[]\n",
 		"log.md":        "# Work Log\n*(This section is intentionally left blank.)*\n",
 		"pr.md":         "# Pull Request\n*(This section is intentionally left blank.)*\n",
-		"status.yaml":   "mode: ''\nrepo: ''\nbranch: ''\npid: 0\npipeline_step: ''\nstarted_at: ''\nupdated_at: ''\n",
+		"status.yaml":   fmt.Sprintf("mode: ''\nrepo: %s\nbranch: %s\npid: 0\npipeline_step: ''\nstarted_at: '%s'\nupdated_at: '%s'\n", repoVal, branchVal, now, now),
 	}
 
 	for name, content := range files {
@@ -58,7 +69,7 @@ func ResolveFeatureDir(storyID, cwd, remoteURL string) (string, error) {
 		)
 	}
 
-	orgRepo := parseOrgRepo(remoteURL)
+	orgRepo := ParseOrgRepo(remoteURL)
 	if orgRepo == "" {
 		return "", fmt.Errorf("cannot parse org/repo from remote URL: %s", remoteURL)
 	}
@@ -70,10 +81,10 @@ func ResolveFeatureDir(storyID, cwd, remoteURL string) (string, error) {
 	return filepath.Join(home, ".ai-session", "features", orgRepo, storyID), nil
 }
 
-// parseOrgRepo extracts "org/repo" from SSH and HTTPS git remote URLs.
+// ParseOrgRepo extracts "org/repo" from SSH and HTTPS git remote URLs.
 // SSH:   git@github.com:org/repo.git  → org/repo
 // HTTPS: https://github.com/org/repo.git → org/repo
-func parseOrgRepo(remoteURL string) string {
+func ParseOrgRepo(remoteURL string) string {
 	url := strings.TrimSuffix(remoteURL, ".git")
 	if strings.HasPrefix(url, "git@") {
 		parts := strings.SplitN(url, ":", 2)

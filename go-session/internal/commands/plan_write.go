@@ -94,5 +94,9 @@ func WritePlan(featureDir string, data []byte) error {
 	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
 		return fmt.Errorf("writing plan.yml.tmp: %w", err)
 	}
-	return os.Rename(tmpPath, planPath)
+	if err := os.Rename(tmpPath, planPath); err != nil {
+		return err
+	}
+	updateStatusPipelineStep(featureDir, "plan-done")
+	return nil
 }
