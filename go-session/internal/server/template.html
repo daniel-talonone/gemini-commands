@@ -66,7 +66,7 @@
       <tr>
         <td class="actions">
           {{if .WorkDir -}}
-          <a href="{{printf "file://%s" .WorkDir | safeURL}}" title="Open in Finder">📁</a>
+          <a href="/action/finder?path={{.WorkDir | urlquery}}" title="Open in Finder">📁</a>
           <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode"><code>&lt;/&gt;</code></a>
           <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
           {{- else}}<span class="empty">—</span>{{end}}

@@ -49,6 +49,7 @@ func (s *Server) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.makeHandler(tmpl))
 	mux.HandleFunc("/action/terminal", TerminalHandler)
+	mux.HandleFunc("/action/finder", FinderHandler)
 
 	addr := fmt.Sprintf(":%d", s.port)
 	s.http = &http.Server{Addr: addr, Handler: mux}
@@ -84,6 +85,27 @@ func TerminalHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := exec.Command("open", "-a", "Terminal", path).Run(); err != nil {
 		http.Error(w, "failed to open terminal: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// FinderHandler handles GET /action/finder?path=<dir> by opening the directory
+// in Finder. Returns 400 if path is missing or not an existing directory,
+// 500 if the open command fails, 204 on success.
+func FinderHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Query().Get("path")
+	if path == "" {
+		http.Error(w, "path parameter is required", http.StatusBadRequest)
+		return
+	}
+	info, err := os.Stat(path)
+	if err != nil || !info.IsDir() {
+		http.Error(w, "path is not an existing directory", http.StatusBadRequest)
+		return
+	}
+	if err := exec.Command("open", path).Run(); err != nil {
+		http.Error(w, "failed to open finder: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

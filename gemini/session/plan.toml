@@ -10,6 +10,11 @@ Please perform the following steps:
 
 1.  **Identify Directory:** Identify the active feature directory from our conversation (e.g., `.features/sc-1234/`). If a scope argument is provided (e.g., "for the frontend", "for the backend"), save files into the matching subdirectory (e.g., `frontend/plan.yml`). Otherwise save directly in the feature directory.
 
+2.  **Mark Planning Started:** Update `pipeline_step` in the feature directory's `status.yaml` to `plan`:
+    ```bash
+    yq e '.pipeline_step = "plan"' -i "<feature-dir>/status.yaml"
+    ```
+
 2.  **Gather Context:** Find the `### ✨ Session Context Loaded for...` block in the conversation history. This block contains the feature **Description** and **Project Conventions**. Use this as your primary context.
 
 3.  **Read Existing Files:** If `plan.yml` or `architecture.md` already exist in the target directory, read them before proceeding. **Never overwrite plan.yml** — only extend with new tasks. Preserve all existing entries and their statuses. `architecture.md` may be updated or replaced as part of this session.
