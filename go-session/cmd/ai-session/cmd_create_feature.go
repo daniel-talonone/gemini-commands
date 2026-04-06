@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
+
 
 	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
+	git "github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -50,13 +50,13 @@ Errors:
 		workDir, _ := cmd.Flags().GetString("work-dir")
 
 		if repo == "" {
-			repo = gitOrgRepo()
+			repo = git.OrgRepo()
 		}
 		if branch == "" {
-			branch = gitCurrentBranch()
+			branch = git.CurrentBranch()
 		}
 		if workDir == "" {
-			workDir = gitWorkDir()
+			workDir = git.WorkDir()
 		}
 
 		if err := commands.CreateFeature(args[0], repo, branch, workDir); err != nil {
@@ -68,33 +68,4 @@ Errors:
 	},
 }
 
-// gitOrgRepo returns "org/repo" derived from git remote origin, or "" if unavailable.
-func gitOrgRepo() string {
-	remoteURL := gitRemoteURL()
-	if remoteURL == "" {
-		return ""
-	}
-	return commands.ParseOrgRepo(remoteURL)
-}
 
-// gitWorkDir returns the repo root path from git rev-parse --show-toplevel, or "" if unavailable.
-func gitWorkDir() string {
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
-}
-
-// gitCurrentBranch returns the current git branch name, or "" if unavailable.
-func gitCurrentBranch() string {
-	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
-	if err != nil {
-		return ""
-	}
-	branch := strings.TrimSpace(string(out))
-	if branch == "HEAD" { // detached HEAD state
-		return ""
-	}
-	return branch
-}

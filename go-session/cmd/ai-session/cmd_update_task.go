@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
+	plan "github.com/daniel-talonone/gemini-commands/internal/commands/plan"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +47,7 @@ Errors:
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := commands.UpdateTask(args[0], args[1], updateTaskStatus); err != nil {
+		if err := plan.UpdateTask(args[0], args[1], updateTaskStatus); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
@@ -80,7 +80,7 @@ Errors:
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := commands.UpdateSlice(args[0], args[1], updateSliceStatus); err != nil {
+		if err := plan.UpdateSlice(args[0], args[1], updateSliceStatus); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}

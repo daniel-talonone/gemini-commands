@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
+
 
 	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
+	git "github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,7 @@ Errors:
 			fmt.Fprintln(os.Stderr, "Error getting working directory:", err)
 			os.Exit(1)
 		}
-		result, err := commands.ResolveFeatureDir(args[0], cwd, gitRemoteURL())
+		result, err := commands.ResolveFeatureDir(args[0], cwd, git.RemoteURL())
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
@@ -55,12 +55,4 @@ Errors:
 	},
 }
 
-// gitRemoteURL returns the git remote origin URL, or "" if not in a git repo.
-// exec.Command is intentionally kept in the CLI layer, not in internal/commands.
-func gitRemoteURL() string {
-	out, err := exec.Command("git", "remote", "get-url", "origin").Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
-}
+

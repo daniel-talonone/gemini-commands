@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
 )
 
 // SplitTaskEntry is one replacement task produced by the enricher's SPLIT output.
@@ -35,7 +37,7 @@ func SplitTask(featureDir, sliceID, taskID string, replacements []SplitTaskEntry
 
 	// 2 & 3. Validate suffixes and task bodies
 	for i, r := range replacements {
-		if !kebabRe.MatchString(r.Suffix) {
+		if !plan.KebabRe.MatchString(r.Suffix) {
 			return fmt.Errorf("replacement %d: suffix %q is not kebab-case", i, r.Suffix)
 		}
 		for _, line := range strings.Split(r.Task, "\n") {
@@ -77,8 +79,8 @@ func SplitTask(featureDir, sliceID, taskID string, replacements []SplitTaskEntry
 		if sNode.Kind != yaml.MappingNode {
 			continue
 		}
-		sID := mappingScalar(sNode, "id")
-		tasksNode := mappingValue(sNode, "tasks")
+		sID := plan.MappingScalar(sNode, "id")
+		tasksNode := plan.MappingValue(sNode, "tasks")
 		if tasksNode == nil || tasksNode.Kind != yaml.SequenceNode {
 			continue
 		}
@@ -86,7 +88,7 @@ func SplitTask(featureDir, sliceID, taskID string, replacements []SplitTaskEntry
 			if tNode.Kind != yaml.MappingNode {
 				continue
 			}
-			tID := mappingScalar(tNode, "id")
+			tID := plan.MappingScalar(tNode, "id")
 			if tID != "" && !(sID == sliceID && tID == taskID) {
 				existingTaskIDs[tID] = sID
 			}
@@ -111,23 +113,23 @@ func SplitTask(featureDir, sliceID, taskID string, replacements []SplitTaskEntry
 	taskFound := false
 
 	for _, sNode := range sliceSeq.Content {
-		if sNode.Kind != yaml.MappingNode || mappingScalar(sNode, "id") != sliceID {
+		if sNode.Kind != yaml.MappingNode || plan.MappingScalar(sNode, "id") != sliceID {
 			continue
 		}
 		sliceFound = true
 
-		tasksNode := mappingValue(sNode, "tasks")
+		tasksNode := plan.MappingValue(sNode, "tasks")
 		if tasksNode == nil || tasksNode.Kind != yaml.SequenceNode {
 			return fmt.Errorf("slice %q: tasks field is missing or invalid", sliceID)
 		}
 
 		targetIdx := -1
 		for i, tNode := range tasksNode.Content {
-			if tNode.Kind != yaml.MappingNode || mappingScalar(tNode, "id") != taskID {
+			if tNode.Kind != yaml.MappingNode || plan.MappingScalar(tNode, "id") != taskID {
 				continue
 			}
 			taskFound = true
-			status := mappingScalar(tNode, "status")
+			status := plan.MappingScalar(tNode, "status")
 			if status != "todo" {
 				return fmt.Errorf("task %q has status %q — split skipped (only todo tasks may be split)", taskID, status)
 			}

@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
 )
 
 // EnrichTask updates only the task: body of a single todo task in plan.yml
@@ -60,12 +62,12 @@ func EnrichTask(featureDir, sliceID, taskID, body string) error {
 		if sliceNode.Kind != yaml.MappingNode {
 			continue
 		}
-		if mappingScalar(sliceNode, "id") != sliceID {
+		if plan.MappingScalar(sliceNode, "id") != sliceID {
 			continue
 		}
 		sliceFound = true
 
-		tasksNode := mappingValue(sliceNode, "tasks")
+		tasksNode := plan.MappingValue(sliceNode, "tasks")
 		if tasksNode == nil || tasksNode.Kind != yaml.SequenceNode {
 			return fmt.Errorf("slice %q: tasks field is missing or invalid", sliceID)
 		}
@@ -74,19 +76,17 @@ func EnrichTask(featureDir, sliceID, taskID, body string) error {
 			if taskNode.Kind != yaml.MappingNode {
 				continue
 			}
-			if mappingScalar(taskNode, "id") != taskID {
+			if plan.MappingScalar(taskNode, "id") != taskID {
 				continue
 			}
 			taskFound = true
 
-			status := mappingScalar(taskNode, "status")
+			status := plan.MappingScalar(taskNode, "status")
 			if status != "todo" {
 				return fmt.Errorf("task %q has status %q — enrichment skipped (only todo tasks may be enriched)", taskID, status)
 			}
 
-			if err := setMappingValue(taskNode, "task", body); err != nil {
-				return fmt.Errorf("updating task %q in slice %q: %w", taskID, sliceID, err)
-			}
+			plan.SetMappingValue(taskNode, "task", body)
 			break
 		}
 		break

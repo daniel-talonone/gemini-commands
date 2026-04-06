@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
+	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +47,7 @@ Errors:
 			fmt.Fprintln(os.Stderr, "Error reading stdin:", err)
 			os.Exit(1)
 		}
-		if err := commands.WritePlan(args[0], data); err != nil {
+		if err := plan.WritePlan(args[0], data); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}

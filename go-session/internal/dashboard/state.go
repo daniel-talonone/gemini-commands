@@ -35,6 +35,8 @@ type FeatureState struct {
 	LastDoneTask string // ID of last done task in document order
 	AllDone      bool   // true if every task in plan.yml is "done"
 	HasStatus    bool   // false if status.yaml was absent
+	StartedAt    string
+	UpdatedAt    string
 }
 
 // DeriveState computes a FeatureState from parsed inputs.
@@ -53,6 +55,8 @@ func DeriveState(storyID string, repo string, status *FeatureStatus, plan []Plan
 		state.PipelineStep = status.PipelineStep
 		state.WorkDir = status.WorkDir
 		state.IsRunning = status.PID > 0 && isAlive(status.PID)
+		state.StartedAt = status.StartedAt
+		state.UpdatedAt = status.UpdatedAt
 		if status.Repo != "" {
 			state.Repo = status.Repo
 		}

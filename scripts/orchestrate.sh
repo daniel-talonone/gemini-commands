@@ -8,7 +8,13 @@
 #   orchestrate.sh <story-id> --pr
 #   orchestrate.sh --status <story-id>
 
-set -euo pipefail
+# Robustly determine AI_SESSION_HOME based on the script's location.
+if [ -z "${AI_SESSION_HOME:-}" ]; then
+  AI_SESSION_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  export AI_SESSION_HOME
+fi
+
+set -euxo pipefail # Added 'x' for debug tracing
 
 usage() {
   echo "Usage:"
@@ -23,7 +29,7 @@ usage() {
 show_status() {
   local story_id="$1"
   local feature_dir
-  feature_dir="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "$story_id")"
+  feature_dir="$($AI_SESSION_HOME/go-session/bin/ai-session resolve-feature-dir "$story_id")" # Updated to use Go CLI
 
   if [ ! -d "$feature_dir" ]; then
     echo "Error: feature directory not found: $feature_dir" >&2
@@ -41,8 +47,22 @@ show_status() {
 run_headless() {
   local cmd="$1"
   local story_id="$2"
+  # Corrected path to generated headless prompts
+  local prompt_file="$AI_SESSION_HOME/headless/session/$cmd.md" 
+
+  if [ ! -f "$prompt_file" ]; then
+    echo "Error: Headless prompt not found at $prompt_file. Please run 'scripts/gen_headless.sh' to generate these prompts." >&2
+    exit 1
+  fi
+  
   local prompt
-  prompt="$(sed "s/{{args}}/$story_id/g" "$AI_SESSION_HOME/headless/session/$cmd.md")"
+  prompt="$(sed "s/{{args}}/$story_id/g" "$prompt_file")"
+  
+  if [ -z "$prompt" ]; then
+      echo "Error: Prompt is empty after processing $prompt_file" >&2
+      exit 1
+  fi
+
   gemini --yolo -p "$prompt"
 }
 
@@ -62,17 +82,23 @@ write_status() {
   fi
 
   mkdir -p "$feature_dir"
-  printf 'mode: auto\nrepo: %s\nbranch: %s\npid: %d\npipeline_step: %s\nstarted_at: %s\nupdated_at: %s\n' \
-    "$repo_slug" "$branch" "$$" "$step" "$started_at" "$now" \
-    > "$feature_dir/status.yaml"
+  # Use a single-line printf to avoid shell parsing issues with line continuations.
+  printf "mode: auto
+repo: %s
+branch: %s
+pid: %d
+pipeline_step: %s
+started_at: %s
+updated_at: %s
+" "$repo_slug" "$branch" "$$" "$step" "$started_at" "$now" > "$feature_dir/status.yaml"
 }
 
 check_preconditions() {
   local flag="$1"
   local feature_dir="$2"
 
-  if [ ! -f "$feature_dir/description.md" ]; then
-    echo "Error: description.md not found in $feature_dir. Run /session:new or /session:define first." >&2
+  if [ ! -d "$feature_dir" ]; then
+    echo "Error: feature directory not found: $feature_dir. Run /session:new or /session:define first." >&2
     exit 1
   fi
 
@@ -139,7 +165,7 @@ else
 fi
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "$STORY_ID")"
-FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "$STORY_ID")"
+FEATURE_DIR="$($AI_SESSION_HOME/go-session/bin/ai-session resolve-feature-dir "$STORY_ID")" # Updated to use Go CLI
 
 check_preconditions "$FLAG" "$FEATURE_DIR"
 

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/daniel-talonone/gemini-commands/internal/git"
 )
 
 // CreateFeature creates a feature directory with placeholder files.
@@ -72,7 +74,7 @@ func ResolveFeatureDir(storyID, cwd, remoteURL string) (string, error) {
 		)
 	}
 
-	orgRepo := ParseOrgRepo(remoteURL)
+	orgRepo := git.ParseOrgRepo(remoteURL)
 	if orgRepo == "" {
 		return "", fmt.Errorf("cannot parse org/repo from remote URL: %s", remoteURL)
 	}
@@ -84,26 +86,4 @@ func ResolveFeatureDir(storyID, cwd, remoteURL string) (string, error) {
 	return filepath.Join(home, ".ai-session", "features", orgRepo, storyID), nil
 }
 
-// ParseOrgRepo extracts "org/repo" from SSH and HTTPS git remote URLs.
-// SSH:   git@github.com:org/repo.git  → org/repo
-// HTTPS: https://github.com/org/repo.git → org/repo
-func ParseOrgRepo(remoteURL string) string {
-	url := strings.TrimSuffix(remoteURL, ".git")
-	if strings.HasPrefix(url, "git@") {
-		parts := strings.SplitN(url, ":", 2)
-		if len(parts) == 2 {
-			return parts[1]
-		}
-		return ""
-	}
-	idx := strings.Index(url, "://")
-	if idx == -1 {
-		return ""
-	}
-	rest := url[idx+3:]
-	slash := strings.Index(rest, "/")
-	if slash == -1 {
-		return ""
-	}
-	return rest[slash+1:]
-}
+
