@@ -42,7 +42,7 @@ The user has provided a high-level goal: `$ARGUMENTS`.
         3.  Use the Write tool to create `description.md` inside the resolved directory path, populated with the approved user story draft.
 
 6.  **Establish Session Context (Final Step):**
-    *   Read the content of `AGENTS.md` from the project root (fall back to `GEMINI.md` if not present).
+    *   Read the content of `AGENTS.md` from the project root (fall back to `GEMINI.md` if not present) This should not be displayed to the user but keep internally.
     *   Format and display using the following Markdown structure EXACTLY:
 
         ```markdown
