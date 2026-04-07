@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daniel-talonone/gemini-commands/internal/commands"
+	"github.com/daniel-talonone/gemini-commands/internal/commands/description"
 	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
 	"github.com/daniel-talonone/gemini-commands/internal/commands/status"
+	"github.com/daniel-talonone/gemini-commands/internal/log"
 )
 
 // errorBlockRe strips the entire {{#if error_message}}...{{/if}} block (including
@@ -41,7 +42,7 @@ var defaultContextExcludes = []string{
 // appendLog writes a timestamped entry to log.md. Logging is best-effort — a
 // failure is reported via the logger but never stops the orchestration.
 func appendLog(logger *slog.Logger, featureDir, msg string) {
-	if err := commands.AppendLog(featureDir, msg); err != nil {
+	if err := log.AppendLog(featureDir, msg); err != nil {
 		logger.Warn("failed to append log entry", "error", err)
 	}
 }
@@ -104,14 +105,13 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	logger.Info("Initial verification gate passed.")
 
 	// Read story description for prompt context.
-	storyDescBytes, err := os.ReadFile(filepath.Join(featureDir, "description.md"))
+	storyDescription, err := description.LoadDescription(featureDir)
 	if err != nil {
 		return fmt.Errorf("reading description.md: %w", err)
 	}
-	storyDescription := string(storyDescBytes)
 
 	// Load architecture if present — gives the LLM design constraints and pattern refs.
-	architectureDescription, err := plan.LoadArchitecture(featureDir)
+	architectureDescription, err := description.LoadArchitecture(featureDir)
 	if err != nil {
 		return fmt.Errorf("loading architecture: %w", err)
 	}
