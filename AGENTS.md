@@ -129,5 +129,5 @@ Typical approach:
    `spec/session/command_details.md`.
 
 ## Verification
-Run: make build && make test && make lint
+Run: make prcm
 

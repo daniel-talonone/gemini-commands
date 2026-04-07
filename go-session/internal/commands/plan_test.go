@@ -30,10 +30,10 @@ const samplePlan = `- id: slice-one
       status: todo
 `
 
-func writePlan(t *testing.T, content string) string {
+func writePlan(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "plan.yml"), []byte(content), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "plan.yml"), []byte(samplePlan), 0644))
 	return dir
 }
 
@@ -45,20 +45,20 @@ func readPlan(t *testing.T, dir string) string {
 }
 
 func TestUpdateTask_SetsDone(t *testing.T) {
-	dir := writePlan(t, samplePlan)
+	dir := writePlan(t)
 	require.NoError(t, plan.UpdateTask(dir, "task-one", "done"))
 	plan := readPlan(t, dir)
 	assert.Contains(t, plan, "status: done")
 }
 
 func TestUpdateTask_SetsInProgress(t *testing.T) {
-	dir := writePlan(t, samplePlan)
+	dir := writePlan(t)
 	require.NoError(t, plan.UpdateTask(dir, "task-two", "in-progress"))
 	assert.Contains(t, readPlan(t, dir), "status: in-progress")
 }
 
 func TestUpdateTask_PreservesOtherContent(t *testing.T) {
-	dir := writePlan(t, samplePlan)
+	dir := writePlan(t)
 	require.NoError(t, plan.UpdateTask(dir, "task-one", "done"))
 	plan := readPlan(t, dir)
 	assert.Contains(t, plan, "id: task-two")
@@ -69,14 +69,14 @@ func TestUpdateTask_PreservesOtherContent(t *testing.T) {
 }
 
 func TestUpdateTask_TaskNotFound(t *testing.T) {
-	dir := writePlan(t, samplePlan)
+	dir := writePlan(t)
 	err := plan.UpdateTask(dir, "nonexistent", "done")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "nonexistent")
 }
 
 func TestUpdateTask_InvalidStatus(t *testing.T) {
-	dir := writePlan(t, samplePlan)
+	dir := writePlan(t)
 	err := plan.UpdateTask(dir, "task-one", "invalid")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid")
@@ -90,7 +90,7 @@ func TestUpdateTask_MissingPlanYml(t *testing.T) {
 }
 
 func TestUpdateSlice_SetsDone(t *testing.T) {
-	dir := writePlan(t, samplePlan)
+	dir := writePlan(t)
 	require.NoError(t, plan.UpdateSlice(dir, "slice-one", "done"))
 	plan := readPlan(t, dir)
 	assert.Contains(t, plan, "status: done")
@@ -98,7 +98,7 @@ func TestUpdateSlice_SetsDone(t *testing.T) {
 }
 
 func TestUpdateSlice_PreservesOtherContent(t *testing.T) {
-	dir := writePlan(t, samplePlan)
+	dir := writePlan(t)
 	require.NoError(t, plan.UpdateSlice(dir, "slice-one", "done"))
 	plan := readPlan(t, dir)
 	assert.Contains(t, plan, "id: slice-two")
@@ -106,7 +106,7 @@ func TestUpdateSlice_PreservesOtherContent(t *testing.T) {
 }
 
 func TestUpdateSlice_SliceNotFound(t *testing.T) {
-	dir := writePlan(t, samplePlan)
+	dir := writePlan(t)
 	err := plan.UpdateSlice(dir, "nonexistent-slice", "done")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "nonexistent-slice")

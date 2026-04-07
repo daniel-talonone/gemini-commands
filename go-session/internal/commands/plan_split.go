@@ -89,7 +89,7 @@ func SplitTask(featureDir, sliceID, taskID string, replacements []SplitTaskEntry
 				continue
 			}
 			tID := plan.MappingScalar(tNode, "id")
-			if tID != "" && !(sID == sliceID && tID == taskID) {
+			if tID != "" && (sID != sliceID || tID != taskID) {
 				existingTaskIDs[tID] = sID
 			}
 		}

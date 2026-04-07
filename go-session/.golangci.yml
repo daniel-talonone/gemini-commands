@@ -1,0 +1,26 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    # defaults
+    - errcheck       # unchecked errors
+    - govet          # go vet checks
+    - ineffassign    # unused assignments
+    - staticcheck    # staticcheck suite (includes gosimple)
+    - unused         # unused code
+    # extras
+    - errorlint      # incorrect error wrapping (Go 1.13+)
+    - exhaustive     # missing switch cases on enums
+    - misspell       # common spelling mistakes
+    - nilerr         # returning nil alongside non-nil error
+    - unparam        # unused function parameters
+    - revive         # drop-in golint replacement with extra rules
+
+  settings:
+    revive:
+      rules:
+        - name: package-comments
+          disabled: true
+        - name: exported
+          disabled: true

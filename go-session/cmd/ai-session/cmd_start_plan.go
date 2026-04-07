@@ -45,7 +45,7 @@ This command replaces the 'orchestrate.sh --plan' script.`,
 		logger.Info("Verifying preconditions")
 		descPath := filepath.Join(featureDir, "description.md")
 		if _, err := os.Stat(descPath); os.IsNotExist(err) {
-			return fmt.Errorf("description.md not found in %s. Run /session:new or /session:define first.", featureDir)
+			return fmt.Errorf("description.md not found in %s — run /session:new or /session:define first", featureDir)
 		}
 		logger.Info("Preconditions verified")
 

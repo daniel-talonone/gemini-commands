@@ -33,13 +33,13 @@ Errors:
   - Not in a git repository and no local .features/<story-id> found
   - Git remote URL cannot be parsed into org/repo
   - Exactly 1 argument required`,
-	Args: func(cmd *cobra.Command, args []string) error {
+	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("exactly 1 argument required: <story-id>, got %d", len(args))
 		}
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		cwd, err := os.Getwd()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error getting working directory:", err)

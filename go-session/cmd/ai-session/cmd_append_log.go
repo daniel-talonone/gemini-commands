@@ -31,13 +31,13 @@ Entries are separated by a blank line. Creates log.md if it does not exist.
 Errors:
   - Feature directory does not exist
   - Exactly 2 arguments required`,
-	Args: func(cmd *cobra.Command, args []string) error {
+	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) != 2 {
 			return fmt.Errorf("exactly 2 arguments required: <feature-dir> and <message>, got %d", len(args))
 		}
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		if err := commands.AppendLog(args[0], args[1]); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)

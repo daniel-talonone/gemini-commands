@@ -85,5 +85,3 @@ func ResolveFeatureDir(storyID, cwd, remoteURL string) (string, error) {
 	}
 	return filepath.Join(home, ".ai-session", "features", orgRepo, storyID), nil
 }
-
-

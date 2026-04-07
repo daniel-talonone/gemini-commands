@@ -3,7 +3,6 @@ package git
 import (
 	"os/exec"
 	"strings"
-
 )
 
 // RemoteURL returns the git remote origin URL, or "" if not in a git repo.

@@ -12,6 +12,7 @@ import (
 	"github.com/daniel-talonone/gemini-commands/internal/commands/status" // Needed by WritePlan
 )
 
+// KebabRe matches a valid kebab-case identifier (e.g. "my-slice-id").
 var KebabRe = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 var validStatuses = map[string]bool{

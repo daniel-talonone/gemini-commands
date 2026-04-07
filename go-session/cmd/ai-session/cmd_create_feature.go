@@ -38,7 +38,7 @@ Idempotent: exits 0 if the directory already exists (skips existing files).
 Errors:
   - Exactly 1 argument required
   - Directory cannot be created (permissions, invalid path)`,
-	Args: func(cmd *cobra.Command, args []string) error {
+	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("exactly 1 argument required: <feature-dir>, got %d", len(args))
 		}

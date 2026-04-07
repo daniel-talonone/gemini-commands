@@ -22,6 +22,14 @@ var errorBlockRe = regexp.MustCompile(`(?s)\{\{#if error_message\}\}.*?\{\{/if\}
 // agentsVerifyRe extracts the verification command from an AGENTS.md "## Verification" section.
 var agentsVerifyRe = regexp.MustCompile(`(?m)^## Verification\r?\nRun: (.+)$`)
 
+// appendLog writes a timestamped entry to log.md. Logging is best-effort — a
+// failure is reported via the logger but never stops the orchestration.
+func appendLog(logger *slog.Logger, featureDir, msg string) {
+	if err := commands.AppendLog(featureDir, msg); err != nil {
+		logger.Warn("failed to append log entry", "error", err)
+	}
+}
+
 // Run orchestrates the full implementation loop for a feature: reads the plan,
 // runs the verification gate, iterates slices/tasks, invokes the LLM per task,
 // and marks statuses as it progresses.
@@ -29,7 +37,7 @@ var agentsVerifyRe = regexp.MustCompile(`(?m)^## Verification\r?\nRun: (.+)$`)
 // workDir must be the target project root (the directory containing AGENTS.md).
 // aiSessionHome must be the resolved AI_SESSION_HOME path.
 func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome string) error {
-	commands.AppendLog(featureDir, fmt.Sprintf("--- Starting implementation orchestration for feature: %s ---", featureID))
+	appendLog(logger, featureDir, fmt.Sprintf("--- Starting implementation orchestration for feature: %s ---", featureID))
 	logger.Info("Starting implementation orchestration", "feature_id", featureID)
 
 	// Extract verification command from the project's AGENTS.md.
@@ -37,18 +45,18 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	if err != nil {
 		return fmt.Errorf("extracting verification command: %w", err)
 	}
-	commands.AppendLog(featureDir, fmt.Sprintf("Using verification command: %s", verificationCmd))
+	appendLog(logger, featureDir, fmt.Sprintf("Using verification command: %s", verificationCmd))
 	logger.Info("Using verification command", "command", verificationCmd)
 
 	// Initial verification gate — codebase must be passing before we start.
-	commands.AppendLog(featureDir, "Running initial verification gate...")
+	appendLog(logger, featureDir, "Running initial verification gate...")
 	logger.Info("Running initial verification gate")
 	if err := runShell(verificationCmd); err != nil {
 		msg := fmt.Sprintf("Initial verification failed — codebase must be in a passing state to begin: %v", err)
-		commands.AppendLog(featureDir, msg)
+		appendLog(logger, featureDir, msg)
 		return fmt.Errorf("%s", msg)
 	}
-	commands.AppendLog(featureDir, "Initial verification gate passed.")
+	appendLog(logger, featureDir, "Initial verification gate passed.")
 	logger.Info("Initial verification gate passed.")
 
 	// Read story description for prompt context.
@@ -88,7 +96,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 				continue
 			}
 
-			commands.AppendLog(featureDir, fmt.Sprintf("Starting slice: %s", s.ID))
+			appendLog(logger, featureDir, fmt.Sprintf("Starting slice: %s", s.ID))
 			logger.Info("Starting slice", "id", s.ID)
 			if err := plan.UpdateSlice(featureDir, s.ID, "in-progress"); err != nil {
 				return fmt.Errorf("updating slice %s to in-progress: %w", s.ID, err)
@@ -103,9 +111,9 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 
 				resuming := t.Status == "in-progress"
 				if resuming {
-					commands.AppendLog(featureDir, fmt.Sprintf("Resuming task: %s (was in-progress from a prior run)", t.ID))
+					appendLog(logger, featureDir, fmt.Sprintf("Resuming task: %s (was in-progress from a prior run)", t.ID))
 				} else {
-					commands.AppendLog(featureDir, fmt.Sprintf("Starting task: %s", t.ID))
+					appendLog(logger, featureDir, fmt.Sprintf("Starting task: %s", t.ID))
 				}
 				logger.Info("Starting task", "slice", s.ID, "task", t.ID, "resuming", resuming)
 
@@ -114,7 +122,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 				}
 
 				if err := executeTaskWithRetry(logger, featureDir, aiSessionHome, storyDescription, architectureDescription, s.Description, t.Task, verificationCmd); err != nil {
-					commands.AppendLog(featureDir, fmt.Sprintf("Task %s FAILED after all retries: %v", t.ID, err))
+					appendLog(logger, featureDir, fmt.Sprintf("Task %s FAILED after all retries: %v", t.ID, err))
 					logger.Error("Task failed after all retries", "task", t.ID, "error", err)
 					return fmt.Errorf("task %s in slice %s failed: %w", t.ID, s.ID, err)
 				}
@@ -123,7 +131,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 					return fmt.Errorf("updating task %s to done: %w", t.ID, err)
 				}
 				t.Status = "done"
-				commands.AppendLog(featureDir, fmt.Sprintf("Task %s completed successfully.", t.ID))
+				appendLog(logger, featureDir, fmt.Sprintf("Task %s completed successfully.", t.ID))
 				logger.Info("Task completed", "task", t.ID)
 			}
 
@@ -131,7 +139,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 				return fmt.Errorf("updating slice %s to done: %w", s.ID, err)
 			}
 			s.Status = "done"
-			commands.AppendLog(featureDir, fmt.Sprintf("Slice %s completed.", s.ID))
+			appendLog(logger, featureDir, fmt.Sprintf("Slice %s completed.", s.ID))
 			logger.Info("Slice completed", "id", s.ID)
 			progressMade = true
 		}
@@ -147,7 +155,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	if err := status.Write(featureDir, "implement-done", "", ""); err != nil {
 		return fmt.Errorf("updating status to implement-done: %w", err)
 	}
-	commands.AppendLog(featureDir, "--- IMPLEMENT COMPLETE ---")
+	appendLog(logger, featureDir, "--- IMPLEMENT COMPLETE ---")
 	logger.Info("IMPLEMENT COMPLETE")
 	return nil
 }
@@ -184,6 +192,7 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, storyD
 		}
 
 		if os.Getenv("IN_TEST_MODE") != "true" {
+			appendLog(logger, featureDir, fmt.Sprintf("Invoking LLM for task execution (attempt %d).", attempt))
 			logger.Info("Invoking Gemini", "attempt", attempt)
 			// Pass the prompt via stdin to avoid OS argument-length limits.
 			// In --yolo mode Gemini executes tool calls autonomously; changes land on disk
@@ -193,7 +202,7 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, storyD
 			geminiCmd.Stdout = os.Stdout
 			geminiCmd.Stderr = os.Stderr
 			if err := geminiCmd.Run(); err != nil {
-				return fmt.Errorf("Gemini failed on attempt %d: %w", attempt, err)
+				return fmt.Errorf("gemini failed on attempt %d: %w", attempt, err)
 			}
 		} else {
 			logger.Info("Skipping Gemini invocation (test mode)", "attempt", attempt)
@@ -205,6 +214,7 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, storyD
 		cmd.Stderr = &verificationOutput
 		if err := cmd.Run(); err != nil {
 			lastVerificationError = fmt.Errorf("attempt %d failed:\n%s", attempt, verificationOutput.String())
+			appendLog(logger, featureDir, fmt.Sprintf("Verification failed (attempt %d): %s", attempt, verificationOutput.String()))
 			logger.Error("Verification failed", "attempt", attempt)
 			if attempt == maxRetries {
 				return lastVerificationError
@@ -212,6 +222,7 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, storyD
 			continue
 		}
 
+		appendLog(logger, featureDir, fmt.Sprintf("Verification passed (attempt %d).", attempt))
 		logger.Info("Verification passed", "attempt", attempt)
 		return nil
 	}

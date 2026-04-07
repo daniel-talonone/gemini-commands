@@ -35,13 +35,13 @@ Errors:
   - Invalid YAML
   - Schema violations (missing fields, bad status, non-kebab-case ids, duplicates)
   - Exactly 1 positional argument required`,
-	Args: func(cmd *cobra.Command, args []string) error {
+	Args: func(_ *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("exactly 1 argument required: <feature-dir>, got %d", len(args))
 		}
 		return nil
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error reading stdin:", err)

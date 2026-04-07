@@ -31,7 +31,7 @@ func TestTerminalHandler_NotADirectory(t *testing.T) {
 	dir := t.TempDir()
 	f, err := os.CreateTemp(dir, "testfile")
 	require.NoError(t, err)
-	f.Close()
+	require.NoError(t, f.Close())
 
 	req := httptest.NewRequest(http.MethodGet, "/action/terminal?path="+filepath.ToSlash(f.Name()), nil)
 	w := httptest.NewRecorder()
@@ -58,7 +58,7 @@ func TestFinderHandler_NotADirectory(t *testing.T) {
 	dir := t.TempDir()
 	f, err := os.CreateTemp(dir, "testfile")
 	require.NoError(t, err)
-	f.Close()
+	require.NoError(t, f.Close())
 
 	req := httptest.NewRequest(http.MethodGet, "/action/finder?path="+filepath.ToSlash(f.Name()), nil)
 	w := httptest.NewRecorder()

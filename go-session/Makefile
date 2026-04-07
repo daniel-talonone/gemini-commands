@@ -1,4 +1,4 @@
-.PHONY: build test lint
+.PHONY: build test lint prcm
 
 BINARY = bin/ai-session
 
@@ -10,4 +10,6 @@ test:
 	go test ./...
 
 lint:
-	go vet ./...
+	golangci-lint run ./...
+
+prcm: build test lint
