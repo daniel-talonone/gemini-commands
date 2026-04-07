@@ -28,7 +28,7 @@ func TestCreateFeature_PlaceholderContent(t *testing.T) {
 	for _, name := range []string{"plan.yml", "questions.yml", "review.yml"} {
 		content, err := os.ReadFile(filepath.Join(dir, name))
 		require.NoError(t, err)
-		assert.Equal(t, "[]\n", string(content), "%s should contain []", name)
+		assert.Equal(t, "[]", string(content), "%s should contain []", name)
 	}
 	log, _ := os.ReadFile(filepath.Join(dir, "log.md"))
 	assert.Contains(t, string(log), "# Work Log")
