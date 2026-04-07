@@ -129,5 +129,5 @@ Typical approach:
    `spec/session/command_details.md`.
 
 ## Verification
-Run: make prcm
+Run: cd go-session && make prcm
 

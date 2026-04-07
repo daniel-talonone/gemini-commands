@@ -2,6 +2,7 @@ package dashboard_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/daniel-talonone/gemini-commands/internal/dashboard"
 	"github.com/stretchr/testify/assert"
@@ -114,4 +115,53 @@ func TestDeriveState_AllDoneIgnoresEmptySliceWhenOthersDone(t *testing.T) {
 	}
 	result := dashboard.DeriveState("sc-1", "org/repo", nil, plan, neverAlive)
 	assert.True(t, result.AllDone, "done tasks + empty slice = all existing tasks done")
+}
+
+// TestDeriveState_TimeFormatting tests that DeriveState correctly populates
+// the formatted timestamp fields.
+func TestDeriveState_TimeFormatting(t *testing.T) {
+	t.Run("formats valid timestamps", func(t *testing.T) {
+		// We just check that the formatted string is not empty, as the exact relative
+		// time string ("5 minutes ago") is hard to test deterministically without
+		// more complex mocking. The time formatting utility will have its own
+		// comprehensive tests.
+		startedTime := time.Now().Add(-1 * time.Hour)
+		updatedTime := time.Now().Add(-5 * time.Minute)
+		started := startedTime.Format(time.RFC3339)
+		updated := updatedTime.Format(time.RFC3339)
+
+		status := &dashboard.FeatureStatus{StartedAt: started, UpdatedAt: updated}
+		result := dashboard.DeriveState("sc-1", "org/repo", status, nil, neverAlive)
+
+		assert.WithinDuration(t, startedTime, result.StartedAt, time.Second) // Check time.Time value
+		assert.NotEmpty(t, result.FormattedStartedAt)                        // Check formatted string
+
+		assert.WithinDuration(t, updatedTime, result.UpdatedAt, time.Second) // Check time.Time value
+		assert.NotEmpty(t, result.FormattedUpdatedAt)                        // Check formatted string
+	})
+
+	t.Run("handles invalid timestamps", func(t *testing.T) {
+		status := &dashboard.FeatureStatus{
+			StartedAt: "not-a-timestamp",
+			UpdatedAt: "not-a-timestamp-either",
+		}
+		result := dashboard.DeriveState("sc-1", "org/repo", status, nil, neverAlive)
+
+		assert.True(t, result.StartedAt.IsZero())
+		assert.Equal(t, "—", result.FormattedStartedAt, "FormattedStartedAt should be '—' for invalid input")
+
+		assert.True(t, result.UpdatedAt.IsZero())
+		assert.Equal(t, "—", result.FormattedUpdatedAt, "FormattedUpdatedAt should be '—' for invalid input")
+	})
+
+	t.Run("handles empty timestamps", func(t *testing.T) {
+		status := &dashboard.FeatureStatus{StartedAt: "", UpdatedAt: ""}
+		result := dashboard.DeriveState("sc-1", "org/repo", status, nil, neverAlive)
+
+		assert.True(t, result.StartedAt.IsZero())
+		assert.Equal(t, "—", result.FormattedStartedAt, "FormattedStartedAt should be '—' for empty input")
+
+		assert.True(t, result.UpdatedAt.IsZero())
+		assert.Equal(t, "—", result.FormattedUpdatedAt, "FormattedUpdatedAt should be '—' for empty input")
+	})
 }

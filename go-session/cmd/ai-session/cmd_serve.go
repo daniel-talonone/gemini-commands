@@ -36,7 +36,7 @@ Flags:
 Shutdown: press CTRL+C for graceful shutdown.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		srv := server.New(servePort)
+		srv := server.New(servePort, &server.DashboardScanner{})
 
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()

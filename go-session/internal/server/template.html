@@ -12,8 +12,31 @@
     button { cursor: pointer; background: #f0f0f0; }
     button:hover { background: #e0e0e0; }
     table { border-collapse: collapse; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 3px; }
-    th { text-align: left; padding: 0.5rem 0.8rem; background: #f0f0f0; border-bottom: 2px solid #ddd; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    th {
+      text-align: left;
+      padding: 0.5rem 0.8rem;
+      background: #f0f0f0;
+      border-bottom: 2px solid #ddd;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    th a {
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
     td { text-align: left; padding: 0.45rem 0.8rem; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+    .timestamp-col {
+      text-align: center;
+      padding: 0.45rem 0.8rem;
+      min-width: 120px; /* Adjust as needed */
+    }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #f9f9f9; }
     .running { color: #2a7a2a; font-weight: bold; }
@@ -58,6 +81,8 @@
         <th>Mode</th>
         <th>Step</th>
         <th>Status</th>
+        <th>{{if and (eq .SortBy "started") (eq .SortOrder "asc")}}<a href="?{{if .RepoFilter}}repo={{.RepoFilter}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}{{else if .StatusFilter}}status={{.StatusFilter}}{{end}}">Created &#x25B2;</a>{{else if eq .SortBy "started"}}<a href="?sort=started&order=asc{{if .RepoFilter}}&repo={{.RepoFilter}}{{end}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">Created &#x25BC;</a>{{else}}<a href="?sort=started&order=desc{{if .RepoFilter}}&repo={{.RepoFilter}}{{end}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">Created</a>{{end}}</th>
+        <th>{{if and (eq .SortBy "updated") (eq .SortOrder "asc")}}<a href="?{{if .RepoFilter}}repo={{.RepoFilter}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}{{else if .StatusFilter}}status={{.StatusFilter}}{{end}}">Updated &#x25B2;</a>{{else if eq .SortBy "updated"}}<a href="?sort=updated&order=asc{{if .RepoFilter}}&repo={{.RepoFilter}}{{end}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">Updated &#x25BC;</a>{{else}}<a href="?sort=updated&order=desc{{if .RepoFilter}}&repo={{.RepoFilter}}{{end}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">Updated</a>{{end}}</th>
         <th>Last Done Task</th>
       </tr>
     </thead>
@@ -80,10 +105,12 @@
           {{else if .AllDone}}<span class="done">✓ done</span>
           {{else}}<span class="idle">○ idle</span>{{end}}
         </td>
+        <td>{{if .FormattedStartedAt}}{{.FormattedStartedAt}}{{else}}<span class="empty">—</span>{{end}}</td>
+        <td>{{if .FormattedUpdatedAt}}{{.FormattedUpdatedAt}}{{else}}<span class="empty">—</span>{{end}}</td>
         <td>{{if .LastDoneTask}}{{.LastDoneTask}}{{else}}<span class="empty">—</span>{{end}}</td>
       </tr>
       {{else}}
-      <tr><td colspan="7" style="text-align:center; padding: 1.5rem; color:#aaa;">No features found.</td></tr>
+      <tr><td colspan="9" style="text-align:center; padding: 1.5rem; color:#aaa;">No features found.</td></tr>
       {{end}}
     </tbody>
   </table>

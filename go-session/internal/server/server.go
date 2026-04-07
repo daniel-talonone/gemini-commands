@@ -23,17 +23,35 @@ type PageData struct {
 	AllRepos     []string
 	RepoFilter   string
 	StatusFilter string
+	SortBy       string
+	SortOrder    string
 }
 
 // Server is the dashboard HTTP server.
+//go:generate mockgen -source=server.go -destination=mock_server.go -package=server
+type Scanner interface {
+	ScanAll() ([]dashboard.FeatureState, error)
+}
+
+// DashboardScanner implements the server.Scanner interface using dashboard.ScanAll.
+type DashboardScanner struct{}
+
+func (ds *DashboardScanner) ScanAll() ([]dashboard.FeatureState, error) {
+	return dashboard.ScanAll()
+}
+
 type Server struct {
-	port int
-	http *http.Server
+	port        int
+	http        *http.Server
+	ScanAllFunc func() ([]dashboard.FeatureState, error)
 }
 
 // New creates a new Server listening on the given port.
-func New(port int) *Server {
-	return &Server{port: port}
+func New(port int, scanner Scanner) *Server {
+	return &Server{
+		port:        port,
+		ScanAllFunc: scanner.ScanAll,
+	}
 }
 
 // Start parses the template, registers routes, and begins listening.
@@ -47,7 +65,7 @@ func (s *Server) Start() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", s.makeHandler(tmpl))
+	mux.HandleFunc("/", s.MakeHandler(tmpl))
 	mux.HandleFunc("/action/terminal", TerminalHandler)
 	mux.HandleFunc("/action/finder", FinderHandler)
 
@@ -111,9 +129,9 @@ func FinderHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) makeHandler(tmpl *template.Template) http.HandlerFunc {
+func (s *Server) MakeHandler(tmpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		features, err := dashboard.ScanAll()
+		features, err := s.ScanAllFunc()
 		if err != nil {
 			http.Error(w, "scan error: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -121,6 +139,16 @@ func (s *Server) makeHandler(tmpl *template.Template) http.HandlerFunc {
 
 		repoFilter := r.URL.Query().Get("repo")
 		statusFilter := r.URL.Query().Get("status")
+		sortParam := r.URL.Query().Get("sort")
+		orderParam := r.URL.Query().Get("order")
+
+		// Default sort by UpdatedAt descending.
+		if sortParam == "" {
+			sortParam = "updated"
+		}
+		if orderParam == "" {
+			orderParam = "desc"
+		}
 
 		// Reject unknown status filter values.
 		if statusFilter != "" && statusFilter != "running" && statusFilter != "done" && statusFilter != "idle" {
@@ -166,11 +194,16 @@ func (s *Server) makeHandler(tmpl *template.Template) http.HandlerFunc {
 			filtered = append(filtered, f)
 		}
 
+		// Apply sorting
+		SortFeatures(filtered, sortParam, orderParam)
+
 		data := PageData{
 			Features:     filtered,
 			AllRepos:     allRepos,
 			RepoFilter:   repoFilter,
 			StatusFilter: statusFilter,
+			SortBy:       sortParam,
+			SortOrder:    orderParam,
 		}
 
 		// Buffer template output — prevents partial responses on error.
@@ -182,4 +215,39 @@ func (s *Server) makeHandler(tmpl *template.Template) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(buf.Bytes())
 	}
+}
+
+// sortFeatures sorts the provided feature list in place based on the given
+// sort key and direction. It handles invalid or missing timestamps by treating
+// them as the oldest possible time.
+func SortFeatures(features []dashboard.FeatureState, sortBy, sortDir string) {
+	sort.Slice(features, func(i, j int) bool {
+		t1 := features[i].UpdatedAt
+		t2 := features[j].UpdatedAt
+		if sortBy == "started" {
+			t1 = features[i].StartedAt
+			t2 = features[j].StartedAt
+		}
+
+		t1IsZero := t1.IsZero()
+		t2IsZero := t2.IsZero()
+
+		if t1IsZero && t2IsZero {
+			return false // Treat as equal
+		}
+		if t1IsZero {
+			// Zero time is "smallest", so it comes first in "asc"
+			return sortDir != "desc"
+		}
+		if t2IsZero {
+			// Zero time is "smallest", so it comes first in "asc"
+			return sortDir == "desc"
+		}
+
+		if sortDir == "asc" {
+			return t1.Before(t2)
+		}
+		// Default to "desc"
+		return t1.After(t2)
+	})
 }

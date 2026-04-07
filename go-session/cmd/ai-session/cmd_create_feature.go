@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-
 	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
 	git "github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
@@ -67,5 +66,3 @@ Errors:
 		return nil
 	},
 }
-
-

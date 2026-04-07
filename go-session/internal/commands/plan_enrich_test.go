@@ -54,7 +54,7 @@ func TestEnrichTask_UpdatesBody(t *testing.T) {
 
 	plan := readEnrichPlan(t, dir)
 	assert.Contains(t, plan, newBody)
-	assert.Contains(t, plan, "task-todo")   // id preserved
+	assert.Contains(t, plan, "task-todo")    // id preserved
 	assert.Contains(t, plan, "status: todo") // status preserved
 }
 

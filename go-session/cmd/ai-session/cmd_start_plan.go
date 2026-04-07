@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"log/slog"
 	"strings"
 
 	"github.com/daniel-talonone/gemini-commands/internal/commands"
@@ -56,7 +56,7 @@ This command replaces the 'orchestrate.sh --plan' script.`,
 			return fmt.Errorf("updating status: %w", err)
 		}
 		logger.Info("Status updated successfully")
-		
+
 		logger.Info("Preparing plan prompt")
 		prompt, err := preparePlanPrompt(storyID)
 		if err != nil {
@@ -68,7 +68,7 @@ This command replaces the 'orchestrate.sh --plan' script.`,
 		geminiCmd := exec.Command("gemini", "--yolo", "-p", prompt)
 		geminiCmd.Stdout = os.Stdout
 		geminiCmd.Stderr = os.Stderr
-		
+
 		if err := geminiCmd.Run(); err != nil {
 			logger.Error("Gemini command failed", "error", err)
 			if writeErr := status.Write(featureDir, "plan-failed", repo, branch); writeErr != nil {
