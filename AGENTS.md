@@ -79,6 +79,7 @@ terminal. Both tools use the same `/session:` prefix.
   - `scripts/load_context_files.sh` — **DEPRECATED**. Use `ai-session load-context <story-id>` instead.
   - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.ai-session/features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`. Each row shows 📁/`</>`/⬛ quick-launch icons when `work_dir` is set in `status.yaml`.
   - `GET /action/terminal?path=<dir>` — dashboard endpoint that opens Terminal.app at the given directory (macOS only).
+  - `ai-session implement <story-id>` — Go orchestrator for the implementation phase. Resolves the feature dir, reads `AGENTS.md` for the verification command, runs an initial verification gate, iterates plan.yml slices (with dependency checks) and tasks, invokes `gemini --yolo` via stdin for each task, retries up to 5 times on verification failure, updates task/slice statuses atomically, and sets `pipeline_step: implement-done` on completion.
 - **Session Context Pattern:** To reduce token consumption, session commands use an
   explicit context-passing pattern:
   - **Producers** (`/session:start`, `/session:define`, `/session:new`): Output a
@@ -96,6 +97,7 @@ terminal. Both tools use the same `/session:` prefix.
   - `plan.yml` writes are gated through `ai-session plan-write` — validates schema before writing,
     rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs. **Side-effect:** sets
     `pipeline_step: plan-done` in `status.yaml` after every successful write.
+  - `plan.Plan`, `plan.Slice`, `plan.Task` Go types are exported from `internal/commands/plan/plan.go` — use `plan.LoadPlan(featureDir)` to read plan.yml into a typed struct from other packages.
   - Per-task enrichment uses `ai-session plan-enrich-task --slice <id> --task <id>` — updates only
     the `task:` field of a single todo task, protected by an injection guard and status lock.
   - Context loading uses `ai-session load-context <story-id>` — outputs all feature dir files as

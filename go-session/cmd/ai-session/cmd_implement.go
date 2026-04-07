@@ -1,0 +1,47 @@
+package main
+
+import (
+	"fmt"
+	"log/slog"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"github.com/daniel-talonone/gemini-commands/internal/commands"
+	"github.com/daniel-talonone/gemini-commands/internal/commands/implement"
+	"github.com/daniel-talonone/gemini-commands/internal/git"
+)
+
+func init() {
+	rootCmd.AddCommand(implementCmd)
+}
+
+var implementCmd = &cobra.Command{
+	Use:   "implement <story-id>",
+	Short: "Start the headless implementation for a feature",
+	Long: `Executes the headless implementation for a given feature.
+This command replaces the 'orchestrate.sh --implement' script.`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+
+		storyID := args[0]
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("getting current working directory: %w", err)
+		}
+		remoteURL := git.RemoteURL()
+
+		featureDir, err := commands.ResolveFeatureDir(storyID, cwd, remoteURL)
+		if err != nil {
+			return fmt.Errorf("failed to resolve feature directory for %q: %w", storyID, err)
+		}
+
+		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome()); err != nil {
+			return fmt.Errorf("implementation run failed: %w", err)
+		}
+
+		return nil
+	},
+}

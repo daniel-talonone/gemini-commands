@@ -18,23 +18,58 @@ var validStatuses = map[string]bool{
 	"todo": true, "in-progress": true, "done": true,
 }
 
-type planSliceRaw struct {
-	ID          string        `yaml:"id"`
-	Description string        `yaml:"description"`
-	Status      string        `yaml:"status"`
-	Tasks       []planTaskRaw `yaml:"tasks"`
+// Plan is a collection of Slices, representing the entire plan.yml file.
+type Plan []Slice
+
+// Slice represents a single slice in the plan.
+type Slice struct {
+	ID          string   `yaml:"id"`
+	Description string   `yaml:"description"`
+	Status      string   `yaml:"status"`
+	DependsOn   []string `yaml:"depends_on,omitempty"`
+	Tasks       []Task   `yaml:"tasks"`
 }
 
-type planTaskRaw struct {
+// Task represents a single task within a slice.
+type Task struct {
 	ID     string `yaml:"id"`
 	Task   string `yaml:"task"`
 	Status string `yaml:"status"`
 }
 
+// LoadArchitecture reads architecture.md from featureDir. Returns an empty string
+// without error if the file does not exist — architecture is optional.
+func LoadArchitecture(featureDir string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(featureDir, "architecture.md"))
+	if os.IsNotExist(err) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("reading architecture.md: %w", err)
+	}
+	return string(data), nil
+}
+
+// LoadPlan reads and parses plan.yml from featureDir into a Plan.
+func LoadPlan(featureDir string) (Plan, error) {
+	data, err := os.ReadFile(planPath(featureDir))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("plan.yml not found in %s", featureDir)
+		}
+		return nil, fmt.Errorf("reading plan.yml: %w", err)
+	}
+	var p Plan
+	if err := yaml.Unmarshal(data, &p); err != nil {
+		return nil, fmt.Errorf("parsing plan.yml: %w", err)
+	}
+	return p, nil
+}
+
 // ValidatePlan parses data and enforces the full plan schema.
 // Returns a precise, location-qualified error message on any violation.
 func ValidatePlan(data []byte) error {
-	var slices []planSliceRaw
+	var slices []Slice
 	if err := yaml.Unmarshal(data, &slices); err != nil {
 		return fmt.Errorf("invalid YAML: %w", err)
 	}
