@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -12,7 +13,14 @@ import (
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 )
 
+var (
+	implementMaxRetries int
+	implementRetryDelay time.Duration
+)
+
 func init() {
+	implementCmd.Flags().IntVar(&implementMaxRetries, "max-retries", 5, "Maximum LLM+verification attempts per task")
+	implementCmd.Flags().DurationVar(&implementRetryDelay, "retry-delay", 10*time.Second, "Delay between retry attempts (helps avoid rate limits)")
 	rootCmd.AddCommand(implementCmd)
 }
 
@@ -38,7 +46,7 @@ This command replaces the 'orchestrate.sh --implement' script.`,
 			return fmt.Errorf("failed to resolve feature directory for %q: %w", storyID, err)
 		}
 
-		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome()); err != nil {
+		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome(), implementMaxRetries, implementRetryDelay); err != nil {
 			return fmt.Errorf("implementation run failed: %w", err)
 		}
 

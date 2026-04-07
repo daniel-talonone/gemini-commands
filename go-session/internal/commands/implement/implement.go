@@ -3,12 +3,14 @@ package implement
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/daniel-talonone/gemini-commands/internal/commands"
 	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
@@ -21,6 +23,20 @@ var errorBlockRe = regexp.MustCompile(`(?s)\{\{#if error_message\}\}.*?\{\{/if\}
 
 // agentsVerifyRe extracts the verification command from an AGENTS.md "## Verification" section.
 var agentsVerifyRe = regexp.MustCompile(`(?m)^## Verification\r?\nRun: (.+)$`)
+
+// agentsContextFilesRe extracts the source file glob pattern from an AGENTS.md
+// "## Context files\nPattern: <globs>" section.
+var agentsContextFilesRe = regexp.MustCompile(`(?m)^## Context files\r?\nPattern: (.+)$`)
+
+// defaultContextExcludes are git pathspec exclusions applied when no explicit
+// "## Context files" pattern is configured in AGENTS.md. They strip known
+// non-source files (config, docs, lock files, binaries) that produce formatting
+// noise without containing any structural information the LLM needs.
+var defaultContextExcludes = []string{
+	":!*.yaml", ":!*.yml", ":!*.json", ":!*.toml",
+	":!*.md", ":!*.txt", ":!*.lock", ":!*.sum",
+	":!*.svg", ":!*.png", ":!*.jpg", ":!*.gif", ":!*.ico",
+}
 
 // appendLog writes a timestamped entry to log.md. Logging is best-effort — a
 // failure is reported via the logger but never stops the orchestration.
@@ -36,7 +52,31 @@ func appendLog(logger *slog.Logger, featureDir, msg string) {
 //
 // workDir must be the target project root (the directory containing AGENTS.md).
 // aiSessionHome must be the resolved AI_SESSION_HOME path.
-func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome string) error {
+// maxRetries is the maximum number of LLM+verification attempts per task.
+// retryDelay is the pause between attempts (helps avoid LLM rate limits).
+func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome string, maxRetries int, retryDelay time.Duration) (err error) {
+	// Set the initial pipeline_step. If the previous run left "implement-failed"
+	// (i.e. a human manually intervened and is restarting), use "implement-restarted"
+	// so the dashboard reflects the context. Any other state is treated as a first run.
+	currentStep, _ := status.ReadStep(featureDir)
+	initialStep := "implement"
+	if currentStep == "implement-failed" {
+		initialStep = "implement-restarted"
+	}
+	if writeErr := status.Write(featureDir, initialStep, "", ""); writeErr != nil {
+		logger.Warn("failed to write initial implement status", "error", writeErr)
+	}
+
+	// On any failure, mark the run as failed so the dashboard and the next invocation
+	// can distinguish between "in progress", "failed", and "done".
+	defer func() {
+		if err != nil {
+			if writeErr := status.Write(featureDir, "implement-failed", "", ""); writeErr != nil {
+				logger.Warn("failed to write implement-failed status", "error", writeErr)
+			}
+		}
+	}()
+
 	appendLog(logger, featureDir, fmt.Sprintf("--- Starting implementation orchestration for feature: %s ---", featureID))
 	logger.Info("Starting implementation orchestration", "feature_id", featureID)
 
@@ -45,6 +85,10 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	if err != nil {
 		return fmt.Errorf("extracting verification command: %w", err)
 	}
+
+	// Optional source-file filter for the codebase context diff (see AGENTS.md
+	// "## Context files" section). Falls back to defaultContextExcludes if absent.
+	contextPattern := extractContextPattern(workDir)
 	appendLog(logger, featureDir, fmt.Sprintf("Using verification command: %s", verificationCmd))
 	logger.Info("Using verification command", "command", verificationCmd)
 
@@ -121,7 +165,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 					return fmt.Errorf("updating task %s to in-progress: %w", t.ID, err)
 				}
 
-				if err := executeTaskWithRetry(logger, featureDir, aiSessionHome, storyDescription, architectureDescription, s.Description, t.Task, verificationCmd); err != nil {
+				if err := executeTaskWithRetry(logger, featureDir, aiSessionHome, workDir, storyDescription, architectureDescription, s.Description, t.Task, verificationCmd, maxRetries, retryDelay, contextPattern); err != nil {
 					appendLog(logger, featureDir, fmt.Sprintf("Task %s FAILED after all retries: %v", t.ID, err))
 					logger.Error("Task failed after all retries", "task", t.ID, "error", err)
 					return fmt.Errorf("task %s in slice %s failed: %w", t.ID, s.ID, err)
@@ -152,6 +196,17 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 		}
 	}
 
+	// Final integration check: catches cross-cutting issues (template↔struct mismatches,
+	// sort key inconsistencies, dead code, always-passing tests) that individual task
+	// verification gates miss because each task only validates its own local scope.
+	appendLog(logger, featureDir, "Running final integration check...")
+	logger.Info("Running integration check")
+	if err := runIntegrationCheck(logger, aiSessionHome, storyDescription, workDir, contextPattern); err != nil {
+		appendLog(logger, featureDir, fmt.Sprintf("Integration check found blockers: %v", err))
+		return fmt.Errorf("integration check failed: %w", err)
+	}
+	appendLog(logger, featureDir, "Integration check passed.")
+
 	if err := status.Write(featureDir, "implement-done", "", ""); err != nil {
 		return fmt.Errorf("updating status to implement-done: %w", err)
 	}
@@ -160,12 +215,122 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	return nil
 }
 
-// executeTaskWithRetry invokes the LLM for a single task and retries on verification failure.
+// extractContextPattern reads the optional "## Context files\nPattern: <globs>" section
+// from AGENTS.md and returns the space-separated glob list. Returns nil when the section
+// is absent so callers can fall back to defaultContextExcludes.
+func extractContextPattern(dir string) []string {
+	content, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		return nil
+	}
+	matches := agentsContextFilesRe.FindSubmatch(content)
+	if len(matches) < 2 {
+		return nil
+	}
+	return strings.Fields(strings.TrimSpace(string(matches[1])))
+}
+
+// getSourceFilesDiff returns a git diff scoped to source files only.
+//
+// If includePatterns is non-empty (read from AGENTS.md "## Context files"), they are
+// passed as include pathspecs: `git diff HEAD -- <patterns>`.
+// Otherwise, defaultContextExcludes are used to strip noise (config, docs, lock files)
+// while keeping all source languages: `git diff HEAD -- :!*.yaml :!*.md …`.
+//
+// A 32 KB cap prevents runaway context sizes. When truncated, the most recent hunks
+// are kept (most likely to contain the task-relevant additions) and a header notes it.
+func getSourceFilesDiff(workDir string, includePatterns []string) string {
+	args := []string{"diff", "HEAD", "--"}
+	if len(includePatterns) > 0 {
+		args = append(args, includePatterns...)
+	} else {
+		args = append(args, defaultContextExcludes...)
+	}
+
+	var out bytes.Buffer
+	cmd := exec.Command("git", args...)
+	cmd.Dir = workDir
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return ""
+	}
+
+	result := out.String()
+	const maxBytes = 32 * 1024
+	if len(result) <= maxBytes {
+		return result
+	}
+
+	// Keep the tail of the diff and align to the next file header so we never
+	// emit a partial hunk.
+	tail := result[len(result)-maxBytes:]
+	if idx := strings.Index(tail, "\ndiff --git"); idx >= 0 {
+		tail = tail[idx+1:]
+	}
+	return fmt.Sprintf("[diff truncated: showing last %d of %d bytes — earliest changes omitted]\n\n%s",
+		len(tail), len(result), tail)
+}
+
+// runIntegrationCheck invokes the LLM with integration_check.md to catch
+// cross-cutting issues (template↔struct mismatches, dead code, broken tests)
+// that per-task verification gates miss. Returns an error if the LLM reports
+// any BLOCKERs (exits non-zero).
+func runIntegrationCheck(logger *slog.Logger, aiSessionHome, storyDescription, workDir string, contextPattern []string) error {
+	if os.Getenv("IN_TEST_MODE") == "true" {
+		logger.Info("Skipping integration check (test mode)")
+		return nil
+	}
+
+	promptPath := filepath.Join(aiSessionHome, "headless", "session", "integration_check.md")
+	promptTemplate, err := os.ReadFile(promptPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Prompt file is optional; skip gracefully rather than failing the run.
+			logger.Warn("integration_check.md not found — skipping integration check", "path", promptPath)
+			return nil
+		}
+		return fmt.Errorf("reading integration_check.md: %w", err)
+	}
+
+	diff := getSourceFilesDiff(workDir, contextPattern)
+	prompt := strings.ReplaceAll(string(promptTemplate), "{{story_description_here}}", storyDescription)
+	prompt = strings.ReplaceAll(prompt, "{{codebase_diff_here}}", diff)
+
+	geminiCmd := exec.Command("gemini", "--yolo")
+	geminiCmd.Stdin = strings.NewReader(prompt)
+	geminiCmd.Stdout = os.Stdout
+	geminiCmd.Stderr = os.Stderr
+	if err := geminiCmd.Run(); err != nil {
+		return fmt.Errorf("integration check reported blockers (gemini exit: %w)", err)
+	}
+	return nil
+}
+
+// isRateLimitError reports whether the combined stdout+stderr output of a failed
+// Gemini invocation indicates a transient rate-limit or quota error. These errors
+// should be retried without consuming the task's attempt budget.
+func isRateLimitError(output string) bool {
+	lower := strings.ToLower(output)
+	return strings.Contains(lower, "429") ||
+		strings.Contains(lower, "rate limit") ||
+		strings.Contains(lower, "ratelimitexceeded") ||
+		strings.Contains(lower, "quota exceeded") ||
+		strings.Contains(lower, "resource exhausted") ||
+		strings.Contains(lower, "too many requests")
+}
+
+// executeTaskWithRetry invokes the LLM for a single task and retries on failure.
 // In --yolo mode Gemini executes its own tool calls (run_shell_command, write_file, replace)
-// live during the process — file changes happen inside the gemini call. We stream its output
-// to the terminal and check the exit code; there is nothing to capture or re-execute.
-func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, storyDescription, architectureDescription, sliceDescription, taskDescription, verificationCmd string) error {
-	const maxRetries = 5
+// live during the process — file changes happen inside the gemini call.
+//
+// A non-zero Gemini exit code is treated as a soft failure: verification still runs
+// because file changes may have landed on disk. If verification passes, the task
+// succeeds regardless of the Gemini exit code. If either fails, both errors are
+// injected into the next attempt's prompt so the LLM can recover.
+//
+// retryDelay is applied before each retry to avoid LLM rate-limit errors that
+// otherwise cause immediate failure on the following attempt.
+func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, workDir, storyDescription, architectureDescription, sliceDescription, taskDescription, verificationCmd string, maxRetries int, retryDelay time.Duration, contextPattern []string) error {
 	promptPath := filepath.Join(aiSessionHome, "headless", "session", "execute_task.md")
 
 	// Read prompt template once; it does not change between retries.
@@ -174,60 +339,102 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, storyD
 		return fmt.Errorf("reading execute_task.md: %w", err)
 	}
 
-	var lastVerificationError error
-	for attempt := 1; attempt <= maxRetries; attempt++ {
+	// attempt counts real failures against the budget. rateLimitRetries tracks
+	// transient quota/rate-limit errors separately — they never consume the budget
+	// but are capped to prevent an infinite loop.
+	const maxRateLimitRetries = 20
+	attempt := 1
+	rateLimitRetries := 0
+	var lastError error
+
+	for attempt <= maxRetries {
+		if (attempt > 1 || rateLimitRetries > 0) && retryDelay > 0 {
+			logger.Info("Waiting before retry", "delay", retryDelay, "attempt", attempt, "rate_limit_retries", rateLimitRetries)
+			time.Sleep(retryDelay)
+		}
+
+		// Capture the current diff before building the prompt so the LLM can see
+		// all changes made by previous tasks (prevents field-name mismatches when
+		// a later task references types introduced by an earlier one).
+		changesSoFar := getSourceFilesDiff(workDir, contextPattern)
+
 		promptContent := strings.ReplaceAll(string(promptTemplate), "{{story_description_here}}", storyDescription)
 		promptContent = strings.ReplaceAll(promptContent, "{{architecture_description_here}}", architectureDescription)
 		promptContent = strings.ReplaceAll(promptContent, "{{slice_description_here}}", sliceDescription)
 		promptContent = strings.ReplaceAll(promptContent, "{{task_description_here}}", taskDescription)
+		promptContent = strings.ReplaceAll(promptContent, "{{changes_so_far_here}}", changesSoFar)
+		promptContent = strings.ReplaceAll(promptContent, "{{verification_command_here}}", verificationCmd)
 
-		if lastVerificationError != nil {
-			// Inject error and strip the conditional markers.
-			promptContent = strings.ReplaceAll(promptContent, "{{error_message_here}}", lastVerificationError.Error())
+		if lastError != nil {
+			promptContent = strings.ReplaceAll(promptContent, "{{error_message_here}}", lastError.Error())
 			promptContent = strings.ReplaceAll(promptContent, "{{#if error_message}}", "")
 			promptContent = strings.ReplaceAll(promptContent, "{{/if}}", "")
 		} else {
-			// Strip the entire conditional block (including surrounding XML tags).
 			promptContent = errorBlockRe.ReplaceAllString(promptContent, "")
 		}
 
+		var geminiErr error
+		var geminiOutput bytes.Buffer // captures stdout+stderr for rate-limit detection
 		if os.Getenv("IN_TEST_MODE") != "true" {
 			appendLog(logger, featureDir, fmt.Sprintf("Invoking LLM for task execution (attempt %d).", attempt))
 			logger.Info("Invoking Gemini", "attempt", attempt)
-			// Pass the prompt via stdin to avoid OS argument-length limits.
-			// In --yolo mode Gemini executes tool calls autonomously; changes land on disk
-			// during this call. Stream output to the terminal and check exit code only.
 			geminiCmd := exec.Command("gemini", "--yolo")
 			geminiCmd.Stdin = strings.NewReader(promptContent)
-			geminiCmd.Stdout = os.Stdout
-			geminiCmd.Stderr = os.Stderr
+			geminiCmd.Stdout = io.MultiWriter(os.Stdout, &geminiOutput)
+			geminiCmd.Stderr = io.MultiWriter(os.Stderr, &geminiOutput)
 			if err := geminiCmd.Run(); err != nil {
-				return fmt.Errorf("gemini failed on attempt %d: %w", attempt, err)
+				geminiErr = fmt.Errorf("gemini exited with error: %w", err)
+				appendLog(logger, featureDir, fmt.Sprintf("Gemini exited with error (attempt %d): %v — running verification anyway", attempt, err))
+				logger.Warn("Gemini exited with error; running verification", "attempt", attempt, "error", err)
 			}
 		} else {
 			logger.Info("Skipping Gemini invocation (test mode)", "attempt", attempt)
 		}
 
+		// Always run verification — file changes may have landed on disk even when
+		// Gemini exited non-zero (e.g. due to a rate-limit or transient API error).
 		var verificationOutput bytes.Buffer
-		cmd := exec.Command("sh", "-c", verificationCmd)
-		cmd.Stdout = &verificationOutput
-		cmd.Stderr = &verificationOutput
-		if err := cmd.Run(); err != nil {
-			lastVerificationError = fmt.Errorf("attempt %d failed:\n%s", attempt, verificationOutput.String())
-			appendLog(logger, featureDir, fmt.Sprintf("Verification failed (attempt %d): %s", attempt, verificationOutput.String()))
-			logger.Error("Verification failed", "attempt", attempt)
-			if attempt == maxRetries {
-				return lastVerificationError
-			}
-			continue
+		verifyCmd := exec.Command("sh", "-c", verificationCmd)
+		verifyCmd.Stdout = &verificationOutput
+		verifyCmd.Stderr = &verificationOutput
+		verifyErr := verifyCmd.Run()
+
+		if verifyErr == nil {
+			appendLog(logger, featureDir, fmt.Sprintf("Verification passed (attempt %d).", attempt))
+			logger.Info("Verification passed", "attempt", attempt)
+			return nil
 		}
 
-		appendLog(logger, featureDir, fmt.Sprintf("Verification passed (attempt %d).", attempt))
-		logger.Info("Verification passed", "attempt", attempt)
-		return nil
+		// Rate-limit / quota errors do not count against the attempt budget.
+		if geminiErr != nil && isRateLimitError(geminiOutput.String()) {
+			rateLimitRetries++
+			msg := fmt.Sprintf("Rate-limit error on attempt %d (rate-limit retry %d/%d) — not counting against budget.", attempt, rateLimitRetries, maxRateLimitRetries)
+			appendLog(logger, featureDir, msg)
+			logger.Warn(msg)
+			if rateLimitRetries >= maxRateLimitRetries {
+				return fmt.Errorf("exceeded rate-limit retry budget (%d retries): %w", maxRateLimitRetries, geminiErr)
+			}
+			continue // attempt unchanged
+		}
+
+		// Real failure: build combined error for the next prompt and consume one attempt.
+		var errParts []string
+		if geminiErr != nil {
+			errParts = append(errParts, geminiErr.Error())
+		}
+		errParts = append(errParts, verificationOutput.String())
+		lastError = fmt.Errorf("%s", strings.Join(errParts, "\n"))
+
+		appendLog(logger, featureDir, fmt.Sprintf("Verification failed (attempt %d): %s", attempt, verificationOutput.String()))
+		logger.Error("Verification failed", "attempt", attempt)
+
+		if attempt == maxRetries {
+			return lastError
+		}
+		attempt++
 	}
 
-	return lastVerificationError
+	return lastError
 }
 
 // depsMet reports whether all slices in deps are marked "done" in the plan.

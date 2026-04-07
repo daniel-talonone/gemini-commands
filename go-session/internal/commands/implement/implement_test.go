@@ -46,7 +46,7 @@ func TestRun(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(featureDir, "status.yaml"), []byte("pipeline_step: plan-done\n"), 0644))
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	err := implement.Run(logger, "test-feature", featureDir, projectDir, aiSessionHome)
+	err := implement.Run(logger, "test-feature", featureDir, projectDir, aiSessionHome, 3, 0)
 	require.NoError(t, err)
 
 	// Verify plan.yml: test-task and test-slice must be marked done.

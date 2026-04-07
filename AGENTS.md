@@ -131,3 +131,6 @@ Typical approach:
 ## Verification
 Run: cd go-session && make prcm
 
+## Context files
+Pattern: *.go
+

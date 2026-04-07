@@ -21,6 +21,23 @@ type Status struct {
 	UpdatedAt    string `yaml:"updated_at"`
 }
 
+// ReadStep returns the current pipeline_step value from status.yaml.
+// Returns an empty string without error if the file does not exist.
+func ReadStep(featureDir string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(featureDir, "status.yaml"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("reading status.yaml: %w", err)
+	}
+	var s Status
+	if err := yaml.Unmarshal(data, &s); err != nil {
+		return "", fmt.Errorf("unmarshaling status.yaml: %w", err)
+	}
+	return s.PipelineStep, nil
+}
+
 // Write reads, updates, and atomically writes the status.yaml file.
 // If repo or branch are empty, their existing values are preserved.
 func Write(featureDir, step, repo, branch string) error {
