@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
-	git "github.com/daniel-talonone/gemini-commands/internal/git"
+	"github.com/daniel-talonone/gemini-commands/internal/feature"
+	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -30,12 +30,12 @@ files (excluding _* files) as XML blocks:
 Files are sorted alphabetically. Output is printed to stdout with no trailing newline.
 
 Arguments:
-  <story-id>  Story ID or explicit path (same resolution as resolve-feature-dir)
+  <story-id>  Story identifier (e.g. sc-1234) or an explicit path
 
 Resolution order:
   1. story-id contains "/" or starts with "." or "~": used as-is
   2. .features/<story-id>/ exists in CWD: use that path (legacy layout)
-  3. Derive from git remote: ~/.ai-session/features/<org>/<repo>/<story-id>
+  3. Derive from git remote origin: ~/.ai-session/features/<org>/<repo>/<story-id>
 
 Errors:
   - Feature directory does not exist after resolution
@@ -52,12 +52,12 @@ Errors:
 			fmt.Fprintln(os.Stderr, "Error getting working directory:", err)
 			os.Exit(1)
 		}
-		featureDir, err := commands.ResolveFeatureDir(args[0], cwd, git.RemoteURL())
+		featureDir, err := feature.ResolveFeatureDir(args[0], cwd, git.RemoteURL())
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}
-		output, err := commands.LoadContext(featureDir)
+		output, err := feature.LoadContext(featureDir)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)

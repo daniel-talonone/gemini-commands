@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
-	git "github.com/daniel-talonone/gemini-commands/internal/git"
+	"github.com/daniel-talonone/gemini-commands/internal/feature"
+	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +58,7 @@ Errors:
 			workDir = git.WorkDir()
 		}
 
-		if err := commands.CreateFeature(args[0], repo, branch, workDir); err != nil {
+		if err := feature.CreateFeature(args[0], repo, branch, workDir); err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)
 		}

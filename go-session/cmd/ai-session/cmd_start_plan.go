@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/daniel-talonone/gemini-commands/internal/commands"
-	"github.com/daniel-talonone/gemini-commands/internal/commands/status"
+	"github.com/daniel-talonone/gemini-commands/internal/feature"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
+	"github.com/daniel-talonone/gemini-commands/internal/status"
 	"github.com/spf13/cobra"
 )
 
@@ -33,10 +33,10 @@ This command replaces the 'orchestrate.sh --plan' script.`,
 		logger.Info("Resolving feature directory", "story_id", storyID)
 		cwd, err := os.Getwd()
 		if err != nil {
-			return fmt.Errorf("getting working directory: %w", err)
+			return fmt.Errorf("getting current working directory: %w", err)
 		}
 		remoteURL := git.RemoteURL()
-		featureDir, err := commands.ResolveFeatureDir(storyID, cwd, remoteURL)
+		featureDir, err := feature.ResolveFeatureDir(storyID, cwd, remoteURL)
 		if err != nil {
 			return err
 		}

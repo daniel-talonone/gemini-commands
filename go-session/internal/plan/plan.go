@@ -7,9 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/daniel-talonone/gemini-commands/internal/status"
 	"gopkg.in/yaml.v3"
-
-	"github.com/daniel-talonone/gemini-commands/internal/commands/status" // Needed by WritePlan
 )
 
 // KebabRe matches a valid kebab-case identifier (e.g. "my-slice-id").

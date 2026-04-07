@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
+	"github.com/daniel-talonone/gemini-commands/internal/feature"
 	git "github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +44,7 @@ Errors:
 			fmt.Fprintln(os.Stderr, "Error getting working directory:", err)
 			os.Exit(1)
 		}
-		result, err := commands.ResolveFeatureDir(args[0], cwd, git.RemoteURL())
+		result, err := feature.ResolveFeatureDir(args[0], cwd, git.RemoteURL())
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(1)

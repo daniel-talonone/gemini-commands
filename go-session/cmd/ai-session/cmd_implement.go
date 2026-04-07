@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/daniel-talonone/gemini-commands/internal/commands"
-	"github.com/daniel-talonone/gemini-commands/internal/commands/implement"
+	"github.com/daniel-talonone/gemini-commands/internal/feature"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
+	"github.com/daniel-talonone/gemini-commands/internal/implement"
 )
 
 var (
@@ -41,7 +41,7 @@ This command replaces the 'orchestrate.sh --implement' script.`,
 		}
 		remoteURL := git.RemoteURL()
 
-		featureDir, err := commands.ResolveFeatureDir(storyID, cwd, remoteURL)
+		featureDir, err := feature.ResolveFeatureDir(storyID, cwd, remoteURL)
 		if err != nil {
 			return fmt.Errorf("failed to resolve feature directory for %q: %w", storyID, err)
 		}

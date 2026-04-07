@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"gopkg.in/yaml.v3"
-
-	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
 )
 
 // SplitTaskEntry is one replacement task produced by the enricher's SPLIT output.

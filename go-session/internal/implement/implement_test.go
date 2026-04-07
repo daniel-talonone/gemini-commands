@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/daniel-talonone/gemini-commands/internal/commands/implement"
+	"github.com/daniel-talonone/gemini-commands/internal/implement"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

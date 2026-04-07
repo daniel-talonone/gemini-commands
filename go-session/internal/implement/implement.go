@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daniel-talonone/gemini-commands/internal/commands/description"
-	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
-	"github.com/daniel-talonone/gemini-commands/internal/commands/status"
+	"github.com/daniel-talonone/gemini-commands/internal/description"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
+	"github.com/daniel-talonone/gemini-commands/internal/plan"
+	"github.com/daniel-talonone/gemini-commands/internal/status"
 )
 
 // errorBlockRe strips the entire {{#if error_message}}...{{/if}} block (including

@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"gopkg.in/yaml.v3"
-
-	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
 )
 
 // EnrichTask updates only the task: body of a single todo task in plan.yml

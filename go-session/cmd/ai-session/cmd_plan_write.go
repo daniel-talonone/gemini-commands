@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/daniel-talonone/gemini-commands/internal/commands/plan"
+	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"github.com/spf13/cobra"
 )
 

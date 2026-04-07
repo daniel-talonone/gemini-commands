@@ -38,6 +38,19 @@ func ReadStep(featureDir string) (string, error) {
 	return s.PipelineStep, nil
 }
 
+// LoadStatus reads and unmarshals the status.yaml file into a Status struct.
+func LoadStatus(featureDir string) (*Status, error) {
+	data, err := os.ReadFile(filepath.Join(featureDir, "status.yaml"))
+	if err != nil {
+		return nil, fmt.Errorf("reading status.yaml: %w", err)
+	}
+	var s Status
+	if err := yaml.Unmarshal(data, &s); err != nil {
+		return nil, fmt.Errorf("unmarshaling status.yaml: %w", err)
+	}
+	return &s, nil
+}
+
 // Write reads, updates, and atomically writes the status.yaml file.
 // If repo or branch are empty, their existing values are preserved.
 func Write(featureDir, step, repo, branch string) error {

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/daniel-talonone/gemini-commands/internal/commands/description"
+	"github.com/daniel-talonone/gemini-commands/internal/description"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
