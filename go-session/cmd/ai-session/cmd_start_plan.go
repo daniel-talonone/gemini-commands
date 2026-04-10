@@ -16,6 +16,7 @@ import (
 
 func init() {
 	rootCmd.AddCommand(startPlanCmd)
+	startPlanCmd.Flags().Bool("skip-enrich", false, "Skip the post-plan task enrichment step")
 }
 
 const enrichScript = "scripts/enrich_tasks.sh"
@@ -84,17 +85,21 @@ This command replaces the 'orchestrate.sh --plan' script.`,
 		logger.Info("Status updated to plan-done")
 		fmt.Println("Plan generation successful.")
 
-		// Trigger enrichment synchronously
-		logger.Info("Triggering synchronous enrichment")
-		enrichScriptPath := filepath.Join(getAISessionHome(), enrichScript)
-		enrichCmd := exec.Command(enrichScriptPath, featureDir)
-		enrichCmd.Stdout = os.Stdout
-		enrichCmd.Stderr = os.Stderr
-		if err := enrichCmd.Run(); err != nil {
-			logger.Error("Enrichment script failed", "error", err)
-			return fmt.Errorf("enrichment failed: %w", err)
+		skipEnrich, _ := cmd.Flags().GetBool("skip-enrich")
+		if skipEnrich {
+			logger.Info("Skipping enrichment (--skip-enrich)")
+		} else {
+			logger.Info("Triggering synchronous enrichment")
+			enrichScriptPath := filepath.Join(getAISessionHome(), enrichScript)
+			enrichCmd := exec.Command(enrichScriptPath, featureDir)
+			enrichCmd.Stdout = os.Stdout
+			enrichCmd.Stderr = os.Stderr
+			if err := enrichCmd.Run(); err != nil {
+				logger.Error("Enrichment script failed", "error", err)
+				return fmt.Errorf("enrichment failed: %w", err)
+			}
+			logger.Info("Synchronous enrichment finished successfully")
 		}
-		logger.Info("Synchronous enrichment finished successfully")
 
 		return nil
 	},
