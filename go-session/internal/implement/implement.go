@@ -364,6 +364,7 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, workDi
 		promptContent = strings.ReplaceAll(promptContent, "{{task_description_here}}", taskDescription)
 		promptContent = strings.ReplaceAll(promptContent, "{{changes_so_far_here}}", changesSoFar)
 		promptContent = strings.ReplaceAll(promptContent, "{{verification_command_here}}", verificationCmd)
+		promptContent = strings.ReplaceAll(promptContent, "{{feature_dir_here}}", featureDir)
 
 		if lastError != nil {
 			promptContent = strings.ReplaceAll(promptContent, "{{error_message_here}}", lastError.Error())

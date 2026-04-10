@@ -50,7 +50,7 @@ Read it carefully before touching any file. It is the authoritative source of tr
 
 1. **Log your reasoning first.** Before touching any file, run:
    ```
-   $AI_SESSION_HOME/go-session/bin/ai-session append-log "$FEATURE_DIR" "<your plan>"
+   $AI_SESSION_HOME/go-session/bin/ai-session append-log "{{feature_dir_here}}" "<your plan>"
    ```
    The message should be a concise paragraph summarising your approach, any adaptations to the task description, and key decisions.
 
@@ -60,8 +60,8 @@ Read it carefully before touching any file. It is the authoritative source of tr
    ```
    Compare what you see against what the task description says (CURRENT CODE, function signatures, file structure). The plan was written at planning time and may be stale.
    - If the file content matches: proceed as described.
-   - If the file content differs: use the task's **intent** to determine the correct change. Log the discrepancy via `append-log` and proceed — do not stop.
-   - If a referenced file does not exist and the task does not say to create it: log an ambiguity message via `append-log` and exit non-zero. Do not guess.
+   - If the file content differs: use the task's **intent** to determine the correct change. Log the discrepancy via `append-log "{{feature_dir_here}}"` and proceed — do not stop.
+   - If a referenced file does not exist and the task does not say to create it: log an ambiguity message via `append-log "{{feature_dir_here}}"` and exit non-zero. Do not guess.
 
    **Cross-file consistency check (mandatory for templates and interface-touching files):**
    If the task involves editing a template, a config file, or any file that references types or
