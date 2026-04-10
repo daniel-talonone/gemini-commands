@@ -21,6 +21,16 @@ var validStatuses = map[string]bool{
 // Plan is a collection of Slices, representing the entire plan.yml file.
 type Plan []Slice
 
+// FindSlice searches the plan for a slice with the given ID.
+func (p Plan) FindSlice(id string) (Slice, bool) {
+	for _, s := range p {
+		if s.ID == id {
+			return s, true
+		}
+	}
+	return Slice{}, false
+}
+
 // Slice represents a single slice in the plan.
 type Slice struct {
 	ID          string   `yaml:"id"`
@@ -29,7 +39,6 @@ type Slice struct {
 	DependsOn   []string `yaml:"depends_on,omitempty"`
 	Tasks       []Task   `yaml:"tasks"`
 }
-
 // Task represents a single task within a slice.
 type Task struct {
 	ID     string `yaml:"id"`
