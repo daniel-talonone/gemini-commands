@@ -125,9 +125,9 @@ func WritePlan(featureDir string, data []byte) error {
 	if err = os.Rename(tmpPath, planPath(featureDir)); err != nil {
 		return err
 	}
-	if err = status.Write(featureDir, "plan-done", "", ""); err != nil {
-		return fmt.Errorf("updating status pipeline step: %w", err)
-	}
+	// Best-effort side-effect: update pipeline_step if a status.yaml exists.
+	// Failure here must not fail the plan write itself.
+	_ = status.Write(featureDir, "plan-done", "", "")
 	return nil
 }
 

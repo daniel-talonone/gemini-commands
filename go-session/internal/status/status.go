@@ -10,6 +10,10 @@ import (
 )
 
 // Status represents the structure of the status.yaml file.
+//
+// INVARIANT: every field in this struct must have a corresponding key in status.yaml and vice versa.
+// Unmarshaling a file that contains a key not present in this struct silently drops that key on the
+// next Write round-trip. Add new status.yaml fields here before deploying code that writes them.
 type Status struct {
 	Mode         string `yaml:"mode"`
 	Repo         string `yaml:"repo"`
@@ -19,6 +23,46 @@ type Status struct {
 	PipelineStep string `yaml:"pipeline_step"`
 	StartedAt    string `yaml:"started_at"`
 	UpdatedAt    string `yaml:"updated_at"`
+	StoryURL     string `yaml:"story_url"`
+	ClonePath    string `yaml:"clone_path"`
+	Error        string `yaml:"error"`
+}
+
+// Create creates a new status.yaml file with initial values.
+// Idempotent: if status.yaml already exists the call is a no-op and returns nil.
+func Create(featureDir, repo, branch, workDir, storyURL, mode string) error {
+	statusPath := filepath.Join(featureDir, "status.yaml")
+	if _, err := os.Stat(statusPath); err == nil {
+		return nil // already exists — never overwrite live runtime state
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	s := Status{
+		Mode:         mode,
+		Repo:         repo,
+		Branch:       branch,
+		WorkDir:      workDir,
+		PID:          0,
+		PipelineStep: "new",
+		StartedAt:    now,
+		UpdatedAt:    now,
+		StoryURL:     storyURL,
+	}
+
+	data, err := yaml.Marshal(&s)
+	if err != nil {
+		return fmt.Errorf("marshaling status.yaml: %w", err)
+	}
+
+	tmpPath := statusPath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		return fmt.Errorf("writing status.yaml.tmp: %w", err)
+	}
+	if err := os.Rename(tmpPath, statusPath); err != nil {
+		os.Remove(tmpPath) //nolint:errcheck
+		return fmt.Errorf("renaming status.yaml.tmp: %w", err)
+	}
+	return nil
 }
 
 // ReadStep returns the current pipeline_step value from status.yaml.
@@ -57,39 +101,25 @@ func Write(featureDir, step, repo, branch string) error {
 	statusPath := filepath.Join(featureDir, "status.yaml")
 	var s Status
 
-	// Read existing status.yaml if it exists
+	// Read existing status.yaml — if absent, nothing to update.
 	data, err := os.ReadFile(statusPath)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("reading status.yaml: %w", err)
+		if os.IsNotExist(err) {
+			return nil // no status file: skip update silently (best-effort side-effect)
 		}
-		// File does not exist, initialize a new Status struct
-		s = Status{
-			Mode:      "auto", // Default mode
-			StartedAt: time.Now().Format(time.RFC3339),
-		}
-	} else {
-		// File exists, unmarshal existing data
-		if err := yaml.Unmarshal(data, &s); err != nil {
-			return fmt.Errorf("unmarshaling status.yaml: %w", err)
-		}
+		return fmt.Errorf("reading status.yaml: %w", err)
+	}
+	if err := yaml.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("unmarshaling status.yaml: %w", err)
 	}
 
-	// Update fields
 	s.PipelineStep = step
 	s.UpdatedAt = time.Now().Format(time.RFC3339)
-
-	// Only update repo/branch if provided, otherwise preserve existing values
 	if repo != "" {
 		s.Repo = repo
 	}
 	if branch != "" {
 		s.Branch = branch
-	}
-
-	// Ensure StartedAt is set if it wasn't already (e.g., for existing files without it)
-	if s.StartedAt == "" {
-		s.StartedAt = s.UpdatedAt // Use UpdatedAt as fallback for StartedAt if missing
 	}
 
 	// Marshal back to YAML

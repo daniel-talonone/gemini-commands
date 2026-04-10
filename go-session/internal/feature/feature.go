@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
+	"github.com/daniel-talonone/gemini-commands/internal/status"
 )
 
 // CreateFeature creates a feature directory with placeholder files.
@@ -20,24 +20,15 @@ func CreateFeature(featureDir, repo, branch, workDir string) error {
 		return fmt.Errorf("creating feature directory: %w", err)
 	}
 
-	repoVal, branchVal, workDirVal := "''", "''", "''"
-	if repo != "" {
-		repoVal = repo
+	if err := status.Create(featureDir, repo, branch, workDir, "", ""); err != nil {
+		return fmt.Errorf("creating status.yaml: %w", err)
 	}
-	if branch != "" {
-		branchVal = branch
-	}
-	if workDir != "" {
-		workDirVal = workDir
-	}
-	now := time.Now().Format(time.RFC3339)
 
 	files := map[string]string{
 		"plan.yml":      "[]",
 		"questions.yml": "[]",
 		"review.yml":    "[]",
 		"pr.md":         "# Pull Request",
-		"status.yaml":   fmt.Sprintf("mode: ''\nrepo: %s\nbranch: %s\nwork_dir: %s\npid: 0\npipeline_step: ''\nstarted_at: '%s'\nupdated_at: '%s'\n", repoVal, branchVal, workDirVal, now, now),
 	}
 
 	for name, content := range files {
@@ -49,6 +40,7 @@ func CreateFeature(featureDir, repo, branch, workDir string) error {
 			return fmt.Errorf("writing %s: %w", name, err)
 		}
 	}
+
 	if err := log.CreateLogFile(featureDir); err != nil {
 		return fmt.Errorf("writing log: %w", err)
 	}
