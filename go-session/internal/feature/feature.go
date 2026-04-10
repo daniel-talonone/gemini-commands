@@ -9,6 +9,7 @@ import (
 
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
+	"github.com/daniel-talonone/gemini-commands/internal/review"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 )
 
@@ -27,7 +28,6 @@ func CreateFeature(featureDir, repo, branch, workDir string) error {
 	files := map[string]string{
 		"plan.yml":      "[]",
 		"questions.yml": "[]",
-		"review.yml":    "[]",
 		"pr.md":         "# Pull Request",
 	}
 
@@ -39,6 +39,10 @@ func CreateFeature(featureDir, repo, branch, workDir string) error {
 		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 			return fmt.Errorf("writing %s: %w", name, err)
 		}
+	}
+
+	if err := review.Create(featureDir, review.TypeDefault); err != nil {
+		return fmt.Errorf("creating review.yml: %w", err)
 	}
 
 	if err := log.CreateLogFile(featureDir); err != nil {
