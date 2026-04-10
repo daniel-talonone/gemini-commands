@@ -18,6 +18,61 @@ import (
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 )
 
+type Strategy interface {
+	ExecuteSlice(ctx SliceContext) error
+}
+
+type SliceContext struct {
+	FeatureDir    string
+	WorkDir       string
+	AISessionHome string
+	Story         string
+	Architecture  string
+	Slice         plan.Slice
+	VerificationCmd string
+	MaxRetries    int
+	RetryDelay    time.Duration
+	ContextPattern []string
+	Logger        *slog.Logger
+}
+
+type PerTaskStrategy struct{}
+
+func (s *PerTaskStrategy) ExecuteSlice(ctx SliceContext) error {
+	for j := range ctx.Slice.Tasks {
+		t := &ctx.Slice.Tasks[j]
+		if t.Status == "done" {
+			continue
+		}
+
+		resuming := t.Status == "in-progress"
+		if resuming {
+			appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Resuming task: %s (was in-progress from a prior run)", t.ID))
+		} else {
+			appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Starting task: %s...", t.ID))
+		}
+		ctx.Logger.Info("Starting task", "slice", ctx.Slice.ID, "task", t.ID, "resuming", resuming)
+
+		if err := plan.UpdateTask(ctx.FeatureDir, t.ID, "in-progress"); err != nil {
+			return fmt.Errorf("updating task %s to in-progress: %w", t.ID, err)
+		}
+
+		if err := executeTaskWithRetry(ctx.Logger, ctx.FeatureDir, ctx.AISessionHome, ctx.WorkDir, ctx.Story, ctx.Architecture, ctx.Slice.Description, t.Task, ctx.VerificationCmd, ctx.MaxRetries, ctx.RetryDelay, ctx.ContextPattern); err != nil {
+			appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Task %s FAILED after all retries: %v", t.ID, err))
+			ctx.Logger.Error("Task failed", "task", t.ID, "error", err)
+			return fmt.Errorf("task %s in slice %s failed: %w", t.ID, ctx.Slice.ID, err)
+		}
+
+		if err := plan.UpdateTask(ctx.FeatureDir, t.ID, "done"); err != nil {
+			return fmt.Errorf("updating task %s to done: %w", t.ID, err)
+		}
+		t.Status = "done"
+		appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Task %s completed successfully.", t.ID))
+		ctx.Logger.Info("Task completed", "task", t.ID)
+	}
+	return nil
+}
+
 // errorBlockRe strips the entire {{#if error_message}}...{{/if}} block (including
 // its XML wrapper) when there is no error to inject.
 var errorBlockRe = regexp.MustCompile(`(?s)\{\{#if error_message\}\}.*?\{\{/if\}\}`)
@@ -55,7 +110,7 @@ func appendLog(logger *slog.Logger, featureDir, msg string) {
 // aiSessionHome must be the resolved AI_SESSION_HOME path.
 // maxRetries is the maximum number of LLM+verification attempts per task.
 // retryDelay is the pause between attempts (helps avoid LLM rate limits).
-func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome string, maxRetries int, retryDelay time.Duration) (err error) {
+func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome string, maxRetries int, retryDelay time.Duration, strategy Strategy) (err error) {
 	// Set the initial pipeline_step. If the previous run left "implement-failed"
 	// (i.e. a human manually intervened and is restarting), use "implement-restarted"
 	// so the dashboard reflects the context. Any other state is treated as a first run.
@@ -142,41 +197,27 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 
 			appendLog(logger, featureDir, fmt.Sprintf("Starting slice: %s", s.ID))
 			logger.Info("Starting slice", "id", s.ID)
+
 			if err := plan.UpdateSlice(featureDir, s.ID, "in-progress"); err != nil {
 				return fmt.Errorf("updating slice %s to in-progress: %w", s.ID, err)
 			}
 
-			// Process each task in the slice sequentially.
-			for j := range s.Tasks {
-				t := &s.Tasks[j]
-				if t.Status == "done" {
-					continue
-				}
+			sliceCtx := SliceContext{
+				Logger:          logger,
+				FeatureDir:      featureDir,
+				AISessionHome:   aiSessionHome,
+				WorkDir:         workDir,
+				Story:           storyDescription,
+				Architecture:    architectureDescription,
+				VerificationCmd: verificationCmd,
+				MaxRetries:      maxRetries,
+				RetryDelay:      retryDelay,
+				ContextPattern:  contextPattern,
+				Slice:           *s,
+			}
 
-				resuming := t.Status == "in-progress"
-				if resuming {
-					appendLog(logger, featureDir, fmt.Sprintf("Resuming task: %s (was in-progress from a prior run)", t.ID))
-				} else {
-					appendLog(logger, featureDir, fmt.Sprintf("Starting task: %s", t.ID))
-				}
-				logger.Info("Starting task", "slice", s.ID, "task", t.ID, "resuming", resuming)
-
-				if err := plan.UpdateTask(featureDir, t.ID, "in-progress"); err != nil {
-					return fmt.Errorf("updating task %s to in-progress: %w", t.ID, err)
-				}
-
-				if err := executeTaskWithRetry(logger, featureDir, aiSessionHome, workDir, storyDescription, architectureDescription, s.Description, t.Task, verificationCmd, maxRetries, retryDelay, contextPattern); err != nil {
-					appendLog(logger, featureDir, fmt.Sprintf("Task %s FAILED after all retries: %v", t.ID, err))
-					logger.Error("Task failed after all retries", "task", t.ID, "error", err)
-					return fmt.Errorf("task %s in slice %s failed: %w", t.ID, s.ID, err)
-				}
-
-				if err := plan.UpdateTask(featureDir, t.ID, "done"); err != nil {
-					return fmt.Errorf("updating task %s to done: %w", t.ID, err)
-				}
-				t.Status = "done"
-				appendLog(logger, featureDir, fmt.Sprintf("Task %s completed successfully.", t.ID))
-				logger.Info("Task completed", "task", t.ID)
+			if err := strategy.ExecuteSlice(sliceCtx); err != nil {
+				return fmt.Errorf("strategy failed to execute slice %s: %w", s.ID, err)
 			}
 
 			if err := plan.UpdateSlice(featureDir, s.ID, "done"); err != nil {

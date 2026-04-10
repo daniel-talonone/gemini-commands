@@ -46,7 +46,7 @@ This command replaces the 'orchestrate.sh --implement' script.`,
 			return fmt.Errorf("failed to resolve feature directory for %q: %w", storyID, err)
 		}
 
-		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome(), implementMaxRetries, implementRetryDelay); err != nil {
+		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome(), implementMaxRetries, implementRetryDelay, &implement.PerTaskStrategy{}); err != nil {
 			return fmt.Errorf("implementation run failed: %w", err)
 		}
 

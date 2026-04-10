@@ -1,5 +1,7 @@
 # Headless Plan — auto-generates plan.yml without user interaction.
 # Hand-written (not generated). Do not run scripts/gen_headless.sh on this file.
+# IMPORTANT: This file is a prompt template. {{args}} is substituted at runtime by the Go CLI.
+# DO NOT write to this file or any file outside the feature directory.
 
 You are a senior software architect generating an implementation plan autonomously.
 You have no prior conversation context — read all inputs from disk.
@@ -43,7 +45,7 @@ The feature identifier is: {{args}}
 
 7. **Save Files:**
    - **Do NOT use `write_file` for `plan.yml`.** Instead, pipe through `plan-write` via `run_shell_command`:
-       printf '%s\n' "$PLAN_YAML" | ai-session plan-write "$FEATURE_DIR"
+       printf '%s' "$PLAN_YAML" | ai-session plan-write "$FEATURE_DIR"
      If the command exits non-zero, output the error and stop — do not trigger enrichment.
    - Use `write_file` to save `questions.yml` to `$FEATURE_DIR/questions.yml`.
    - Use `write_file` to save `architecture.md` to `$FEATURE_DIR/architecture.md`.
