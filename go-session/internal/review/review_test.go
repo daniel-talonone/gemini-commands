@@ -265,6 +265,82 @@ func TestAppend_RejectsInvalidStatus_DocsType(t *testing.T) {
 	assert.True(t, os.IsNotExist(statErr), "review-docs.yml must not exist after a rejected write")
 }
 
+// --- Write ---
+
+func TestWrite_HappyPath(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+	findings, err := Load(dir, TypeDefault)
+	require.NoError(t, err)
+	require.Len(t, findings, 1)
+	assert.Equal(t, "find-1", findings[0].ID)
+}
+
+func TestWrite_ReplacesExistingFile(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-2"), validFinding("find-3")}))
+	findings, err := Load(dir, TypeDefault)
+	require.NoError(t, err)
+	require.Len(t, findings, 2)
+	assert.Equal(t, "find-2", findings[0].ID)
+}
+
+func TestWrite_ValidationError_BadID(t *testing.T) {
+	dir := t.TempDir()
+	err := Write(dir, TypeDefault, []Finding{{ID: "Bad ID", Feedback: "feedback", Status: "open"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "finding[0].id")
+	assertNoDefaultReviewFile(t, dir)
+}
+
+func TestWrite_ValidationError_EmptyFeedback(t *testing.T) {
+	dir := t.TempDir()
+	err := Write(dir, TypeDefault, []Finding{{ID: "find-1", Feedback: "", Status: "open"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "finding[0].feedback")
+	assertNoDefaultReviewFile(t, dir)
+}
+
+func TestWrite_ValidationError_BadStatus(t *testing.T) {
+	dir := t.TempDir()
+	err := Write(dir, TypeDefault, []Finding{{ID: "find-1", Feedback: "feedback", Status: "todo"}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "finding[0].status")
+	assertNoDefaultReviewFile(t, dir)
+}
+
+func TestWrite_UnknownType(t *testing.T) {
+	dir := t.TempDir()
+	err := Write(dir, Type("unknown"), []Finding{validFinding("find-1")})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown review type")
+}
+
+func TestWrite_NoTmpLeftover(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		assert.NotContains(t, e.Name(), ".tmp")
+	}
+}
+
+func TestWrite_EmptyFindings(t *testing.T) {
+	// Empty findings list is valid — "no issues found" is a legitimate result.
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{}))
+	findings, err := Load(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Empty(t, findings)
+}
+
+func TestWrite_NonexistentDir(t *testing.T) {
+	err := Write("/nonexistent/path", TypeDefault, []Finding{validFinding("find-1")})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "feature directory does not exist")
+}
+
 // --- helpers ---
 
 func assertNoDefaultReviewFile(t *testing.T, dir string) {

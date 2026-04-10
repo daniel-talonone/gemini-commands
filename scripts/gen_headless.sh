@@ -24,7 +24,7 @@ CHECKSUMS_FILE="$HEADLESS_DIR/.checksums"
 
 # Commands that have no headless equivalent — skip entirely.
 # plan is excluded because claude/session/headless/plan.md is hand-written.
-DENY_LIST=("define" "start" "end" "get-familiar" "log-research" "migration" "plan" "checkpoint" "implement")
+DENY_LIST=("define" "start" "end" "get-familiar" "log-research" "migration" "plan" "checkpoint" "implement" "review" "review-docs" "review-devops")
 
 if ! command -v gemini &>/dev/null; then
     echo "Error: 'gemini' CLI not found in PATH. Install Gemini CLI to use this script." >&2

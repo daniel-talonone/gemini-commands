@@ -149,6 +149,43 @@ func Append(featureDir string, t Type, f Finding) error {
 	return atomicWrite(path, append(existing, f))
 }
 
+// writeValidate validates findings with LLM-actionable error messages that
+// include the finding index, field name, received value, constraint, and a valid example.
+func writeValidate(findings []Finding) error {
+	for i, f := range findings {
+		if f.ID == "" {
+			return fmt.Errorf("finding[%d].id: value is empty — must be a non-empty kebab-case string (e.g. \"null-pointer-in-auth\")", i)
+		}
+		if !kebabCase.MatchString(f.ID) {
+			return fmt.Errorf("finding[%d].id: %q is not kebab-case — must match ^[a-z0-9]+(-[a-z0-9]+)*$ (e.g. \"null-pointer-in-auth\")", i, f.ID)
+		}
+		if f.Feedback == "" {
+			return fmt.Errorf("finding[%d].feedback: value is empty — must be a non-empty string describing the issue", i)
+		}
+		if f.Status != "open" && f.Status != "resolved" {
+			return fmt.Errorf("finding[%d].status: %q is not valid — must be \"open\" or \"resolved\"", i, f.Status)
+		}
+	}
+	return nil
+}
+
+// Write validates all findings with LLM-actionable error messages and atomically
+// replaces the review file for the given type. It is the single exported entry
+// point for full-file writes; callers must never call atomicWrite directly.
+func Write(featureDir string, t Type, findings []Finding) error {
+	if _, err := os.Stat(featureDir); os.IsNotExist(err) {
+		return fmt.Errorf("feature directory does not exist: %s", featureDir)
+	}
+	name, err := filename(t)
+	if err != nil {
+		return err
+	}
+	if err := writeValidate(findings); err != nil {
+		return err
+	}
+	return atomicWrite(filepath.Join(featureDir, name), findings)
+}
+
 // UpdateStatus updates the status of a single finding by ID (atomic write).
 // Returns an error if the ID is not found or the status is invalid.
 func UpdateStatus(featureDir string, t Type, id, status string) error {
