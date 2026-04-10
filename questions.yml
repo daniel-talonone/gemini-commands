@@ -1,3 +1,0 @@
-- question: Is there a preferred way to handle a failure in the middle of a slice?
-  answer: The prompt should instruct the LLM to stop on any verification failure. The Go orchestrator will handle the retry logic. On retry, the LLM will see which tasks are already `done` and resume from the first non-`done` task.
-  status: resolved
