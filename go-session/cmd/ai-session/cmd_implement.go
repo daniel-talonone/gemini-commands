@@ -21,6 +21,8 @@ var (
 func init() {
 	implementCmd.Flags().IntVar(&implementMaxRetries, "max-retries", 5, "Maximum LLM+verification attempts per task")
 	implementCmd.Flags().DurationVar(&implementRetryDelay, "retry-delay", 10*time.Second, "Delay between retry attempts (helps avoid rate limits)")
+	implementCmd.Flags().Bool("tasks", false, "Execute one LLM call per task (default strategy)")
+	implementCmd.Flags().Bool("slices", false, "Execute one LLM call per slice")
 	rootCmd.AddCommand(implementCmd)
 }
 
@@ -46,7 +48,20 @@ This command replaces the 'orchestrate.sh --implement' script.`,
 			return fmt.Errorf("failed to resolve feature directory for %q: %w", storyID, err)
 		}
 
-		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome(), implementMaxRetries, implementRetryDelay, &implement.PerTaskStrategy{}); err != nil {
+		useSlices, _ := cmd.Flags().GetBool("slices")
+		useTasks, _ := cmd.Flags().GetBool("tasks")
+		if useSlices && useTasks {
+			return fmt.Errorf("--tasks and --slices are mutually exclusive")
+		}
+
+		var strategy implement.Strategy
+		if useSlices {
+			strategy = &implement.PerSliceStrategy{}
+		} else {
+			strategy = &implement.PerTaskStrategy{}
+		}
+
+		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome(), implementMaxRetries, implementRetryDelay, strategy); err != nil {
 			return fmt.Errorf("implementation run failed: %w", err)
 		}
 
