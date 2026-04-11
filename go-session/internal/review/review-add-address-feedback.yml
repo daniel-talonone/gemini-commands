@@ -1,0 +1,93 @@
+- id: no-filter-resolved-findings
+  file: go-session/internal/review/review.go
+  line: 39
+  feedback: >
+    ReadFindings passes all findings to the LLM, including those with status "resolved".
+    The prompt in address-feedback.md instructs the LLM to "work through every finding"
+    but then qualifies it with "status: open" in step 2. The filtering is a natural-language
+    suggestion to the LLM, not a hard filter at the API boundary. ReadFindings should filter
+    to only open findings before marshaling, or the signature should accept a status filter.
+    As-is, resolved findings waste prompt tokens and risk the LLM re-addressing already-fixed issues.
+  status: open
+
+- id: type-to-name-mapping-duplicated
+  file: go-session/cmd/ai-session/cmd_address_feedback.go
+  line: 76
+  feedback: >
+    The switch statement that maps review.Type → display name ("regular", "docs", "devops")
+    is duplicated: once in the "no flags" branch (lines 78–85) and implicitly again in the
+    "anyFlag" branch via literal strings (lines 66–73). The review package owns these types;
+    either add a String() / DisplayName() method to review.Type, or at minimum extract a
+    shared typeToName() helper. The current duplication will silently diverge if a new type
+    is added.
+  status: open
+
+- id: silent-empty-name-on-unknown-type
+  file: go-session/cmd/ai-session/cmd_address_feedback.go
+  line: 78
+  feedback: >
+    The switch inside the AllTypes() loop has no default branch. If AllTypes() ever returns
+    a value not covered (e.g. after adding TypeIntegration), `name` stays "", the job is
+    appended with an empty typeName, and the error/skip messages become "no findings for
+     review" — confusing and hard to debug. Add a default case that returns an error or panics.
+  status: open
+
+- id: prompt-reread-per-job
+  file: go-session/cmd/ai-session/cmd_address_feedback.go
+  line: 109
+  feedback: >
+    runAddressJob reads the prompt file from disk on every invocation. When multiple review
+    types are being addressed in a single run, the file is read N times. The prompt is
+    constant for the duration of the command; it should be read once in RunE before the
+    jobs loop and passed into runAddressJob (or cache it in a closure). Minor but inconsistent
+    with how cmd_review.go handles a similar pattern — that one also reads per job, so this
+    is a systemic issue worth fixing here.
+  status: open
+
+- id: no-test-for-address-feedback-cmd
+  file: go-session/cmd/ai-session/cmd_address_feedback.go
+  line: 0
+  feedback: >
+    There are no tests for the command itself — flag parsing, no-flags-implies-all behaviour,
+    or the skip-when-empty logic. cmd_implement.go and cmd_review.go also lack tests, but
+    this is a new command and the pattern should be established now. At minimum, table-driven
+    unit tests for job-list construction (using cobra's FParseErrWhitelist or by extracting
+    the job-building logic into a pure function) would catch the silent-empty-name bug above.
+  status: open
+
+- id: headless-prompt-missing-verification-command
+  file: headless/session/address-feedback.md
+  line: 20
+  feedback: >
+    Step 2c says "Run the verification command from AGENTS.md after each fix" but does not
+    tell the LLM where AGENTS.md lives or how to extract the verification command from it.
+    The review.md and review-docs.md prompts explicitly use `cat AGENTS.md` and reference
+    the project root. This prompt only reads AGENTS.md in step 1 (no explicit path given),
+    and then asks the LLM to "use" it in step 2c without re-reading it — expecting the LLM
+    to retain information across a multi-step loop. Store the verification command in a
+    variable or repeat the AGENTS.md read instruction in step 2c.
+  status: open
+
+- id: runAddressJob-not-testable
+  file: go-session/cmd/ai-session/cmd_address_feedback.go
+  line: 109
+  feedback: >
+    runAddressJob hardcodes exec.Command("gemini", "--yolo") with no injection point, making
+    it impossible to unit-test without spawning a real gemini process. cmd_review.go has the
+    same issue, so this is a known pattern — but since this PR adds a new command it is the
+    right time to introduce a LLMRunner interface (or at least a function-typed field), consistent
+    with the Strategy pattern already used in cmd_implement.go. At minimum, extract the exec
+    invocation to a variable/field so tests can swap it.
+  status: open
+
+- id: allTypes-order-not-enforced-by-type-system
+  file: go-session/internal/review/review.go
+  line: 32
+  feedback: >
+    The doc comment says "stable order" but the function just returns a slice literal — the
+    order is stable only by convention, not enforcement. Callers who depend on deterministic
+    ordering (e.g. for sequential gemini calls) have no contract stronger than the comment.
+    This is acceptable for now, but the comment should say explicitly "declaration order:
+    TypeDefault, TypeDocs, TypeDevOps" so future maintainers know changing the order is
+    a breaking change, not a cosmetic edit.
+  status: open

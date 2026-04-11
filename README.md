@@ -72,6 +72,8 @@ gemini skills install ~/.ai-session/gemini/tdd-skill
 │   └── internal/
 │       ├── commands/      # File operations (plan, log, dir, load-context, …)
 │       ├── dashboard/     # Feature scanner + state derivation (for serve)
+│       ├── git/           # Git helpers (remote URL, diff, untracked files)
+│       ├── review/        # review*.yml CRUD and open-findings access
 │       └── server/        # HTTP server + HTML template (for serve)
 ├── gemini/                # Gemini CLI implementation (*.toml)
 │   └── session/
@@ -130,6 +132,10 @@ ai-session plan-get sc-1234 --slice s --task t
 ai-session plan-write sc-1234       # validate + atomically write plan.yml (stdin)
 ai-session plan-enrich-task sc-1234 --slice s --task t
 ai-session plan-split-task sc-1234 --slice s --task t
+ai-session implement sc-1234        # headless LLM implementation loop (gemini --yolo per task)
+ai-session review sc-1234 [--regular] [--docs] [--devops] [--strategy=branch|last-commit]
+ai-session review-write sc-1234 --type regular   # write findings from stdin (YAML)
+ai-session address-feedback sc-1234 [--regular] [--docs] [--devops]
 ```
 
 Build the binary: `cd go-session && make build` (output: `go-session/bin/ai-session`, added to `$PATH` by `setup.sh`).

@@ -27,6 +27,52 @@ type Finding struct {
 	Status   string `yaml:"status"`
 }
 
+// AllTypes returns all review types in declaration order: TypeDefault, TypeDocs, TypeDevOps.
+// Changing this order is a breaking change for callers that depend on sequential processing.
+func AllTypes() []Type {
+	return []Type{TypeDefault, TypeDocs, TypeDevOps}
+}
+
+// TypeName returns the display name for a review type ("regular", "docs", "devops").
+// Returns an error for unknown types so callers never silently produce an empty name.
+func TypeName(t Type) (string, error) {
+	switch t {
+	case TypeDefault:
+		return "regular", nil
+	case TypeDocs:
+		return "docs", nil
+	case TypeDevOps:
+		return "devops", nil
+	default:
+		return "", fmt.Errorf("unknown review type: %q", t)
+	}
+}
+
+// ReadFindings returns open findings for the given type as a YAML-formatted string.
+// Only findings with status "open" are included — resolved findings are filtered out.
+// The file path, filename, and encoding are internal details of this package.
+// Returns an empty string (no error) if there are no open findings or the file does not exist.
+func ReadFindings(featureDir string, t Type) (string, error) {
+	findings, err := Load(featureDir, t)
+	if err != nil {
+		return "", err
+	}
+	var open []Finding
+	for _, f := range findings {
+		if f.Status == "open" {
+			open = append(open, f)
+		}
+	}
+	if len(open) == 0 {
+		return "", nil
+	}
+	data, err := yaml.Marshal(open)
+	if err != nil {
+		return "", fmt.Errorf("marshaling findings: %w", err)
+	}
+	return string(data), nil
+}
+
 var kebabCase = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 // filename returns the YAML file name for the given review type.

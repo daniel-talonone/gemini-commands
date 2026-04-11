@@ -341,6 +341,91 @@ func TestWrite_NonexistentDir(t *testing.T) {
 	assert.Contains(t, err.Error(), "feature directory does not exist")
 }
 
+// --- AllTypes ---
+
+func TestAllTypes_ReturnsAllThree(t *testing.T) {
+	types := AllTypes()
+	assert.Len(t, types, 3)
+	assert.Contains(t, types, TypeDefault)
+	assert.Contains(t, types, TypeDocs)
+	assert.Contains(t, types, TypeDevOps)
+}
+
+// --- TypeName ---
+
+func TestTypeName_KnownTypes(t *testing.T) {
+	cases := []struct {
+		t    Type
+		want string
+	}{
+		{TypeDefault, "regular"},
+		{TypeDocs, "docs"},
+		{TypeDevOps, "devops"},
+	}
+	for _, c := range cases {
+		name, err := TypeName(c.t)
+		require.NoError(t, err)
+		assert.Equal(t, c.want, name)
+	}
+}
+
+func TestTypeName_UnknownType(t *testing.T) {
+	_, err := TypeName(Type("unknown"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown review type")
+}
+
+// --- ReadFindings ---
+
+func TestReadFindings_HappyPath(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+	s, err := ReadFindings(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Contains(t, s, "find-1")
+}
+
+func TestReadFindings_FiltersResolvedFindings(t *testing.T) {
+	dir := t.TempDir()
+	open := validFinding("open-1")
+	resolved := Finding{ID: "resolved-1", File: "main.go", Line: 1, Feedback: "was fixed", Status: "resolved"}
+	require.NoError(t, Write(dir, TypeDefault, []Finding{open, resolved}))
+	s, err := ReadFindings(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Contains(t, s, "open-1")
+	assert.NotContains(t, s, "resolved-1")
+}
+
+func TestReadFindings_AllResolved_ReturnsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	resolved := Finding{ID: "resolved-1", File: "main.go", Line: 1, Feedback: "was fixed", Status: "resolved"}
+	require.NoError(t, Write(dir, TypeDefault, []Finding{resolved}))
+	s, err := ReadFindings(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Empty(t, s)
+}
+
+func TestReadFindings_EmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{}))
+	s, err := ReadFindings(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Empty(t, s)
+}
+
+func TestReadFindings_FileNotExist(t *testing.T) {
+	dir := t.TempDir()
+	s, err := ReadFindings(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Empty(t, s)
+}
+
+func TestReadFindings_UnknownType(t *testing.T) {
+	dir := t.TempDir()
+	_, err := ReadFindings(dir, Type("unknown"))
+	require.Error(t, err)
+}
+
 // --- helpers ---
 
 func assertNoDefaultReviewFile(t *testing.T, dir string) {

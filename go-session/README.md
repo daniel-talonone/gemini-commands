@@ -64,6 +64,29 @@ ai-session update-slice <feature-dir> <slice-id> --status <todo|in-progress|done
 
 `plan-enrich-task` and `plan-split-task` reject stdin containing `id:` or `status:` lines (injection guard) and only operate on tasks with status `todo`.
 
+### Review
+
+```bash
+ai-session review <story-id> [--regular] [--docs] [--devops]
+  [--strategy=branch|last-commit]
+```
+Runs a headless LLM code review via `gemini --yolo`. Fetches a diff, injects it into the matching headless prompt (`headless/session/review.md`, `review-docs.md`, or `review-devops.md`), and saves findings via `review-write`. The diff includes both tracked and untracked files.
+
+- `--strategy=branch` (default): full branch diff vs `origin/<default-branch>`.
+- `--strategy=last-commit`: uncommitted changes only (staged + unstaged + untracked vs HEAD).
+
+No flags → all three types are reviewed. Flags are combinable.
+
+```bash
+ai-session review-write <feature-dir> --type <regular|docs|devops>
+```
+Validates and atomically writes review findings from stdin (YAML). The `internal/review` package is the single source of truth for filenames and format — callers never construct paths to `review*.yml` directly.
+
+```bash
+ai-session address-feedback <story-id> [--regular] [--docs] [--devops]
+```
+Reads open findings per review type via `internal/review.ReadFindings` and pipes each to `gemini --yolo` using `headless/session/address-feedback.md`. Resolved findings are filtered out before the prompt is built. No flags → all three types are addressed. Types with no open findings are skipped automatically.
+
 ### Orchestration
 
 ```bash
@@ -93,8 +116,10 @@ internal/
     implement/          Headless LLM orchestration engine
     status/             status.yaml read/write
   dashboard/            Feature state derivation and directory scanning
-  git/                  Git helper functions (remote URL, branch, work-dir)
+  git/                  Git helper functions (remote URL, branch, work-dir, diff)
   log/                  log.md create and append (atomic writes)
+  review/               review*.yml CRUD — Create, Load, Append, Write, UpdateStatus,
+                        ReadFindings (open-only), AllTypes, TypeName
   server/               HTTP dashboard server and embedded HTML template
 ```
 
