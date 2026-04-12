@@ -8,7 +8,7 @@ import (
 
 // RunYolo executes `gemini --yolo` with the given stdin.
 func RunYolo(stdin io.Reader, stdout, stderr io.Writer) error {
-	geminiCmd := exec.Command("gemini", "--yolo", "--model=gemini-2.5-flash")
+	geminiCmd := exec.Command("gemini", "--yolo") //, "--model=gemini-2.5-flash")
 	geminiCmd.Stdin = stdin
 	geminiCmd.Stdout = stdout
 	geminiCmd.Stderr = stderr

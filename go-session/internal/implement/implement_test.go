@@ -65,3 +65,36 @@ func TestRun(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(statusBytes), "implement-done")
 }
+
+func TestExtractVerificationCommand(t *testing.T) {
+	t.Run("happy path", func(t *testing.T) {
+		tempDir := t.TempDir()
+		agentsMD := "## Verification\nRun: echo 'hello world'\n"
+		err := os.WriteFile(filepath.Join(tempDir, "AGENTS.md"), []byte(agentsMD), 0644)
+		require.NoError(t, err)
+
+		cmd, err := implement.ExtractVerificationCommand(tempDir)
+		require.NoError(t, err)
+		assert.Equal(t, "echo 'hello world'", cmd)
+	})
+
+	t.Run("missing AGENTS.md", func(t *testing.T) {
+		tempDir := t.TempDir() // Directory without AGENTS.md
+
+		_, err := implement.ExtractVerificationCommand(tempDir)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "reading AGENTS.md")
+	})
+
+	t.Run("missing verification section", func(t *testing.T) {
+		tempDir := t.TempDir()
+		agentsMD := "## Some Other Section\nContent here.\n"
+		err := os.WriteFile(filepath.Join(tempDir, "AGENTS.md"), []byte(agentsMD), 0644)
+		require.NoError(t, err)
+
+		_, err = implement.ExtractVerificationCommand(tempDir)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "verification command not found")
+	})
+}
+

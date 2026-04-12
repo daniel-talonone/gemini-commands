@@ -262,7 +262,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	logger.Info("Starting implementation orchestration", "feature_id", featureID)
 
 	// Extract verification command from the project's AGENTS.md.
-	verificationCmd, err := extractVerificationCommand(workDir)
+	verificationCmd, err := ExtractVerificationCommand(workDir)
 	if err != nil {
 		return fmt.Errorf("extracting verification command: %w", err)
 	}
@@ -617,7 +617,7 @@ func depsMet(p plan.Plan, deps []string) bool {
 
 // extractVerificationCommand reads AGENTS.md from dir and extracts the verification
 // command from a "## Verification\nRun: <cmd>" section.
-func extractVerificationCommand(dir string) (string, error) {
+func ExtractVerificationCommand(dir string) (string, error) {
 	content, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
 	if err != nil {
 		return "", fmt.Errorf("reading AGENTS.md: %w", err)
