@@ -46,6 +46,15 @@ ai-session append-log <feature-dir> <message>
 ```
 Atomically appends a timestamped Markdown entry to `log.md`. Creates the file with a `# Work Log` header if it does not exist.
 
+### PR Description
+
+```bash
+ai-session create-pr-description <feature-name>
+```
+Generates a PR description from feature context and writes it to `pr.md` via a headless LLM prompt.
+
+Inputs: `description.md`, `plan.yml`, `log.md`, `status.yaml` (`work_dir`, `story_url`), git branch diff, and `.github/pull_request_template.md` from the repo (optional — skipped if absent). All inputs are injected into `headless/session/create-pr-description.md` and piped to `gemini --yolo`, which writes the result directly to `pr.md`. Re-running overwrites the file (idempotent). Sets `pipeline_step: pr-description-done` on success.
+
 ### Plan
 
 ```bash
@@ -119,6 +128,7 @@ internal/
   git/                  Git helper functions (remote URL, branch, work-dir, diff)
   github/               GitHub CLI interactions (PR review threads)
   log/                  log.md create and append (atomic writes)
+  pr/                   pr.md create, read, and write (atomic writes)
   review/               review*.yml CRUD — Create, Load, Append, Write, UpdateStatus,
                         ReadFindings (open-only), AllTypes, TypeName
   server/               HTTP dashboard server and embedded HTML template

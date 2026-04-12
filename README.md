@@ -126,7 +126,7 @@ ai-session load-context sc-1234     # load feature files as XML blocks for LLM c
 ai-session create-feature sc-1234   # scaffold feature directory (includes status.yaml)
 ai-session resolve-feature-dir sc-1234
 ai-session append-log sc-1234 "msg"
-ai-session create-pr-description sc-1234   # generate PR description from feature context and saves to pr.md
+# For a complete list of `ai-session` commands and their descriptions, refer to AGENTS.md.
 ai-session update-task sc-1234 task-id --status done
 ai-session update-slice sc-1234 slice-id --status in-progress
 ai-session plan-list sc-1234

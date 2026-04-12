@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/daniel-talonone/gemini-commands/internal/description"
+	"github.com/daniel-talonone/gemini-commands/internal/gemini"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
@@ -143,11 +144,7 @@ func (s *PerSliceStrategy) ExecuteSlice(ctx SliceContext) error {
 		if os.Getenv("IN_TEST_MODE") != "true" {
 			appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Invoking LLM for slice execution: %s (attempt %d)", ctx.Slice.ID, attempt))
 			ctx.Logger.Info("Invoking Gemini for slice", "slice", ctx.Slice.ID, "attempt", attempt)
-			geminiCmd := exec.Command("gemini", "--yolo")
-			geminiCmd.Stdin = strings.NewReader(promptContent)
-			geminiCmd.Stdout = io.MultiWriter(os.Stdout, &geminiOutput)
-			geminiCmd.Stderr = io.MultiWriter(os.Stderr, &geminiOutput)
-			if err := geminiCmd.Run(); err != nil {
+			if err := gemini.RunYolo(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &geminiOutput), io.MultiWriter(os.Stderr, &geminiOutput)); err != nil {
 				appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Gemini exited with error (slice %s, attempt %d): %v", ctx.Slice.ID, attempt, err))
 				if isRateLimitError(geminiOutput.String()) {
 					rateLimitRetries++
@@ -465,11 +462,7 @@ func runIntegrationCheck(logger *slog.Logger, aiSessionHome, storyDescription, w
 	prompt := strings.ReplaceAll(string(promptTemplate), "{{story_description_here}}", storyDescription)
 	prompt = strings.ReplaceAll(prompt, "{{codebase_diff_here}}", diff)
 
-	geminiCmd := exec.Command("gemini", "--yolo")
-	geminiCmd.Stdin = strings.NewReader(prompt)
-	geminiCmd.Stdout = os.Stdout
-	geminiCmd.Stderr = os.Stderr
-	if err := geminiCmd.Run(); err != nil {
+	if err := gemini.RunYolo(strings.NewReader(prompt), os.Stdout, os.Stderr); err != nil {
 		return fmt.Errorf("integration check reported blockers (gemini exit: %w)", err)
 	}
 	return nil
@@ -547,12 +540,8 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, workDi
 		if os.Getenv("IN_TEST_MODE") != "true" {
 			appendLog(logger, featureDir, fmt.Sprintf("Invoking LLM for task execution (attempt %d).", attempt))
 			logger.Info("Invoking Gemini", "attempt", attempt)
-			geminiCmd := exec.Command("gemini", "--yolo")
-			geminiCmd.Stdin = strings.NewReader(promptContent)
-			geminiCmd.Stdout = io.MultiWriter(os.Stdout, &geminiOutput)
-			geminiCmd.Stderr = io.MultiWriter(os.Stderr, &geminiOutput)
-			if err := geminiCmd.Run(); err != nil {
-				geminiErr = fmt.Errorf("gemini exited with error: %w", err)
+			if err := gemini.RunYolo(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &geminiOutput), io.MultiWriter(os.Stderr, &geminiOutput)); err != nil {
+				geminiErr = err
 				appendLog(logger, featureDir, fmt.Sprintf("Gemini exited with error (attempt %d): %v — running verification anyway", attempt, err))
 				logger.Warn("Gemini exited with error; running verification", "attempt", attempt, "error", err)
 			}

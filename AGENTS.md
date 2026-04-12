@@ -42,7 +42,8 @@ Feature directories contain:
 - `/session:migration` — Migrates a legacy single-file feature document to the directory structure.
 - `/session:new` — Creates a feature directory from a Shortcut story ID or Notion URL.
 - `/session:plan` — Analyzes codebase and requirements to create a TDD-ready implementation plan.
-- `/session:pr` — Generates a PR description, creates/updates the PR on GitHub.
+- `/session:create-pr-description` — Generates a PR description from feature context and saves to `pr.md`.
+- `/session:pr` — Generates a PR description AND creates/updates the PR on GitHub; saves the PR link to `pr.md`.
 - `/session:review` — Critical code review of the current branch using a sub-agent.
 - `/session:review-devops` — DevOps-focused review of the current branch using a sub-agent.
 - `/session:review-docs` — Documentation review of the current branch using a sub-agent.

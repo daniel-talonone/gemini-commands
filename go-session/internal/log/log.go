@@ -68,3 +68,17 @@ func AppendLog(featureDir, message string) error {
 	}
 	return nil
 }
+
+// LoadLog reads the content of log.md from featureDir.
+// Returns ("", nil) if log.md does not exist.
+func LoadLog(featureDir string) (string, error) {
+	logPath := filepath.Join(featureDir, logFileName)
+	content, err := os.ReadFile(logPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("failed to read log.md: %w", err)
+	}
+	return string(content), nil
+}

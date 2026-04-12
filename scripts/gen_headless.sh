@@ -23,8 +23,11 @@ ADAPTER_PROMPT_FILE="$REPO_DIR/scripts/headless_adapter_prompt.md"
 CHECKSUMS_FILE="$HEADLESS_DIR/.checksums"
 
 # Commands that have no headless equivalent — skip entirely.
-# plan is excluded because claude/session/headless/plan.md is hand-written.
-DENY_LIST=("define" "start" "end" "get-familiar" "log-research" "migration" "plan" "checkpoint" "implement" "review" "review-docs" "review-devops" "address-feedback" "address-feedback-remote")
+# Hand-written headless prompts (not generated): plan, implement, review, review-docs, review-devops,
+# address-feedback, address-feedback-remote, create-pr-description.
+# Inherently interactive commands (no headless variant): define, start, end, get-familiar, log-research,
+# migration, checkpoint.
+DENY_LIST=("define" "start" "end" "get-familiar" "log-research" "migration" "plan" "checkpoint" "implement" "review" "review-docs" "review-devops" "address-feedback" "address-feedback-remote" "create-pr-description")
 
 if ! command -v gemini &>/dev/null; then
     echo "Error: 'gemini' CLI not found in PATH. Install Gemini CLI to use this script." >&2

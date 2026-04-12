@@ -21,6 +21,15 @@ var validStatuses = map[string]bool{
 // Plan is a collection of Slices, representing the entire plan.yml file.
 type Plan []Slice
 
+// ToString marshals the Plan back into a YAML string.
+func (p Plan) ToString() (string, error) {
+	out, err := yaml.Marshal(p)
+	if err != nil {
+		return "", fmt.Errorf("marshaling plan to YAML: %w", err)
+	}
+	return string(out), nil
+}
+
 // FindSlice searches the plan for a slice with the given ID.
 func (p Plan) FindSlice(id string) (Slice, bool) {
 	for _, s := range p {

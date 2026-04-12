@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
+	"github.com/daniel-talonone/gemini-commands/internal/gemini"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
 )
@@ -120,9 +120,5 @@ func runReviewJob(aiHome, featureDir, typeName, promptFile, diff string) error {
 	prompt = strings.ReplaceAll(prompt, "{{feature_dir_here}}", featureDir)
 	prompt = strings.ReplaceAll(prompt, "{{review_type_here}}", typeName)
 
-	geminiCmd := exec.Command("gemini", "--yolo")
-	geminiCmd.Stdin = strings.NewReader(prompt)
-	geminiCmd.Stdout = os.Stdout
-	geminiCmd.Stderr = os.Stderr
-	return geminiCmd.Run()
+	return gemini.RunYolo(strings.NewReader(prompt), os.Stdout, os.Stderr)
 }

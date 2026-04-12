@@ -250,13 +250,14 @@ Headless-only implementation command (`headless/session/implement.md`, hand-writ
 - **Headless mode**: runs all slices sequentially; stops and logs on any unrecoverable failure, marking the task `in-progress` for human triage
 - **Interactive mode**: not yet implemented — future work
 
-### 4. `ai-session` Go Binary (`cmd/ai-session/`)
+### Go CLI (`ai-session`)
 
 A single Go binary with two modes: a CLI for file operations (used by prompts and orchestrator) and a dashboard server. One binary to compile, one thing in `$PATH`, one entry in `setup.sh`.
 
 ```bash
 ai-session load-context sc-1234          # replaces scripts/load_context_files.sh
 ai-session create-feature sc-1234        # replaces scripts/create_feature_dir.sh
+ai-session create-pr-description sc-1234 # generate PR description from feature context and saves to pr.md
 ai-session append-log sc-1234 "msg"      # replaces scripts/append_to_log.sh
 ai-session update-task sc-1234 task-id --status done   # replaces yq one-liners
 ai-session resolve-feature-dir sc-1234   # replaces scripts/resolve_feature_dir.sh
