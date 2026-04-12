@@ -183,7 +183,7 @@ Please check the file [Command Details](command_details.md) for a full breakdown
     updated_at: ''            # updated on every pipeline_step change
     ```
 
-    Lifecycle: scaffolded by `ai-session create-feature` (with `repo`, `branch`, `work_dir`, `started_at`, `updated_at` populated from git). `pipeline_step` is set to `plan-done` automatically by `ai-session plan-write` after a successful plan write. `orchestrate.sh` updates it at each pipeline step. The dashboard reads it to show running state, current step, and quick-launch icons (📁 Finder / `</>` VSCode / ⬛ Terminal) — icons appear when `work_dir` is set. Never overwritten if the file already exists (idempotent scaffolding).
+    Lifecycle: scaffolded by `ai-session create-feature` (with `repo`, `branch`, `work_dir`, `started_at`, `updated_at` populated from git). `pipeline_step` is set to `plan-done` automatically by `ai-session plan-write` after a successful plan write. The dashboard reads it to show running state, current step, and quick-launch icons (📁 Finder / `</>` VSCode / ⬛ Terminal) — icons appear when `work_dir` is set. Never overwritten if the file already exists (idempotent scaffolding).
 -   **Project Document (`AGENTS.md`):** A file at the root of **each of your own
     repositories** (not this repo) that stores project-wide context, architectural
     guidelines, and conventions. The AI reads this file to understand the project it

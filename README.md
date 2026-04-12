@@ -73,6 +73,7 @@ gemini skills install ~/.ai-session/gemini/tdd-skill
 │       ├── commands/      # File operations (plan, log, dir, load-context, …)
 │       ├── dashboard/     # Feature scanner + state derivation (for serve)
 │       ├── git/           # Git helpers (remote URL, diff, untracked files)
+│       ├── pr/            # pr.md create, read, and write
 │       ├── review/        # review*.yml CRUD and open-findings access
 │       └── server/        # HTTP server + HTML template (for serve)
 ├── gemini/                # Gemini CLI implementation (*.toml)
@@ -125,6 +126,7 @@ ai-session load-context sc-1234     # load feature files as XML blocks for LLM c
 ai-session create-feature sc-1234   # scaffold feature directory (includes status.yaml)
 ai-session resolve-feature-dir sc-1234
 ai-session append-log sc-1234 "msg"
+ai-session create-pr-description sc-1234   # generate PR description from feature context and saves to pr.md
 ai-session update-task sc-1234 task-id --status done
 ai-session update-slice sc-1234 slice-id --status in-progress
 ai-session plan-list sc-1234

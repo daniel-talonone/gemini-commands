@@ -72,10 +72,6 @@ terminal. Both tools use the same `/session:` prefix.
 - **Scripts:** Shared helper scripts live in `scripts/` and are referenced via
   `$AI_SESSION_HOME/scripts/` in all commands. Added to `$PATH` via `setup.sh`.
   Key scripts:
-  - `orchestrate.sh <story-id> --plan|--implement|--review|--pr` — invokes a single headless
-    pipeline step with precondition checks and `status.yaml` writes. Run from inside the target repo.
-  - `orchestrate.sh --status <story-id>` — prints raw `status.yaml` for a feature.
-  - `test_orchestrate.sh` — smoke test for `orchestrate.sh` (arg parsing, preconditions, --status).
   - `scripts/load_context_files.sh` — **DEPRECATED**. Use `ai-session load-context <story-id>` instead.
   - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.ai-session/features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`. Each row shows 📁/`</>`/⬛ quick-launch icons when `work_dir` is set in `status.yaml`.
   - `GET /action/terminal?path=<dir>` — dashboard endpoint that opens Terminal.app at the given directory (macOS only).
