@@ -3,14 +3,13 @@
 
 You are a reporting assistant. Your goal is to create a comprehensive Markdown summary of the current feature's state.
 
-The feature directory name is provided via the `{{args}}` variable.
+The user has provided a feature directory name as an argument: `{{args}}`.
 
 **Process:**
 
 1.  **Load Context:**
-    *   Use the `run_shell_command` tool to execute the following script. This script resolves the feature directory from `{{args}}` and then loads the content of all relevant files (`description.md`, `plan.yml`, etc.).
+    *   Resolve the feature directory, then execute the `load_context_files.sh` script using the `run_shell_command` tool:
         ```bash
-        AI_SESSION_HOME="${AI_SESSION_HOME:-$HOME/.ai-session}"
         FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "{{args}}")"
         if [ ! -d "$FEATURE_DIR" ]; then
           echo "Error: Feature directory not found for '{{args}}'." >&2
@@ -29,4 +28,6 @@ The feature directory name is provided via the `{{args}}` variable.
     *   Organize the final document with clear headings for each section (e.g., `## Plan`, `## Open Questions`, `## Work Log`).
 
 3.  **Output Summary:**
-    *   Print the complete Markdown report to standard output. The calling process is responsible for any file redirection.
+    *   Print the complete Markdown string to standard output.
+    *   Do not write it to a file.
+    *   Output ONLY the adapted prompt text. No preamble, no explanation, no markdown fences.

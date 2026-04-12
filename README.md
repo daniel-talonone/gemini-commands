@@ -135,7 +135,7 @@ ai-session plan-split-task sc-1234 --slice s --task t
 ai-session implement sc-1234        # headless LLM implementation loop (gemini --yolo per task)
 ai-session review sc-1234 [--regular] [--docs] [--devops] [--strategy=branch|last-commit]
 ai-session review-write sc-1234 --type regular   # write findings from stdin (YAML)
-ai-session address-feedback sc-1234 [--regular] [--docs] [--devops]
+ai-session address-feedback sc-1234 [--regular] [--docs] [--devops] [--remote]
 ```
 
 Build the binary: `cd go-session && make build` (output: `go-session/bin/ai-session`, added to `$PATH` by `setup.sh`).

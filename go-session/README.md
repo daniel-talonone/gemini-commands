@@ -83,9 +83,9 @@ ai-session review-write <feature-dir> --type <regular|docs|devops>
 Validates and atomically writes review findings from stdin (YAML). The `internal/review` package is the single source of truth for filenames and format — callers never construct paths to `review*.yml` directly.
 
 ```bash
-ai-session address-feedback <story-id> [--regular] [--docs] [--devops]
+ai-session address-feedback <story-id> [--regular] [--docs] [--devops] [--remote]
 ```
-Reads open findings per review type via `internal/review.ReadFindings` and pipes each to `gemini --yolo` using `headless/session/address-feedback.md`. Resolved findings are filtered out before the prompt is built. No flags → all three types are addressed. Types with no open findings are skipped automatically.
+Reads open findings per review type via `internal/review.ReadFindings` and pipes each to `gemini --yolo` using `headless/session/address-feedback.md`. Resolved findings are filtered out before the prompt is built. No flags → all three types are addressed. Types with no open findings are skipped automatically. The `--remote` flag fetches and addresses unresolved inline PR review threads from GitHub. It is mutually exclusive with the other flags and requires the `gh` CLI to be installed and authenticated.
 
 ### Orchestration
 
@@ -117,6 +117,7 @@ internal/
     status/             status.yaml read/write
   dashboard/            Feature state derivation and directory scanning
   git/                  Git helper functions (remote URL, branch, work-dir, diff)
+  github/               GitHub CLI interactions (PR review threads)
   log/                  log.md create and append (atomic writes)
   review/               review*.yml CRUD — Create, Load, Append, Write, UpdateStatus,
                         ReadFindings (open-only), AllTypes, TypeName

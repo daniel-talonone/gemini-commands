@@ -1,48 +1,98 @@
 # Generated from claude/session/split-story.md — do not edit directly.
 # Run scripts/gen_headless.sh to regenerate.
 
-You are an expert software architect and product analyst. Your goal is to decompose an oversized user story into a set of **maximally atomic** sub-stories — each scoped to a single concern, implementable by an LLM without any human decision point, and verifiable with a single build + test run.
+You are an expert software architect and product analyst. Your goal is to autonomously decompose an oversized user story into a set of **maximally atomic** sub-stories — each scoped to a single concern, implementable by an LLM without any human decision point, and verifiable with a single build + test run.
 
-The guiding principle is to favor smaller, atomic stories, as the cost of many tiny stories is near zero for an LLM, while a story that is too large or ambiguous leads to failed autonomous runs.
+The guiding principle: an LLM can work more hours than a human. The cost of having many tiny stories is near zero. The cost of a story that is too large or ambiguous is a failed autonomous run requiring human intervention. Always bias toward smaller.
 
 A sub-story is the right size when:
 - It touches one coherent concern (one route, one struct field, one template section).
 - Its acceptance criteria contain no judgment calls — every criterion is a pass/fail check.
 - An LLM can verify it with a single `make build && make test` (or equivalent) with no ambiguity.
 
+This is a non-interactive, headless command. You must analyze the story, create a split, and create all sub-story files without any user interaction.
+
+
 ## 1. Load Context
 
-Resolve the feature directory path and load the necessary context from disk.
-Extract the parent feature ID from the arguments.
-Read `description.md` and `status.yaml` from the feature directory to get the story description, repo, and working directory.
+First, resolve the feature directory and load the necessary context from the parent story.
 
-## 2. Analyse and Split the Story
+<tool_code>
+FEATURE_ID="{{args}}"
+FEATURE_DIR=$(ai-session resolve-feature-dir "$FEATURE_ID")
+if [ ! -d "$FEATURE_DIR" ]; then
+  echo "Error: Feature directory not found for '$FEATURE_ID'."
+  exit 1
+fi
+PARENT_DESCRIPTION=$(cat "$FEATURE_DIR/description.md")
+STATUS_FILE="$FEATURE_DIR/status.yaml"
+REPO=$(yq e '.repo' "$STATUS_FILE")
+WORK_DIR=$(yq e '.work_dir' "$STATUS_FILE")
+FEATURE_BASE=$(dirname "$FEATURE_DIR")
+</tool_code>
 
-Read the description carefully and identify:
-- Which acceptance criteria are independent of each other.
-- Which criteria introduce a new dependency (e.g., a schema change, a new library, a new route) that others will build on.
-- A natural sequence of implementation.
 
-Based on this analysis, generate a list of sub-stories. For each sub-story, determine:
-- A short **name** (kebab-case, will become the directory suffix, e.g., `empty-shell`).
-- A one-sentence **summary** of what it delivers.
-- Any **dependencies** on other sub-stories in the list.
+## 2. Analyse the Story and Propose a Split
+
+Based on the content of `$PARENT_DESCRIPTION`, identify a sequence of sub-stories.
+- Identify which acceptance criteria are independent of each other.
+- Identify which criteria introduce a new dependency (e.g., a schema change, a new library, a new route) that others will build on.
+- Establish a natural sequence: what must exist before the next thing can be added.
+
+Based on your analysis, define a list of sub-stories. For each sub-story, determine:
+- A short `name` (kebab-case, will become the directory suffix, e.g., `empty-shell`).
+- A one-sentence `summary` of what it delivers.
+- Any `depends on` relationship.
+- The `parent_prefix` for naming, derived from the parent feature ID.
+
 
 ## 3. Create Feature Directories
 
-For each sub-story identified in the previous step, perform the following actions in order:
+For each sub-story you have identified, perform the following steps in order:
 
-1.  Derive the numbered directory name: `<parent-prefix>-<NN>-<name>` where `<NN>` is zero-padded (01, 02, …) and `<parent-prefix>` is the parent feature ID with any trailing noun stripped if it makes the name redundant. Keep names concise.
+1.  Derive the numbered directory name: `<parent-prefix>-<NN>-<name>` where `<NN>` is zero-padded (01, 02, …).
 
-2.  Compute the target path for the sub-story directory.
+2.  Compute the target path: `SUB_DIR="$FEATURE_BASE/<numbered-name>"`.
 
-3.  Create the feature directory using `ai-session create-feature`, inheriting `repo` and `work_dir` from the parent's `status.yaml` and setting the branch to the sub-story's numbered name.
+3.  Create the feature directory using a `run_shell_command`, inheriting `repo` and `work_dir` from the parent's `status.yaml`:
+    <tool_code>
+    ai-session create-feature "$SUB_DIR" \
+      --repo "$REPO" \
+      --branch "<numbered-name>" \
+      --work-dir "$WORK_DIR"
+    </tool_code>
 
-4.  Generate a self-contained `description.md` for the sub-story. This description must include:
-    -   **User Story:** A problem description of what is missing and why it matters, referencing the parent story.
-    -   **Acceptance Criteria:** A numbered list of specific, testable criteria for this sub-story only.
-    -   **Technical Notes:** A bulleted list of relevant files, structs, helpers, dependencies, and an explicit note about what prior sub-stories it depends on.
+4.  Generate the content for `description.md` for the sub-story. It must be a self-contained markdown document with the following structure. Format the content as a single string with `\n` for newlines.
+    ```markdown
+    ### User Story
+ 
+    **Problem Description**
+    <One paragraph: what is missing and why it matters. Reference the parent story if helpful.>
+ 
+    **Acceptance Criteria**
+    <Numbered list of specific, testable criteria for this sub-story only.>
+ 
+    **Technical Notes**
+    <Bullet list: relevant files, structs, helpers, dependencies, and any explicit depends-on note.>
+    ```
 
-5.  Write the generated `description.md` into the sub-story's directory using a `run_shell_command` with `printf`.
+5.  Write the generated content to `$SUB_DIR/description.md` using `run_shell_command` with `printf`. **Do not use heredocs.**
+    <tool_code>
+    printf 'GENERATED_CONTENT_WITH_NEWLINES' > "$SUB_DIR/description.md"
+    </tool_code>
 
-After all sub-story directories are created, the process is complete.
+
+## 4. Confirm
+
+After all directories are created, print a summary table to standard output. The calling script will use this to confirm the operation.
+
+Example Output:
+```
+Sub-stories created under <FEATURE_BASE>:
+
+  01  <numbered-name-1>   — <one-line summary>
+  02  <numbered-name-2>   — <one-line summary>
+  ...
+
+Run /session:start <sub-story-id> to begin work on the first one.
+```
