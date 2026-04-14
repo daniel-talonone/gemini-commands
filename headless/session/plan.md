@@ -23,36 +23,63 @@ The feature identifier is: {{args}}
    If `plan.yml` or `architecture.md` already exist in the feature directory, their content
    will be included in the output — never overwrite existing plan entries.
 
-3. **Analyze Codebase:**
+3. **Anchor on Requirements:**
+   Before analyzing anything, extract and quote verbatim from `description.md`:
+   - Every interface signature, function signature, and data structure the feature defines.
+   - Every acceptance criterion.
+   These are your ground truth. Every task you generate must implement exactly what is
+   quoted here — do not invent variations, rename methods, or add parameters not listed.
+
+4. **Analyze Codebase:**
    Use `glob` and `grep_search` to identify files relevant to the feature description.
    Look for analogous implementations to use as reference patterns.
 
-4. **Auto-select Architecture:**
+   For every file you plan to create or modify:
+   - Run a glob or grep to confirm the target package/directory already exists.
+   - State explicitly: "File X will be at path Y in package Z — confirmed by: [command output]."
+   - If a directory does not exist yet, note that it will be created and explain why.
+
+5. **Auto-select Architecture:**
    Choose the most conservative, least-invasive implementation strategy that most
    closely follows existing codebase patterns. Do not pause for input.
    Write a brief strategy note (3-5 lines) — this will become `architecture.md`.
 
-5. **Generate Questions:**
+6. **Generate Questions:**
    Identify ambiguities. Attempt to resolve each by reading the codebase first.
    Only emit `status: open` for questions that genuinely cannot be answered from code.
    Self-answered questions get `status: resolved` and a populated `answer` field.
 
-6. **Generate Plan:**
+7. **Generate Plan:**
    Create a detailed step-by-step plan grouped into slices. Each slice must leave
-   the repo in a fully valid state when complete. Every task must be self-contained
-   with FILE, FUNCTION, and CURRENT CODE / ADD / CHANGE blocks where non-trivial.
+   the repo in a fully valid state (build + tests + lint pass) when complete.
+   Every task must be self-contained with FILE, FUNCTION, and CURRENT CODE / ADD / CHANGE
+   blocks where non-trivial. Code blocks must be complete and correct — no `...` shortcuts,
+   no pseudo-code, no placeholder comments.
    Follow the schema in `$AI_SESSION_HOME/spec/session/schemas/plan.schema.yml`.
 
-7. **Save Files:**
+   **STRICT RULE — no standalone test tasks:**
+   Do NOT create a slice or task whose sole purpose is writing tests. Tests must always
+   be part of the same task as the code they verify. A task that adds a new function,
+   type, or file must include the corresponding tests in that same task. Never place
+   tests in a later slice or task than the implementation they cover.
+
+   **Slice sizing:** aim for 2–4 tasks per slice. More than 5 tasks in a slice is a
+   signal to split.
+
+   **Verification awareness:** a slice is fully valid when (a) the project compiles,
+   (b) all existing tests pass, and (c) any new tests added in that slice also pass.
+   Plan task order accordingly — tests must never precede the code they compile against.
+
+8. **Save Files:**
    - **Do NOT use `write_file` for `plan.yml`.** Instead, pipe through `plan-write` via `run_shell_command`:
        printf '%s' "$PLAN_YAML" | ai-session plan-write "$FEATURE_DIR"
      If the command exits non-zero, output the error and stop — do not trigger enrichment.
    - Use `write_file` to save `questions.yml` to `$FEATURE_DIR/questions.yml`.
    - Use `write_file` to save `architecture.md` to `$FEATURE_DIR/architecture.md`.
 
-8. **Trigger Enrichment:**
+9. **Trigger Enrichment:**
    Run via `run_shell_command` (detached):
      nohup $AI_SESSION_HOME/scripts/enrich_tasks.sh "$FEATURE_DIR" >> "$FEATURE_DIR/log.md" 2>&1 &
 
-9. **Confirm:**
-   Output one line each: feature dir path, slices count, tasks count, open questions count.
+10. **Confirm:**
+    Output one line each: feature dir path, slices count, tasks count, open questions count.
