@@ -52,10 +52,28 @@ The feature identifier is: {{args}}
 7. **Generate Plan:**
    Create a detailed step-by-step plan grouped into slices. Each slice must leave
    the repo in a fully valid state (build + tests + lint pass) when complete.
-   Every task must be self-contained with FILE, FUNCTION, and CURRENT CODE / ADD / CHANGE
-   blocks where non-trivial. Code blocks must be complete and correct — no `...` shortcuts,
-   no pseudo-code, no placeholder comments.
    Follow the schema in `$AI_SESSION_HOME/spec/session/schemas/plan.schema.yml`.
+
+   **Task descriptions are intent, not implementation.** Each task must describe:
+   - Which file and function/type to create or modify (exact paths, confirmed in step 4).
+   - What the change accomplishes — behavioral description, not code.
+   - How to verify it worked (observable outcome, not a test snippet).
+
+   **No real code in task descriptions.** The implementer has full tool access and will
+   read the actual files before making any change. Do not write `ADD:` or `CHANGE:` blocks
+   with real, copy-pasteable code — the implementer must derive the correct code from the
+   codebase itself, not copy it from the plan.
+
+   **Pseudocode is allowed as guidance only.** If the logic is non-trivial, you may include
+   a short pseudocode sketch to convey intent. Mark it explicitly as pseudocode and make
+   clear it must be adapted to the actual codebase — it is inspiration, not a template:
+   ```
+   // PSEUDOCODE — adapt to actual types and conventions
+   func (j *sliceJob) OnSuccess(attempt int) error {
+       log("all gates passed, attempt N")
+       return nil
+   }
+   ```
 
    **STRICT RULE — no standalone test tasks:**
    Do NOT create a slice or task whose sole purpose is writing tests. Tests must always

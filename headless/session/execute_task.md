@@ -46,6 +46,8 @@ Read it carefully before touching any file. It is the authoritative source of tr
 {{/if}}
 ```
 
+**Write idiomatic code for the target language.** Before editing any file, identify the language from its extension and apply its conventions: correct literal syntax, naming rules, error handling patterns, and import/module organization. If unsure about a convention, read an existing file in the same language in this codebase and follow the pattern you see there.
+
 **Instructions:**
 
 1. **Log your reasoning first.** Before touching any file, run:
@@ -82,6 +84,6 @@ Read it carefully before touching any file. It is the authoritative source of tr
 
 6. **Ensure idempotency** where possible. If the change is re-applied, it should not leave the codebase in a broken state.
 
-7. If the task description includes `FILE:`, `ADD:`, `CHANGE:`, or `FUNCTION:` sections, treat them as strong guidance — but always verify against the actual file content first (step 2).
+7. Task descriptions convey **intent**, not implementation. Any code in a task description is pseudocode — a sketch of the approach, not a template to copy. Always derive the actual implementation by reading the real files (step 2) and writing idiomatic code for the language. Never copy code from the task description verbatim.
 
 Assume you are running from the project's root directory.
