@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
-	"github.com/daniel-talonone/gemini-commands/internal/gemini"
+	"github.com/daniel-talonone/gemini-commands/internal/llm"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
 )
@@ -95,13 +95,18 @@ Review types run sequentially.`,
 			return fmt.Errorf("fetching git diff: %w", err)
 		}
 
+		runner, err := getRunner()
+		if err != nil {
+			return fmt.Errorf("invalid --model flag: %w", err)
+		}
+
 		aiHome := getAISessionHome()
 		for _, job := range jobs {
 			if !job.enabled {
 				continue
 			}
 			fmt.Fprintf(os.Stderr, "Running %s review...\n", job.typeName)
-			if err := runReviewJob(aiHome, featureDir, job.typeName, job.prompt, diff); err != nil {
+			if err := runReviewJob(runner, aiHome, featureDir, job.typeName, job.prompt, diff); err != nil {
 				return fmt.Errorf("%s review failed: %w", job.typeName, err)
 			}
 		}
@@ -109,7 +114,7 @@ Review types run sequentially.`,
 	},
 }
 
-func runReviewJob(aiHome, featureDir, typeName, promptFile, diff string) error {
+func runReviewJob(runner llm.Runner, aiHome, featureDir, typeName, promptFile, diff string) error {
 	promptPath := filepath.Join(aiHome, "headless", "session", promptFile)
 	promptBytes, err := os.ReadFile(promptPath)
 	if err != nil {
@@ -120,5 +125,5 @@ func runReviewJob(aiHome, featureDir, typeName, promptFile, diff string) error {
 	prompt = strings.ReplaceAll(prompt, "{{feature_dir_here}}", featureDir)
 	prompt = strings.ReplaceAll(prompt, "{{review_type_here}}", typeName)
 
-	return gemini.RunYolo(strings.NewReader(prompt), os.Stdout, os.Stderr)
+	return runner.Run(strings.NewReader(prompt), os.Stdout, os.Stderr)
 }

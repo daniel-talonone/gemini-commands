@@ -2,6 +2,7 @@ package implement
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,12 +14,71 @@ import (
 	"time"
 
 	"github.com/daniel-talonone/gemini-commands/internal/description"
-	"github.com/daniel-talonone/gemini-commands/internal/gemini"
+	"github.com/daniel-talonone/gemini-commands/internal/llm"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 	"gopkg.in/yaml.v3"
 )
+
+// RunJob executes job up to maxRetries times: invokes the AI, then calls
+// OnSuccess or OnFailure depending on the exit code. Rate-limit errors are
+// retried on a separate budget without consuming the main attempt count.
+func RunJob(featureDir string, maxRetries int, retryDelay time.Duration, logger *slog.Logger, runner llm.Runner, job Job) error {
+	const maxRateLimitRetries = 20
+	attempt := 1
+	rateLimitRetries := 0
+	var lastErr error
+
+	for attempt <= maxRetries {
+		if attempt > 1 && retryDelay > 0 {
+			logger.Info("Waiting before retry", "delay", retryDelay, "attempt", attempt)
+			time.Sleep(retryDelay)
+		}
+
+		promptContent, err := job.Prompt()
+		if err != nil {
+			return fmt.Errorf("building prompt (attempt %d): %w", attempt, err)
+		}
+
+		var geminiOutput bytes.Buffer
+		var geminiErr error
+		if os.Getenv("IN_TEST_MODE") != "true" {
+			appendLog(logger, featureDir, fmt.Sprintf("Invoking LLM (attempt %d)", attempt))
+			logger.Info("Invoking Gemini", "attempt", attempt)
+			geminiErr = runner.Run(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &geminiOutput), io.MultiWriter(os.Stderr, &geminiOutput))
+		} else {
+			logger.Info("Skipping Gemini invocation (test mode)", "attempt", attempt)
+		}
+
+		if geminiErr != nil {
+			appendLog(logger, featureDir, fmt.Sprintf("Gemini exited with error (attempt %d): %v", attempt, geminiErr))
+			if isRateLimitError(geminiOutput.String()) {
+				rateLimitRetries++
+				if rateLimitRetries >= maxRateLimitRetries {
+					return fmt.Errorf("exceeded rate-limit retry budget (%d retries): %w", maxRateLimitRetries, geminiErr)
+				}
+				continue
+			}
+			lastErr = job.OnFailure(attempt)
+			if lastErr == nil {
+				return nil
+			}
+		} else {
+			lastErr = job.OnSuccess(attempt)
+			if lastErr == nil {
+				return nil
+			}
+		}
+
+		attempt++
+	}
+
+	if lastErr != nil {
+		return fmt.Errorf("job failed after %d attempts: %w", maxRetries, lastErr)
+	}
+	return fmt.Errorf("job failed after %d attempts", maxRetries)
+}
 
 // runShellAndCaptureOutput executes a shell command and captures its stdout/stderr.
 func runShellAndCaptureOutput(cmdStr string) (string, error) {
@@ -46,6 +106,7 @@ type SliceContext struct {
 	RetryDelay      time.Duration
 	ContextPattern  []string
 	Logger          *slog.Logger
+	Runner          llm.Runner
 }
 
 type PerTaskStrategy struct{}
@@ -69,7 +130,7 @@ func (s *PerTaskStrategy) ExecuteSlice(ctx SliceContext) error {
 			return fmt.Errorf("updating task %s to in-progress: %w", t.ID, err)
 		}
 
-		if err := executeTaskWithRetry(ctx.Logger, ctx.FeatureDir, ctx.AISessionHome, ctx.WorkDir, ctx.Story, ctx.Architecture, ctx.Slice.Description, t.Task, ctx.VerificationCmd, ctx.MaxRetries, ctx.RetryDelay, ctx.ContextPattern); err != nil {
+		if err := executeTaskWithRetry(ctx.Logger, ctx.FeatureDir, ctx.AISessionHome, ctx.WorkDir, ctx.Story, ctx.Architecture, ctx.Slice.Description, t.Task, ctx.VerificationCmd, ctx.MaxRetries, ctx.RetryDelay, ctx.ContextPattern, ctx.Runner); err != nil {
 			appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Task %s FAILED after all retries: %v", t.ID, err))
 			ctx.Logger.Error("Task failed", "task", t.ID, "error", err)
 			return fmt.Errorf("task %s in slice %s failed: %w", t.ID, ctx.Slice.ID, err)
@@ -87,115 +148,109 @@ func (s *PerTaskStrategy) ExecuteSlice(ctx SliceContext) error {
 
 type PerSliceStrategy struct{}
 
-func (s *PerSliceStrategy) ExecuteSlice(ctx SliceContext) error {
-	promptPath := filepath.Join(ctx.AISessionHome, "headless", "session", "execute_slice.md")
+// sliceJob implements the Job interface for executing a single slice.
+type sliceJob struct {
+	ctx       SliceContext
+	lastError string
+}
+
+// newSliceJob creates a new sliceJob.
+func newSliceJob(ctx SliceContext) *sliceJob {
+	return &sliceJob{ctx: ctx}
+}
+
+// Prompt assembles the slice prompt by reading the template and plan from disk.
+// It is called on every attempt so task statuses and the codebase diff are fresh.
+func (j *sliceJob) Prompt() (string, error) {
+	promptPath := filepath.Join(j.ctx.AISessionHome, "headless", "session", "execute_slice.md")
 	promptTemplate, err := os.ReadFile(promptPath)
 	if err != nil {
-		return fmt.Errorf("reading execute_slice.md: %w", err)
+		return "", fmt.Errorf("reading execute_slice.md: %w", err)
 	}
 
-	const maxRateLimitRetries = 20
-	attempt := 1
-	rateLimitRetries := 0
-	var lastError string
-
-	for attempt <= ctx.MaxRetries {
-		if attempt > 1 && ctx.RetryDelay > 0 {
-			ctx.Logger.Info("Waiting before retry", "delay", ctx.RetryDelay, "slice", ctx.Slice.ID, "attempt", attempt)
-			time.Sleep(ctx.RetryDelay)
-		}
-
-		// Re-read tasks from disk on each attempt so statuses reflect prior LLM updates.
-		currentPlan, err := plan.LoadPlan(ctx.FeatureDir)
-		if err != nil {
-			return fmt.Errorf("reloading plan for slice %s: %w", ctx.Slice.ID, err)
-		}
-		currentSlice, found := currentPlan.FindSlice(ctx.Slice.ID)
-		if !found {
-			return fmt.Errorf("slice %s not found in plan", ctx.Slice.ID)
-		}
-
-		// Serialize tasks as valid YAML (handles multi-line descriptions safely).
-		tasksBytes, err := yaml.Marshal(currentSlice.Tasks)
-		if err != nil {
-			return fmt.Errorf("serializing tasks for slice %s: %w", ctx.Slice.ID, err)
-		}
-
-		// Re-compute diff on each attempt to reflect latest codebase state.
-		changesSoFar := getSourceFilesDiff(ctx.WorkDir, ctx.ContextPattern)
-
-		promptContent := strings.ReplaceAll(string(promptTemplate), "{{story_description_here}}", ctx.Story)
-		promptContent = strings.ReplaceAll(promptContent, "{{architecture_description_here}}", ctx.Architecture)
-		promptContent = strings.ReplaceAll(promptContent, "{{slice_description_here}}", currentSlice.Description)
-		promptContent = strings.ReplaceAll(promptContent, "{{tasks_here}}", string(tasksBytes))
-		promptContent = strings.ReplaceAll(promptContent, "{{changes_so_far_here}}", changesSoFar)
-		promptContent = strings.ReplaceAll(promptContent, "{{verification_command_here}}", ctx.VerificationCmd)
-		promptContent = strings.ReplaceAll(promptContent, "{{feature_dir_here}}", ctx.FeatureDir)
-
-		if lastError != "" {
-			promptContent = strings.ReplaceAll(promptContent, "{{error_message_here}}", lastError)
-			promptContent = strings.ReplaceAll(promptContent, "{{#if error_message}}", "")
-			promptContent = strings.ReplaceAll(promptContent, "{{/if}}", "")
-		} else {
-			promptContent = errorBlockRe.ReplaceAllString(promptContent, "")
-		}
-
-		var geminiOutput bytes.Buffer
-		if os.Getenv("IN_TEST_MODE") != "true" {
-			appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Invoking LLM for slice execution: %s (attempt %d)", ctx.Slice.ID, attempt))
-			ctx.Logger.Info("Invoking Gemini for slice", "slice", ctx.Slice.ID, "attempt", attempt)
-			if err := gemini.RunYolo(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &geminiOutput), io.MultiWriter(os.Stderr, &geminiOutput)); err != nil {
-				appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Gemini exited with error (slice %s, attempt %d): %v", ctx.Slice.ID, attempt, err))
-				if isRateLimitError(geminiOutput.String()) {
-					rateLimitRetries++
-					if rateLimitRetries >= maxRateLimitRetries {
-						return fmt.Errorf("exceeded rate-limit retry budget for slice %s", ctx.Slice.ID)
-					}
-					continue // rate-limit retries don't consume the attempt budget
-				}
-				// Non-rate-limit Gemini error: still check gates — file changes may have landed.
-			}
-		} else {
-			ctx.Logger.Info("Skipping Gemini invocation (test mode)", "slice", ctx.Slice.ID)
-		}
-
-		// Gate 1: task completeness — all tasks must be marked done by the LLM.
-		reloadedPlan, err := plan.LoadPlan(ctx.FeatureDir)
-		if err != nil {
-			return fmt.Errorf("reloading plan after slice %s execution: %w", ctx.Slice.ID, err)
-		}
-		reloadedSlice, found := reloadedPlan.FindSlice(ctx.Slice.ID)
-		if !found {
-			return fmt.Errorf("slice %s not found in reloaded plan", ctx.Slice.ID)
-		}
-		var incomplete []string
-		for _, t := range reloadedSlice.Tasks {
-			if t.Status != "done" {
-				incomplete = append(incomplete, fmt.Sprintf("%s (status: %s)", t.ID, t.Status))
-			}
-		}
-		if len(incomplete) > 0 {
-			lastError = fmt.Sprintf("not all tasks marked done: %s", strings.Join(incomplete, ", "))
-			appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Gate 1 failed for slice %s (attempt %d): %s", ctx.Slice.ID, attempt, lastError))
-			attempt++
-			continue
-		}
-
-		// Gate 2: verification.
-		verificationOutput, verifyErr := runShellAndCaptureOutput(ctx.VerificationCmd)
-		if verifyErr != nil {
-			lastError = fmt.Sprintf("verification failed: %v\nOutput:\n%s", verifyErr, verificationOutput)
-			appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Gate 2 failed for slice %s (attempt %d): %v", ctx.Slice.ID, attempt, verifyErr))
-			attempt++
-			continue
-		}
-
-		appendLog(ctx.Logger, ctx.FeatureDir, fmt.Sprintf("Slice %s: all gates passed (attempt %d).", ctx.Slice.ID, attempt))
-		ctx.Logger.Info("All gates passed", "slice", ctx.Slice.ID, "attempt", attempt)
-		return nil
+	// Re-read tasks from disk — picks up status changes the LLM made in prior attempts.
+	currentPlan, err := plan.LoadPlan(j.ctx.FeatureDir)
+	if err != nil {
+		return "", fmt.Errorf("reloading plan for slice %s: %w", j.ctx.Slice.ID, err)
+	}
+	currentSlice, found := currentPlan.FindSlice(j.ctx.Slice.ID)
+	if !found {
+		return "", fmt.Errorf("slice %s not found in plan", j.ctx.Slice.ID)
 	}
 
-	return fmt.Errorf("slice %s failed after %d attempts: %s", ctx.Slice.ID, ctx.MaxRetries, lastError)
+	tasksBytes, err := yaml.Marshal(currentSlice.Tasks)
+	if err != nil {
+		return "", fmt.Errorf("serializing tasks for slice %s: %w", j.ctx.Slice.ID, err)
+	}
+
+	changesSoFar := getSourceFilesDiff(j.ctx.WorkDir, j.ctx.ContextPattern)
+
+	promptContent := strings.ReplaceAll(string(promptTemplate), "{{story_description_here}}", j.ctx.Story)
+	promptContent = strings.ReplaceAll(promptContent, "{{architecture_description_here}}", j.ctx.Architecture)
+	promptContent = strings.ReplaceAll(promptContent, "{{slice_description_here}}", currentSlice.Description)
+	promptContent = strings.ReplaceAll(promptContent, "{{tasks_here}}", string(tasksBytes))
+	promptContent = strings.ReplaceAll(promptContent, "{{changes_so_far_here}}", changesSoFar)
+	promptContent = strings.ReplaceAll(promptContent, "{{verification_command_here}}", j.ctx.VerificationCmd)
+	promptContent = strings.ReplaceAll(promptContent, "{{feature_dir_here}}", j.ctx.FeatureDir)
+
+	if j.lastError != "" {
+		promptContent = strings.ReplaceAll(promptContent, "{{error_message_here}}", j.lastError)
+		promptContent = strings.ReplaceAll(promptContent, "{{#if error_message}}", "")
+		promptContent = strings.ReplaceAll(promptContent, "{{/if}}", "")
+	} else {
+		promptContent = errorBlockRe.ReplaceAllString(promptContent, "")
+	}
+	return promptContent, nil
+}
+
+// checkGates validates task completeness (Gate 1) and runs the verification
+// command (Gate 2). Called by both OnSuccess and OnFailure — file changes may
+// land even when Gemini exits non-zero.
+func (j *sliceJob) checkGates(attempt int) error {
+	reloadedPlan, err := plan.LoadPlan(j.ctx.FeatureDir)
+	if err != nil {
+		return fmt.Errorf("reloading plan after slice %s execution: %w", j.ctx.Slice.ID, err)
+	}
+	reloadedSlice, found := reloadedPlan.FindSlice(j.ctx.Slice.ID)
+	if !found {
+		return fmt.Errorf("slice %s not found in reloaded plan", j.ctx.Slice.ID)
+	}
+	var incomplete []string
+	for _, t := range reloadedSlice.Tasks {
+		if t.Status != "done" {
+			incomplete = append(incomplete, fmt.Sprintf("%s (status: %s)", t.ID, t.Status))
+		}
+	}
+	if len(incomplete) > 0 {
+		j.lastError = fmt.Sprintf("not all tasks marked done: %s", strings.Join(incomplete, ", "))
+		appendLog(j.ctx.Logger, j.ctx.FeatureDir, fmt.Sprintf("Gate 1 failed for slice %s (attempt %d): %s", j.ctx.Slice.ID, attempt, j.lastError))
+		return errors.New(j.lastError)
+	}
+
+	verificationOutput, verifyErr := runShellAndCaptureOutput(j.ctx.VerificationCmd)
+	if verifyErr != nil {
+		j.lastError = fmt.Sprintf("verification failed: %v\nOutput:\n%s", verifyErr, verificationOutput)
+		appendLog(j.ctx.Logger, j.ctx.FeatureDir, fmt.Sprintf("Gate 2 failed for slice %s (attempt %d): %v", j.ctx.Slice.ID, attempt, verifyErr))
+		return errors.New(j.lastError)
+	}
+
+	appendLog(j.ctx.Logger, j.ctx.FeatureDir, fmt.Sprintf("Slice %s: all gates passed (attempt %d).", j.ctx.Slice.ID, attempt))
+	j.ctx.Logger.Info("All gates passed", "slice", j.ctx.Slice.ID)
+	return nil
+}
+
+func (j *sliceJob) OnSuccess(attempt int) error {
+	return j.checkGates(attempt)
+}
+
+func (j *sliceJob) OnFailure(attempt int) error {
+	// Gemini exited non-zero. File changes may still have landed — check gates anyway.
+	appendLog(j.ctx.Logger, j.ctx.FeatureDir, fmt.Sprintf("Gemini exited with error for slice %s (attempt %d); checking gates — file changes may have landed.", j.ctx.Slice.ID, attempt))
+	return j.checkGates(attempt)
+}
+
+func (s *PerSliceStrategy) ExecuteSlice(ctx SliceContext) error {
+	return RunJob(ctx.FeatureDir, ctx.MaxRetries, ctx.RetryDelay, ctx.Logger, ctx.Runner, newSliceJob(ctx))
 }
 
 // errorBlockRe strips the entire {{#if error_message}}...{{/if}} block (including
@@ -203,11 +258,11 @@ func (s *PerSliceStrategy) ExecuteSlice(ctx SliceContext) error {
 var errorBlockRe = regexp.MustCompile(`(?s)\{\{#if error_message\}\}.*?\{\{/if\}\}`)
 
 // agentsVerifyRe extracts the verification command from an AGENTS.md "## Verification" section.
-var agentsVerifyRe = regexp.MustCompile(`(?m)^## Verification\r?\nRun: (.+)$`)
+var agentsVerifyRe = regexp.MustCompile(`(?m)^## Verification\s*\nRun: (.+)$`)
 
 // agentsContextFilesRe extracts the source file glob pattern from an AGENTS.md
-// "## Context files\nPattern: <globs>" section.
-var agentsContextFilesRe = regexp.MustCompile(`(?m)^## Context files\r?\nPattern: (.+)$`)
+// "## Context files" section.
+var agentsContextFilesRe = regexp.MustCompile(`(?m)^## Context files\s*\nPattern: (.+)$`)
 
 // defaultContextExcludes are git pathspec exclusions applied when no explicit
 // "## Context files" pattern is configured in AGENTS.md. They strip known
@@ -235,7 +290,7 @@ func appendLog(logger *slog.Logger, featureDir, msg string) {
 // aiSessionHome must be the resolved AI_SESSION_HOME path.
 // maxRetries is the maximum number of LLM+verification attempts per task.
 // retryDelay is the pause between attempts (helps avoid LLM rate limits).
-func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome string, maxRetries int, retryDelay time.Duration, strategy Strategy) (err error) {
+func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome string, maxRetries int, retryDelay time.Duration, strategy Strategy, runner llm.Runner) (err error) {
 	// Set the initial pipeline_step. If the previous run left "implement-failed"
 	// (i.e. a human manually intervened and is restarting), use "implement-restarted"
 	// so the dashboard reflects the context. Any other state is treated as a first run.
@@ -279,7 +334,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	if err := runShell(verificationCmd); err != nil {
 		msg := fmt.Sprintf("Initial verification failed — codebase must be in a passing state to begin: %v", err)
 		appendLog(logger, featureDir, msg)
-		return fmt.Errorf("%s", msg)
+		return errors.New(msg)
 	}
 	appendLog(logger, featureDir, "Initial verification gate passed.")
 	logger.Info("Initial verification gate passed.")
@@ -339,6 +394,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 				RetryDelay:      retryDelay,
 				ContextPattern:  contextPattern,
 				Slice:           *s,
+				Runner:          runner,
 			}
 
 			if err := strategy.ExecuteSlice(sliceCtx); err != nil {
@@ -367,7 +423,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	// verification gates miss because each task only validates its own local scope.
 	appendLog(logger, featureDir, "Running final integration check...")
 	logger.Info("Running integration check")
-	if err := runIntegrationCheck(logger, aiSessionHome, storyDescription, workDir, contextPattern); err != nil {
+	if err := runIntegrationCheck(logger, aiSessionHome, storyDescription, workDir, contextPattern, runner); err != nil {
 		appendLog(logger, featureDir, fmt.Sprintf("Integration check found blockers: %v", err))
 		return fmt.Errorf("integration check failed: %w", err)
 	}
@@ -381,7 +437,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	return nil
 }
 
-// extractContextPattern reads the optional "## Context files\nPattern: <globs>" section
+// extractContextPattern reads the optional "## Context files" section
 // from AGENTS.md and returns the space-separated glob list. Returns nil when the section
 // is absent so callers can fall back to defaultContextExcludes.
 func extractContextPattern(dir string) []string {
@@ -441,7 +497,7 @@ func getSourceFilesDiff(workDir string, includePatterns []string) string {
 // cross-cutting issues (template↔struct mismatches, dead code, broken tests)
 // that per-task verification gates miss. Returns an error if the LLM reports
 // any BLOCKERs (exits non-zero).
-func runIntegrationCheck(logger *slog.Logger, aiSessionHome, storyDescription, workDir string, contextPattern []string) error {
+func runIntegrationCheck(logger *slog.Logger, aiSessionHome, storyDescription, workDir string, contextPattern []string, runner llm.Runner) error {
 	if os.Getenv("IN_TEST_MODE") == "true" {
 		logger.Info("Skipping integration check (test mode)")
 		return nil
@@ -462,7 +518,7 @@ func runIntegrationCheck(logger *slog.Logger, aiSessionHome, storyDescription, w
 	prompt := strings.ReplaceAll(string(promptTemplate), "{{story_description_here}}", storyDescription)
 	prompt = strings.ReplaceAll(prompt, "{{codebase_diff_here}}", diff)
 
-	if err := gemini.RunYolo(strings.NewReader(prompt), os.Stdout, os.Stderr); err != nil {
+	if err := runner.Run(strings.NewReader(prompt), os.Stdout, os.Stderr); err != nil {
 		return fmt.Errorf("integration check reported blockers (gemini exit: %w)", err)
 	}
 	return nil
@@ -492,7 +548,7 @@ func isRateLimitError(output string) bool {
 //
 // retryDelay is applied before each retry to avoid LLM rate-limit errors that
 // otherwise cause immediate failure on the following attempt.
-func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, workDir, storyDescription, architectureDescription, sliceDescription, taskDescription, verificationCmd string, maxRetries int, retryDelay time.Duration, contextPattern []string) error {
+func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, workDir, storyDescription, architectureDescription, sliceDescription, taskDescription, verificationCmd string, maxRetries int, retryDelay time.Duration, contextPattern []string, runner llm.Runner) error {
 	promptPath := filepath.Join(aiSessionHome, "headless", "session", "execute_task.md")
 
 	// Read prompt template once; it does not change between retries.
@@ -540,7 +596,7 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, workDi
 		if os.Getenv("IN_TEST_MODE") != "true" {
 			appendLog(logger, featureDir, fmt.Sprintf("Invoking LLM for task execution (attempt %d).", attempt))
 			logger.Info("Invoking Gemini", "attempt", attempt)
-			if err := gemini.RunYolo(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &geminiOutput), io.MultiWriter(os.Stderr, &geminiOutput)); err != nil {
+			if err := runner.Run(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &geminiOutput), io.MultiWriter(os.Stderr, &geminiOutput)); err != nil {
 				geminiErr = err
 				appendLog(logger, featureDir, fmt.Sprintf("Gemini exited with error (attempt %d): %v — running verification anyway", attempt, err))
 				logger.Warn("Gemini exited with error; running verification", "attempt", attempt, "error", err)
@@ -581,7 +637,7 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, workDi
 			errParts = append(errParts, geminiErr.Error())
 		}
 		errParts = append(errParts, verificationOutput.String())
-		lastError = fmt.Errorf("%s", strings.Join(errParts, "\n"))
+		lastError = errors.New(strings.Join(errParts, "\n"))
 
 		appendLog(logger, featureDir, fmt.Sprintf("Verification failed (attempt %d): %s", attempt, verificationOutput.String()))
 		logger.Error("Verification failed", "attempt", attempt)
@@ -616,7 +672,7 @@ func depsMet(p plan.Plan, deps []string) bool {
 }
 
 // extractVerificationCommand reads AGENTS.md from dir and extracts the verification
-// command from a "## Verification\nRun: <cmd>" section.
+// command from a "## Verification" section.
 func ExtractVerificationCommand(dir string) (string, error) {
 	content, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
 	if err != nil {

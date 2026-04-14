@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
-	"github.com/daniel-talonone/gemini-commands/internal/gemini"
+	"github.com/daniel-talonone/gemini-commands/internal/llm"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/github"
 	"github.com/daniel-talonone/gemini-commands/internal/review"
@@ -94,9 +94,13 @@ Types with no findings are skipped automatically.`,
 			prompt := strings.ReplaceAll(promptTemplate, "{{pr_comments_here}}", threads)
 			prompt = strings.ReplaceAll(prompt, "{{feature_dir}}", featureDir)
 
+			runner, err := getRunner()
+			if err != nil {
+				return fmt.Errorf("invalid --model flag: %w", err)
+			}
 			fmt.Fprintf(os.Stderr, "Addressing remote review findings...\n")
-			if err := gemini.RunYolo(strings.NewReader(prompt), os.Stdout, os.Stderr); err != nil {
-				return fmt.Errorf("gemini pipeline failed: %w", err)
+			if err := runner.Run(strings.NewReader(prompt), os.Stdout, os.Stderr); err != nil {
+				return fmt.Errorf("LLM pipeline failed: %w", err)
 			}
 
 			if err := status.Write(featureDir, "feedback-remote-done", "", ""); err != nil {
@@ -135,6 +139,11 @@ Types with no findings are skipped automatically.`,
 			jobs = append(jobs, addressJob{t, name})
 		}
 
+		runner, err := getRunner()
+		if err != nil {
+			return fmt.Errorf("invalid --model flag: %w", err)
+		}
+
 		aiHome := getAISessionHome()
 		promptPath := filepath.Join(aiHome, "headless", "session", "address-feedback.md")
 		promptBytes, err := os.ReadFile(promptPath)
@@ -153,7 +162,7 @@ Types with no findings are skipped automatically.`,
 				continue
 			}
 			fmt.Fprintf(os.Stderr, "Addressing %s review findings...\n", job.typeName)
-			if err := runAddressJob(promptTemplate, featureDir, job.typeName, findings); err != nil {
+			if err := runAddressJob(runner, promptTemplate, featureDir, job.typeName, findings); err != nil {
 				return fmt.Errorf("addressing %s findings: %w", job.typeName, err)
 			}
 		}
@@ -166,10 +175,10 @@ Types with no findings are skipped automatically.`,
 	},
 }
 
-func runAddressJob(promptTemplate, featureDir, typeName, findings string) error {
+func runAddressJob(runner llm.Runner, promptTemplate, featureDir, typeName, findings string) error {
 	prompt := strings.ReplaceAll(promptTemplate, "{{findings_here}}", findings)
 	prompt = strings.ReplaceAll(prompt, "{{feature_dir}}", featureDir)
 	prompt = strings.ReplaceAll(prompt, "{{review_type_here}}", typeName)
 
-	return gemini.RunYolo(strings.NewReader(prompt), os.Stdout, os.Stderr)
+	return runner.Run(strings.NewReader(prompt), os.Stdout, os.Stderr)
 }

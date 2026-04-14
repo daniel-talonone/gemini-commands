@@ -32,13 +32,22 @@ You have full tool access.
 
 **Instructions:**
 
-1.  **Log your plan:** Use the `ai-session append-log` command to log your plan before making any changes. This should be a concise summary of your approach to completing the remaining tasks in this slice, highlighting any adaptations to the task descriptions.
+1.  **Understand the codebase before writing anything.** Do not write a single line of code yet. First:
+
+    - Read every file mentioned across the slice tasks.
+    - For each file, note its current state: function signatures, types, imports, existing behaviour. Do not rely on the task descriptions for this — read the actual files.
+    - Identify what the tasks depend on but may not mention: interfaces to implement, types to use, callers to update. Read the files that define those things too.
+    - If any task says "implement interface X" or "call function Y", read the file that defines X or Y right now, before anything else.
+
+    After this reading phase you will have a current, first-hand understanding of the codebase. The plan descriptions were written at planning time and may be stale — your readings take priority.
+
+2.  **Log your plan.** Based on what you just read — not based on the task descriptions — write your implementation plan:
 
     ```
     ai-session append-log "{{feature_dir_here}}" "<your plan>"
     ```
 
-2.  **Reality check:** Before editing any file, read its current content using `read_file` or `run_shell_command` (`cat <file_path>`). Compare this against the task description. If there's a discrepancy, use the task's *intent* to guide your changes. Log any significant discrepancies via `ai-session append-log "{{feature_dir_here}}" "Discrepancy: <details>"`.
+    The message must reflect the actual current state of the code, note any discrepancies with the task descriptions, and describe your intended approach.
 
 3.  **Implement tasks in order:** Iterate through the tasks provided below. Skip any tasks already marked `status: done`.
 

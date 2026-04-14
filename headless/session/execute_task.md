@@ -50,29 +50,22 @@ Read it carefully before touching any file. It is the authoritative source of tr
 
 **Instructions:**
 
-1. **Log your reasoning first.** Before touching any file, run:
-   ```
-   $AI_SESSION_HOME/go-session/bin/ai-session append-log "{{feature_dir_here}}" "<your plan>"
-   ```
-   The message should be a concise paragraph summarising your approach, any adaptations to the task description, and key decisions.
+1. **Understand the codebase before writing anything.** Do not write a single line of code yet. First:
 
-2. **Reality check before editing.** For every file referenced in `<task_description>`, read its current content via `run_shell_command`:
-   ```
-   cat <file_path>
-   ```
-   Compare what you see against what the task description says (CURRENT CODE, function signatures, file structure). The plan was written at planning time and may be stale.
-   - If the file content matches: proceed as described.
-   - If the file content differs: use the task's **intent** to determine the correct change. Log the discrepancy via `append-log "{{feature_dir_here}}"` and proceed — do not stop.
-   - If a referenced file does not exist and the task does not say to create it: log an ambiguity message via `append-log "{{feature_dir_here}}"` and exit non-zero. Do not guess.
+   - Read every file the task references. Do not rely on what the task description says the file contains — read the actual current content.
+   - Note the real current state: function signatures, types, imports, existing behaviour. Your readings take priority over the task description, which was written at planning time and may be stale.
+   - Identify what the task depends on but may not mention: interfaces to implement, types to use, callers to update. Read the files that define those too.
+   - For templates or files that reference types defined elsewhere: read the defining file to get exact field names and signatures before writing anything.
 
-   **Cross-file consistency check (mandatory for templates and interface-touching files):**
-   If the task involves editing a template, a config file, or any file that references types or
-   fields defined in other files, also read those defining files to verify the exact names:
-   - For HTML/Go templates: read the Go struct(s) passed to the template and use their exact field names.
-   - For sort/filter keys passed as URL params: read the backend handler/switch that consumes them.
-   - Cross-check against `<codebase_changes>` first — if the struct was modified in this run, its new field names are there.
+   After this reading phase you will understand the actual current state. Only then move to the next step.
 
-3. **If `<previous_failure_error>` is present:** Read the files you modified in the previous attempt, analyse the error, and apply a targeted fix. Do not repeat the same change.
+2. **Log your reasoning.** Based on what you just read — not based on the task description — write your approach:
+   ```
+   ai-session append-log "{{feature_dir_here}}" "<your plan>"
+   ```
+   Note any discrepancies between what the task description says and what the code actually looks like. If a referenced file does not exist and the task does not say to create it, log an ambiguity message and exit non-zero. Do not guess.
+
+3. **If `<previous_failure_error>` is present:** Re-read the files you modified in the previous attempt, analyse the error from first principles, and apply a targeted fix. Do not repeat the same change.
 
 4. **Apply the change** using `replace` for targeted edits to existing files, or `write_file` for new files or full rewrites. Prefer `replace` — it is less likely to introduce unintended changes.
 

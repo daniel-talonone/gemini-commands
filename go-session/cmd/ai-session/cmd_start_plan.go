@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
-	"github.com/daniel-talonone/gemini-commands/internal/gemini"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 	"github.com/spf13/cobra"
@@ -66,8 +65,13 @@ This command replaces the 'orchestrate.sh --plan' script.`,
 		}
 		logger.Info("Plan prompt prepared")
 
-		logger.Info("Executing gemini command")
-		if err := gemini.RunYolo(strings.NewReader(prompt), os.Stdout, os.Stderr); err != nil {
+		runner, err := getRunner()
+		if err != nil {
+			return fmt.Errorf("invalid --model flag: %w", err)
+		}
+
+		logger.Info("Executing LLM command")
+		if err := runner.Run(strings.NewReader(prompt), os.Stdout, os.Stderr); err != nil {
 			logger.Error("Gemini command failed", "error", err)
 			if writeErr := status.Write(featureDir, "plan-failed", repo, branch); writeErr != nil {
 				logger.Error("Failed to write plan-failed status", "error", writeErr)

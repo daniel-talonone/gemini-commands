@@ -61,7 +61,12 @@ This command replaces the 'orchestrate.sh --implement' script.`,
 			strategy = &implement.PerTaskStrategy{}
 		}
 
-		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome(), implementMaxRetries, implementRetryDelay, strategy); err != nil {
+		runner, err := getRunner()
+		if err != nil {
+			return fmt.Errorf("invalid --model flag: %w", err)
+		}
+
+		if err := implement.Run(logger, storyID, featureDir, cwd, getAISessionHome(), implementMaxRetries, implementRetryDelay, strategy, runner); err != nil {
 			return fmt.Errorf("implementation run failed: %w", err)
 		}
 

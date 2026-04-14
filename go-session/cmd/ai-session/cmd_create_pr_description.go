@@ -10,7 +10,6 @@ import (
 
 	"github.com/daniel-talonone/gemini-commands/internal/description"
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
-	"github.com/daniel-talonone/gemini-commands/internal/gemini"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
@@ -114,9 +113,14 @@ If pr.md already has content, the command overwrites it (re-generation is idempo
 		promptContent = strings.ReplaceAll(promptContent, "{{pr_template_section_here}}", prTemplateSection)
 		promptContent = strings.ReplaceAll(promptContent, "{{story_url_section_here}}", storyURLSection)
 
+		runner, err := getRunner()
+		if err != nil {
+			return fmt.Errorf("invalid --model flag: %w", err)
+		}
+
 		fmt.Fprintf(os.Stderr, "Generating PR description for feature %s...\n", featureName)
 		var outputBuf bytes.Buffer
-		if err := gemini.RunYolo(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &outputBuf), os.Stderr); err != nil {
+		if err := runner.Run(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &outputBuf), os.Stderr); err != nil {
 			return fmt.Errorf("generating PR description: %w", err)
 		}
 
