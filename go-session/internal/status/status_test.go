@@ -117,3 +117,55 @@ func TestCreate_AtomicWrite(t *testing.T) {
 	_, err := os.Stat(filepath.Join(dir, "status.yaml.tmp"))
 	assert.True(t, os.IsNotExist(err), "status.yaml.tmp must be cleaned up after Create")
 }
+
+func TestWritePRURL(t *testing.T) {
+	// Create a temporary directory for the feature
+	tempDir := t.TempDir()
+
+	// Create an initial status.yaml file
+	initialStatus := Status{
+		Repo:        "test/repo",
+		Branch:      "main",
+		WorkDir:     "/path/to/work",
+		StartedAt:   time.Now().Add(-1 * time.Hour).Format(time.RFC3339), // Format time for YAML
+		UpdatedAt:   time.Now().Add(-1 * time.Hour).Format(time.RFC3339), // Format time for YAML
+		PipelineStep: "plan-done",
+	}
+	initialData, err := yaml.Marshal(&initialStatus)
+	require.NoError(t, err)
+
+	statusFilePath := filepath.Join(tempDir, "status.yaml")
+	err = os.WriteFile(statusFilePath, initialData, 0644)
+	require.NoError(t, err)
+
+	// Define the PR URL to write
+	prURL := "https://github.com/test/repo/pull/123"
+
+	// Call WritePRURL
+	err = WritePRURL(tempDir, prURL)
+	assert.NoError(t, err)
+
+	// Read the updated status.yaml
+	updatedData, err := os.ReadFile(statusFilePath)
+	assert.NoError(t, err)
+
+	var updatedStatus Status
+	err = yaml.Unmarshal(updatedData, &updatedStatus)
+	assert.NoError(t, err)
+
+	// Assert the PRURL and PipelineStep are updated, and UpdatedAt is newer
+	assert.Equal(t, prURL, updatedStatus.PRURL)
+	assert.Equal(t, "pr-submitted", updatedStatus.PipelineStep)
+	
+	// Parse back to time.Time for comparison
+	initialUpdatedAt, _ := time.Parse(time.RFC3339, initialStatus.UpdatedAt)
+	updatedUpdatedAt, _ := time.Parse(time.RFC3339, updatedStatus.UpdatedAt)
+	
+	assert.False(t, updatedUpdatedAt.Before(initialUpdatedAt), "UpdatedAt should be no earlier than initial UpdatedAt")
+
+	// Ensure other fields are unchanged
+	assert.Equal(t, initialStatus.Repo, updatedStatus.Repo)
+	assert.Equal(t, initialStatus.Branch, updatedStatus.Branch)
+	assert.Equal(t, initialStatus.WorkDir, updatedStatus.WorkDir)
+	assert.Equal(t, initialStatus.StartedAt, updatedStatus.StartedAt) 
+}

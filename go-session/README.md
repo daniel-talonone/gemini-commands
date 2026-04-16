@@ -55,6 +55,14 @@ Generates a PR description from feature context and writes it to `pr.md` via a h
 
 Inputs: `description.md`, `plan.yml`, `log.md`, `status.yaml` (`work_dir`, `story_url`), git branch diff, and `.github/pull_request_template.md` from the repo (optional — skipped if absent). All inputs are injected into `headless/session/create-pr-description.md` and piped to `gemini --yolo`, which writes the result directly to `pr.md`. Re-running overwrites the file (idempotent). Sets `pipeline_step: pr-description-done` on success.
 
+### Submit PR
+
+```bash
+ai-session submit-pr <feature-name>
+```
+Creates a GitHub PR for the feature's branch. The PR title is `feat: <branch-name>`. The PR body is read from `pr.md`. The base branch is detected automatically. If a PR already exists for the branch, the command exits with an error. On success, the PR URL is written to `status.yaml` and the `pipeline_step` is set to `pr-submitted`.
+
+
 ### Plan
 
 ```bash

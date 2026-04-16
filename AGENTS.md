@@ -94,7 +94,7 @@ terminal. Both tools use the same `/session:` prefix.
   - `plan.yml` writes are gated through `ai-session plan-write` — validates schema before writing,
     rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs. **Side-effect:** sets
     `pipeline_step: plan-done` in `status.yaml` after every successful write.
-  - `plan.Plan`, `plan.Slice`, `plan.Task` Go types are exported from `internal/commands/plan/plan.go` — use `plan.LoadPlan(featureDir)` to read plan.yml into a typed struct from other packages.
+  - `plan.Plan`, `plan.Slice`, `plan.Task` Go types are exported from `go-session/internal/plan/plan.go` — use `plan.LoadPlan(featureDir)` to read plan.yml into a typed struct from other packages.
   - Per-task enrichment uses `ai-session plan-enrich-task --slice <id> --task <id>` — updates only
     the `task:` field of a single todo task, protected by an injection guard and status lock.
   - Context loading uses `ai-session load-context <story-id>` — outputs all feature dir files as

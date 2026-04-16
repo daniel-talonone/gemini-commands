@@ -126,7 +126,7 @@ ai-session load-context sc-1234     # load feature files as XML blocks for LLM c
 ai-session create-feature sc-1234   # scaffold feature directory (includes status.yaml)
 ai-session resolve-feature-dir sc-1234
 ai-session append-log sc-1234 "msg"
-# For a complete list of `ai-session` commands and their descriptions, refer to AGENTS.md.
+
 ai-session update-task sc-1234 task-id --status done
 ai-session update-slice sc-1234 slice-id --status in-progress
 ai-session plan-list sc-1234
@@ -138,6 +138,8 @@ ai-session implement sc-1234        # headless LLM implementation loop (gemini -
 ai-session review sc-1234 [--regular] [--docs] [--devops] [--strategy=branch|last-commit]
 ai-session review-write sc-1234 --type regular   # write findings from stdin (YAML)
 ai-session address-feedback sc-1234 [--regular] [--docs] [--devops] [--remote] # Address findings with retry/verification
+ai-session create-pr-description <feature-name> # Generates a PR description from feature context and writes it to `pr.md`.
+ai-session submit-pr <feature-name>             # Creates a GitHub PR for the feature's branch. The PR title is `feat: <branch-name>`. The PR body is read from `pr.md`. The base branch is detected automatically. If a PR already exists for the branch, the command exits with an error. On success, the PR URL is written to `status.yaml` and the `pipeline_step` is set to `pr-submitted`.
 ```
 
 Build the binary: `cd go-session && make build` (output: `go-session/bin/ai-session`, added to `$PATH` by `setup.sh`).

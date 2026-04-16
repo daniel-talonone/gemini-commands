@@ -100,10 +100,11 @@ branch: sc-1234                               # git branch created for this task
 work_dir: /Users/you/code/payments-service   # absolute repo root on disk (git rev-parse --show-toplevel)
 clone_path: /tmp/ai-session/sc-1234          # empty string if clone was cleaned up
 pid: 12345                                    # orchestrator PID; 0 if not running
-pipeline_step: new|plan|enrich|implement|review|pr|pr-rejected|feedback|feedback-local-done|feedback-remote-done
+pipeline_step: new|plan|enrich|implement|review|pr|pr-submitted|pr-rejected|feedback|feedback-local-done|feedback-remote-done
 error: "optional message on failure"          # last error message, for UI display
 started_at: 2026-04-01T10:00:00Z
 updated_at: 2026-04-01T14:22:00Z
+pr_url: https://github.com/talon-one/payments-service/pull/123 # New field for PR URL
 ```
 
 The `pipeline_step` indicates the current stage of the orchestration. When a step fails, it will be set to `<step>-failed` and the `error` field will be populated with a summary of the issue. The full error details will also be written to `log.md`.
@@ -456,4 +457,4 @@ The shell scripts remain as fallback during the transition. No big-bang rewrite.
 
 - **Unifying all session interfaces in the dashboard**: The goal is for the dashboard to be the single management UI for all session interfaces — Claude commands, Gemini commands, headless/orchestrator, and manual sessions. All interfaces already share the same `status.yaml` data layer. The missing piece is a consistent `pipeline_step` vocabulary and ensuring every interface writes `status.yaml` (currently only `plan-write` and the Go orchestrator steps do so). Manual sessions (no orchestrator) leave `pipeline_step` empty after `plan-done` — the dashboard shows them as idle. To fully unify: Claude and Gemini `/session:implement`, `/session:review`, and `/session:pr` commands should update `pipeline_step` at start/end of each step. This is cheap to add once the vocabulary is agreed.
 
-- **`pipeline_step` vocabulary not fully standardised**: Currently defined: `plan-done` (by `plan-write`), `implement-done` (by `ai-session implement`), `feedback-local-done` (by `ai-session address-feedback`), `feedback-remote-done` (by `ai-session address-feedback --remote`). No standard for `new`, `enrich`, `review-done`, `pr-done`, or `done`. Should define a canonical enum before adding more writers.
+- **`pipeline_step` vocabulary not fully standardised**: Currently defined: `plan-done` (by `plan-write`), `implement-done` (by `ai-session implement`), `feedback-local-done` (by `ai-session address-feedback`), `feedback-remote-done` (by `ai-session address-feedback --remote`), `pr-submitted` (by `ai-session submit-pr`). No standard for `new`, `enrich`, `review-done`, `pr-done`, or `done`. Should define a canonical enum before adding more writers.

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
-	"github.com/daniel-talonone/gemini-commands/internal/llm"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
+	"github.com/daniel-talonone/gemini-commands/internal/llm"
 	"github.com/spf13/cobra"
 )
 

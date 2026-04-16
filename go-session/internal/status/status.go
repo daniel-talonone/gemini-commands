@@ -26,6 +26,7 @@ type Status struct {
 	StoryURL     string `yaml:"story_url"`
 	ClonePath    string `yaml:"clone_path"`
 	Error        string `yaml:"error"`
+	PRURL        string `yaml:"pr_url"`
 }
 
 // Create creates a new status.yaml file with initial values.
@@ -134,6 +135,42 @@ func Write(featureDir, step, repo, branch string) error {
 		return fmt.Errorf("writing status.yaml.tmp: %w", err)
 	}
 	if err := os.Rename(tmpPath, statusPath); err != nil {
+		os.Remove(tmpPath) //nolint:errcheck
+		return fmt.Errorf("renaming status.yaml.tmp to status.yaml: %w", err)
+	}
+
+	return nil
+}
+
+// WritePRURL updates the status.yaml file with the given PR URL and sets the pipeline_step.
+func WritePRURL(featureDir, url string) error {
+	statusPath := filepath.Join(featureDir, "status.yaml")
+
+	data, err := os.ReadFile(statusPath)
+	if err != nil {
+		return fmt.Errorf("reading status.yaml: %w", err)
+	}
+
+	var s Status
+	if err := yaml.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("unmarshaling status.yaml: %w", err)
+	}
+
+	s.PRURL = url
+	s.PipelineStep = "pr-submitted"
+	s.UpdatedAt = time.Now().Format(time.RFC3339)
+
+	updatedData, err := yaml.Marshal(&s)
+	if err != nil {
+		return fmt.Errorf("marshaling status.yaml: %w", err)
+	}
+
+	tmpPath := statusPath + ".tmp"
+	if err := os.WriteFile(tmpPath, updatedData, 0644); err != nil {
+		return fmt.Errorf("writing status.yaml.tmp: %w", err)
+	}
+	if err := os.Rename(tmpPath, statusPath); err != nil {
+		os.Remove(tmpPath) //nolint:errcheck
 		return fmt.Errorf("renaming status.yaml.tmp to status.yaml: %w", err)
 	}
 
