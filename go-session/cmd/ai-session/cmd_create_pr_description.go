@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +11,6 @@ import (
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
-	"github.com/daniel-talonone/gemini-commands/internal/pr"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 	"github.com/spf13/cobra"
 )
@@ -112,6 +109,7 @@ If pr.md already has content, the command overwrites it (re-generation is idempo
 		promptContent = strings.ReplaceAll(promptContent, "{{diff_here}}", diff)
 		promptContent = strings.ReplaceAll(promptContent, "{{pr_template_section_here}}", prTemplateSection)
 		promptContent = strings.ReplaceAll(promptContent, "{{story_url_section_here}}", storyURLSection)
+		promptContent = strings.ReplaceAll(promptContent, "{{feature_dir_here}}", featureDir)
 
 		runner, err := getRunner()
 		if err != nil {
@@ -119,13 +117,8 @@ If pr.md already has content, the command overwrites it (re-generation is idempo
 		}
 
 		fmt.Fprintf(os.Stderr, "Generating PR description for feature %s...\n", featureName)
-		var outputBuf bytes.Buffer
-		if err := runner.Run(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &outputBuf), os.Stderr); err != nil {
+		if err := runner.Run(strings.NewReader(promptContent), os.Stdout, os.Stderr); err != nil {
 			return fmt.Errorf("generating PR description: %w", err)
-		}
-
-		if err := pr.Write(featureDir, outputBuf.String()); err != nil {
-			return fmt.Errorf("writing pr.md: %w", err)
 		}
 
 		if err := status.Write(featureDir, "pr-description-done", repo, branch); err != nil {

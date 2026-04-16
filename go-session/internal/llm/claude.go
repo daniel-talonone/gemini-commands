@@ -10,7 +10,7 @@ import (
 type claudeRunner struct{}
 
 func (r *claudeRunner) Run(stdin io.Reader, stdout, stderr io.Writer) error {
-	cmd := exec.Command("claude", "--dangerously-skip-permissions")
+	cmd := exec.Command("claude", "-p", "--dangerously-skip-permissions", `--mcp-config`, `{"mcpServers":{}}`, "--no-session-persistence", "--allowed-tools", "Bash,Read,Glob,Grep,Write", "--model", "haiku")
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
