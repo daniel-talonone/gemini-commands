@@ -16,6 +16,7 @@ const (
 	TypeDefault Type = "default" // maps to review.yml
 	TypeDocs    Type = "docs"    // maps to review-docs.yml
 	TypeDevOps  Type = "devops"  // maps to review-devops.yml
+	TypeRemote  Type = "remote"  // virtual type for remote findings
 )
 
 // Finding represents a single review comment or issue.
@@ -43,6 +44,8 @@ func TypeName(t Type) (string, error) {
 		return "docs", nil
 	case TypeDevOps:
 		return "devops", nil
+	case TypeRemote:
+		return "remote", nil
 	default:
 		return "", fmt.Errorf("unknown review type: %q", t)
 	}
@@ -84,6 +87,8 @@ func filename(t Type) (string, error) {
 		return "review-docs.yml", nil
 	case TypeDevOps:
 		return "review-devops.yml", nil
+	case TypeRemote:
+		return "", fmt.Errorf("TypeRemote is a virtual type with no associated file — use TypeName or Prompt selection only")
 	default:
 		return "", fmt.Errorf("unknown review type: %q", t)
 	}

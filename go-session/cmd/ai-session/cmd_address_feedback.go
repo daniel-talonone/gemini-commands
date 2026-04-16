@@ -2,17 +2,22 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
-	"path/filepath"
-	"strings"
+	"time"
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
-	"github.com/daniel-talonone/gemini-commands/internal/llm"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/github"
+	"github.com/daniel-talonone/gemini-commands/internal/implement"
 	"github.com/daniel-talonone/gemini-commands/internal/review"
-	"github.com/spf13/cobra"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
+	"github.com/spf13/cobra"
+)
+
+const (
+	addressFeedbackMaxRetries = 5
+	addressFeedbackRetryDelay = 1 * time.Second
 )
 
 var (
@@ -60,14 +65,14 @@ Types with no findings are skipped automatically.`,
 			return fmt.Errorf("resolving feature dir: %w", err)
 		}
 
+		s, err := status.LoadStatus(featureDir)
+		if err != nil {
+			return fmt.Errorf("loading status: %w", err)
+		}
+
 		if addressFlagRemote {
 			if addressFlagRegular || addressFlagDocs || addressFlagDevOps {
 				return fmt.Errorf("--remote flag is mutually exclusive with --regular, --docs, and --devops")
-			}
-
-			s, err := status.LoadStatus(featureDir)
-			if err != nil {
-				return fmt.Errorf("loading status: %w", err)
 			}
 
 			fmt.Fprintf(os.Stderr, "Fetching unresolved review threads from GitHub...\n")
@@ -83,24 +88,24 @@ Types with no findings are skipped automatically.`,
 				return nil
 			}
 
-			aiHome := getAISessionHome()
-			promptPath := filepath.Join(aiHome, "headless", "session", "address-feedback-remote.md")
-			promptBytes, err := os.ReadFile(promptPath)
-			if err != nil {
-				return fmt.Errorf("reading prompt: %w", err)
-			}
-			promptTemplate := string(promptBytes)
-
-			prompt := strings.ReplaceAll(promptTemplate, "{{pr_comments_here}}", threads)
-			prompt = strings.ReplaceAll(prompt, "{{feature_dir}}", featureDir)
-
 			runner, err := getRunner()
 			if err != nil {
 				return fmt.Errorf("invalid --model flag: %w", err)
 			}
+
+			aiHome := getAISessionHome()
+			logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+
+			verificationCmd, err := implement.ExtractVerificationCommand(s.WorkDir)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "no verification command found in AGENTS.md, running without verification\n")
+				verificationCmd = ""
+			}
+
 			fmt.Fprintf(os.Stderr, "Addressing remote review findings...\n")
-			if err := runner.Run(strings.NewReader(prompt), os.Stdout, os.Stderr); err != nil {
-				return fmt.Errorf("LLM pipeline failed: %w", err)
+			reviewJob := implement.NewReviewJob(featureDir, s.WorkDir, aiHome, review.TypeRemote, threads, verificationCmd, logger)
+			if err := implement.RunJob(featureDir, addressFeedbackMaxRetries, addressFeedbackRetryDelay, logger, runner, reviewJob); err != nil {
+				fmt.Fprintf(os.Stderr, "⚠ verification failed after addressing feedback: %v\n", err)
 			}
 
 			if err := status.Write(featureDir, "feedback-remote-done", "", ""); err != nil {
@@ -145,12 +150,13 @@ Types with no findings are skipped automatically.`,
 		}
 
 		aiHome := getAISessionHome()
-		promptPath := filepath.Join(aiHome, "headless", "session", "address-feedback.md")
-		promptBytes, err := os.ReadFile(promptPath)
+		logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+
+		verificationCmd, err := implement.ExtractVerificationCommand(s.WorkDir)
 		if err != nil {
-			return fmt.Errorf("reading prompt: %w", err)
+			fmt.Fprintf(os.Stderr, "no verification command found in AGENTS.md, running without verification\n")
+			verificationCmd = ""
 		}
-		promptTemplate := string(promptBytes)
 
 		for _, job := range jobs {
 			findings, err := review.ReadFindings(featureDir, job.t)
@@ -162,8 +168,10 @@ Types with no findings are skipped automatically.`,
 				continue
 			}
 			fmt.Fprintf(os.Stderr, "Addressing %s review findings...\n", job.typeName)
-			if err := runAddressJob(runner, promptTemplate, featureDir, job.typeName, findings); err != nil {
-				return fmt.Errorf("addressing %s findings: %w", job.typeName, err)
+
+			reviewJob := implement.NewReviewJob(featureDir, s.WorkDir, aiHome, job.t, findings, verificationCmd, logger)
+			if err := implement.RunJob(featureDir, addressFeedbackMaxRetries, addressFeedbackRetryDelay, logger, runner, reviewJob); err != nil {
+				fmt.Fprintf(os.Stderr, "⚠ verification failed after addressing feedback: %v\n", err)
 			}
 		}
 
@@ -173,12 +181,4 @@ Types with no findings are skipped automatically.`,
 
 		return nil
 	},
-}
-
-func runAddressJob(runner llm.Runner, promptTemplate, featureDir, typeName, findings string) error {
-	prompt := strings.ReplaceAll(promptTemplate, "{{findings_here}}", findings)
-	prompt = strings.ReplaceAll(prompt, "{{feature_dir}}", featureDir)
-	prompt = strings.ReplaceAll(prompt, "{{review_type_here}}", typeName)
-
-	return runner.Run(strings.NewReader(prompt), os.Stdout, os.Stderr)
 }

@@ -94,7 +94,7 @@ Validates and atomically writes review findings from stdin (YAML). The `internal
 ```bash
 ai-session address-feedback <story-id> [--regular] [--docs] [--devops] [--remote]
 ```
-Reads open findings per review type via `internal/review.ReadFindings` and pipes each to `gemini --yolo` using `headless/session/address-feedback.md`. Resolved findings are filtered out before the prompt is built. No flags → all three types are addressed. Types with no open findings are skipped automatically. The `--remote` flag fetches and addresses unresolved inline PR review threads from GitHub. It is mutually exclusive with the other flags and requires the `gh` CLI to be installed and authenticated.
+Reads open findings per review type via `internal/review.ReadFindings` and pipes each to `gemini --yolo` using `headless/session/address-feedback.md`. This command now uses the same retry and verification engine as `implement`, running the project's verification command after each attempt and retrying on failure. Resolved findings are filtered out before the prompt is built. No flags → all three types are addressed. Types with no open findings are skipped automatically. The `--remote` flag fetches and addresses unresolved inline PR review threads from GitHub. It is mutually exclusive with the other flags and requires the `gh` CLI to be installed and authenticated.
 
 ### Orchestration
 
