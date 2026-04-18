@@ -89,15 +89,12 @@ The feature identifier is: {{args}}
    Plan task order accordingly — tests must never precede the code they compile against.
 
 8. **Save Files:**
+   - We will use variable `$FEATURE_DIR` from the first step.
    - **Do NOT use `write_file` for `plan.yml`.** Instead, pipe through `plan-write` via `run_shell_command`:
-       printf '%s' "$PLAN_YAML" | ai-session plan-write "$FEATURE_DIR"
-     If the command exits non-zero, output the error and stop — do not trigger enrichment.
+       printf '%s' "$PLAN_YAML" | ai-session plan-write {{args}}
+     If the command exits non-zero, output the error and stop.
    - Use `write_file` to save `questions.yml` to `$FEATURE_DIR/questions.yml`.
    - Use `write_file` to save `architecture.md` to `$FEATURE_DIR/architecture.md`.
 
-9. **Trigger Enrichment:**
-   Run via `run_shell_command` (detached):
-     nohup $AI_SESSION_HOME/scripts/enrich_tasks.sh "$FEATURE_DIR" >> "$FEATURE_DIR/log.md" 2>&1 &
-
-10. **Confirm:**
+9. **Confirm:**
     Output one line each: feature dir path, slices count, tasks count, open questions count.
