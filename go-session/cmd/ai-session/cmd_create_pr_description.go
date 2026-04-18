@@ -109,8 +109,7 @@ If pr.md already has content, the command overwrites it (re-generation is idempo
 		promptContent = strings.ReplaceAll(promptContent, "{{diff_here}}", diff)
 		promptContent = strings.ReplaceAll(promptContent, "{{pr_template_section_here}}", prTemplateSection)
 		promptContent = strings.ReplaceAll(promptContent, "{{story_url_section_here}}", storyURLSection)
-		promptContent = strings.ReplaceAll(promptContent, "{{feature_dir_here}}", featureDir)
-
+		promptContent = strings.ReplaceAll(promptContent, "{{story_id_here}}", featureName)
 		runner, err := getRunner()
 		if err != nil {
 			return fmt.Errorf("invalid --model flag: %w", err)

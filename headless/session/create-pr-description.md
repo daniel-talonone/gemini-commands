@@ -3,7 +3,8 @@ Adhere to the following writing style: no LLM prose, no adjectives, no superlati
 Especially for the solution, use bullet points and short declarative sentences only. Avoid using a long paragraph explaining everything. Direct and factual.
 Explicitly extract and include any PR URLs referenced in the description content below.
 
-Write the PR description to `{{feature_dir_here}}/pr.md` using the write_file tool. No other output.
+Write ONLY the PR description as plain markdown — no commentary, no explanations, no code fences. Save it using the command:
+  ai-session pr write-description {{story_id_here}} "{{pull request description}}"
 
 **Context:**
 
