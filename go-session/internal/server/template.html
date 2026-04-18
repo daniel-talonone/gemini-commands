@@ -92,12 +92,12 @@
         <td class="actions">
           {{if .WorkDir -}}
           <a href="/action/finder?path={{.WorkDir | urlquery}}" title="Open in Finder">📁</a>
-          <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode"><code>&lt;/&gt;</code></a>
+          <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode">VSCode</a>
           <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
           {{- else}}<span class="empty">—</span>{{end}}
         </td>
         <td><a href="/feature/{{.StoryID}}">{{.StoryID}}</a></td>
-        <td>{{if .Repo}}{{.Repo}}{{else}}<span class="empty">—</span>{{end}}</td>
+        <td>{{if .Repo}}<a href="https://github.com/{{.Repo}}" target="_blank">{{.Repo}}</a>{{else}}<span class="empty">—</span>{{end}}</td>
         <td>{{if .Mode}}{{.Mode}}{{else}}<span class="empty">—</span>{{end}}</td>
         <td>{{if .PipelineStep}}{{.PipelineStep}}{{else}}<span class="empty">—</span>{{end}}</td>
         <td>
@@ -118,8 +118,22 @@
   <footer>{{len .Features}} feature(s) shown &mdash; refresh to update</footer>
 
   {{define "feature_detail"}}
-  <h1>Feature: {{.ID}}</h1>
-  <a href="/">Back</a>
+  <a href="/">← Back</a>
+  <h1>{{.ID}}</h1>
+  <p>
+    {{if .Repo}}<strong>Repo:</strong> <a href="https://github.com/{{.Repo}}" target="_blank">{{.Repo}}</a>{{end}}
+    {{if .Branch}} | <strong>Branch:</strong> {{.Branch}}{{end}}
+    {{if .StoryURL}} | <a href="{{.StoryURL}}" target="_blank">Story</a>{{end}}
+    {{if .PRURL}} | <a href="{{.PRURL}}" target="_blank">Pull Request</a>{{end}}
+  </p>
+  {{if .WorkDir}}
+  <p>
+    <strong>Quick Launch:</strong>
+    <a href="/action/finder?path={{.WorkDir | urlquery}}" title="Open in Finder">📁</a>
+    <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode">VSCode</a>
+    <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
+  </p>
+  {{end}}
   {{end}}
 </body>
 </html>

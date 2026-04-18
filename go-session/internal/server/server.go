@@ -38,6 +38,8 @@ type FeatureDetailData struct {
 	Repo        string
 	Branch      string
 	PRURL       string
+	StoryURL    string
+	WorkDir     string
 }
 
 // Server is the dashboard HTTP server.
@@ -277,6 +279,8 @@ func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerF
 		if st, err := status.LoadStatus(dir); err == nil {
 			data.Branch = st.Branch
 			data.PRURL = st.PRURL
+			data.StoryURL = st.StoryURL
+			data.WorkDir = st.WorkDir
 		}
 
 		var buf bytes.Buffer

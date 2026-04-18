@@ -121,7 +121,18 @@ Headless plan generation. Invokes `gemini --yolo` with a plan prompt, then runs 
 ```bash
 ai-session serve [--port 1004]
 ```
-Starts a read-only HTTP dashboard at `http://localhost:1004`. Scans `~/.features/` on every request. Supports filters (`?repo=org/name`, `?status=running|idle|done`) and sorting (`?sort=updated|started&order=asc|desc`). On macOS, exposes `/action/terminal?path=<dir>` and `/action/finder?path=<dir>` endpoints to open a directory in Terminal.app or Finder.
+Starts a read-only HTTP dashboard for monitoring features at `http://localhost:1004`. The server scans `~/.features/` on every request, providing a real-time view of all tracked features.
+
+**Main View:**
+- **Filtering:** Supports `?repo=org/name` and `?status=running|idle|done`.
+- **Sorting:** Supports `?sort=updated|started` with `&order=asc|desc`.
+- **Quick-launch actions:** On macOS, each feature row displays icons to open the feature's working directory in Finder (📁), VSCode (`</>`), and the integrated terminal (⬛), provided a `work_dir` is set in its `status.yaml`.
+
+**Detail View:**
+- The header provides direct links to the feature's story (e.g., Shortcut or JIRA) and its associated pull request on GitHub.
+- It also includes the same quick-launch actions (Finder, VSCode, Terminal) as the main view for easy access to the local development environment.
+
+On macOS, the server also exposes `/action/terminal?path=<dir>`, `/action/finder?path=<dir>`, and `/action/vscode?path=<dir>` endpoints to open a directory in the respective application.
 
 ## Package structure
 

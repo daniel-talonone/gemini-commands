@@ -74,7 +74,7 @@ terminal. Both tools use the same `/session:` prefix.
   `$AI_SESSION_HOME/scripts/` in all commands. Added to `$PATH` via `setup.sh`.
   Key scripts:
   - `scripts/load_context_files.sh` — **DEPRECATED**. Use `ai-session load-context <story-id>` instead.
-  - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`. Each row shows 📁/`</>`/⬛ quick-launch icons when `work_dir` is set in `status.yaml`.
+  - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`. The main list view shows 📁/`</>`/⬛ quick-launch icons next to each feature when a `work_dir` is set in `status.yaml`. The feature detail view has a header with links to the story, PR, and local development environment (Finder, VSCode, Terminal).
   - `GET /action/terminal?path=<dir>` — dashboard endpoint that opens Terminal.app at the given directory (macOS only).
   - `ai-session implement <story-id>` — Go orchestrator for the implementation phase. Resolves the feature dir, reads `AGENTS.md` for the verification command, runs an initial verification gate, iterates plan.yml slices (with dependency checks) and tasks, invokes `gemini --yolo` via stdin for each task, retries up to 5 times on verification failure, updates task/slice statuses atomically, and sets `pipeline_step: implement-done` on completion.
 - **Session Context Pattern:** To reduce token consumption, session commands use an
