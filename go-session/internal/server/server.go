@@ -10,8 +10,12 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strings"
 
 	"github.com/daniel-talonone/gemini-commands/internal/dashboard"
+	"github.com/daniel-talonone/gemini-commands/internal/description"
+	"github.com/daniel-talonone/gemini-commands/internal/feature"
+	"github.com/daniel-talonone/gemini-commands/internal/status"
 )
 
 //go:embed template.html
@@ -25,6 +29,15 @@ type PageData struct {
 	StatusFilter string
 	SortBy       string
 	SortOrder    string
+}
+
+// FeatureDetailData is passed to the feature_detail template.
+type FeatureDetailData struct {
+	ID          string
+	Description string
+	Repo        string
+	Branch      string
+	PRURL       string
 }
 
 // Server is the dashboard HTTP server.
@@ -65,7 +78,8 @@ func (s *Server) Start() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", s.MakeHandler(tmpl))
+	mux.HandleFunc("/", s.MakeListHandler(tmpl))
+	mux.HandleFunc("/feature/", s.MakeFeatureDetailHandler(tmpl))
 	mux.HandleFunc("/action/terminal", TerminalHandler)
 	mux.HandleFunc("/action/finder", FinderHandler)
 
@@ -129,8 +143,13 @@ func FinderHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) MakeHandler(tmpl *template.Template) http.HandlerFunc {
+func (s *Server) MakeListHandler(tmpl *template.Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+
 		features, err := s.ScanAllFunc()
 		if err != nil {
 			http.Error(w, "scan error: "+err.Error(), http.StatusInternalServerError)
@@ -209,6 +228,59 @@ func (s *Server) MakeHandler(tmpl *template.Template) http.HandlerFunc {
 		// Buffer template output — prevents partial responses on error.
 		var buf bytes.Buffer
 		if err := tmpl.Execute(&buf, data); err != nil {
+			http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/feature/")
+		if id == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		features, err := s.ScanAllFunc()
+		if err != nil {
+			http.Error(w, "scan error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var found *dashboard.FeatureState
+		for i := range features {
+			if features[i].StoryID == id {
+				found = &features[i]
+				break
+			}
+		}
+		if found == nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Use Repo from the scanner to build a synthetic remote URL so
+		// ResolveFeatureDir remains the single source of truth for path resolution.
+		remoteURL := "https://github.com/" + found.Repo
+		dir, err := feature.ResolveFeatureDir(id, ".", remoteURL)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		desc, _ := description.LoadDescription(dir)
+
+		data := FeatureDetailData{ID: id, Description: desc, Repo: found.Repo}
+		if st, err := status.LoadStatus(dir); err == nil {
+			data.Branch = st.Branch
+			data.PRURL = st.PRURL
+		}
+
+		var buf bytes.Buffer
+		if err := tmpl.ExecuteTemplate(&buf, "feature_detail", data); err != nil {
 			http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
 			return
 		}

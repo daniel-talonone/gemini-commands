@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/daniel-talonone/gemini-commands/internal/dashboard"
+	"github.com/daniel-talonone/gemini-commands/internal/feature"
 	"github.com/daniel-talonone/gemini-commands/internal/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -165,7 +166,7 @@ func TestSortingLogic(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			rr := httptest.NewRecorder()
-			srv.MakeHandler(tmpl).ServeHTTP(rr, req)
+			srv.MakeListHandler(tmpl).ServeHTTP(rr, req)
 
 			require.Equal(t, http.StatusOK, rr.Code)
 			assert.Equal(t, tt.expectedOrder, parsedOrder(rr.Body.String()))
@@ -212,7 +213,7 @@ func TestSortingWithFilters(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			rr := httptest.NewRecorder()
-			srv.MakeHandler(tmpl).ServeHTTP(rr, req)
+			srv.MakeListHandler(tmpl).ServeHTTP(rr, req)
 
 			require.Equal(t, http.StatusOK, rr.Code)
 			assert.Equal(t, tt.expectedOrder, parsedOrder(rr.Body.String()))
@@ -298,14 +299,54 @@ func TestHandlerWithRealTemplate(t *testing.T) {
 		},
 	}}
 	srv := server.New(8080, mockS)
-	handler := srv.MakeHandler(tmpl)
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	srv.MakeListHandler(tmpl).ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code, "real template should render without errors")
 	assert.Contains(t, rr.Body.String(), "sc-1")
 	assert.Contains(t, rr.Body.String(), "1 hour ago")
 	assert.Contains(t, rr.Body.String(), "just now")
+}
+
+func TestFeatureDetailHandler(t *testing.T) {
+	// This template is a simplified version of the real one, only containing
+	// the parts needed for this test.
+	tmplContent := `{{define "feature_detail"}}<h1>Feature: {{.ID}}</h1><a href="/">Back</a>{{end}}`
+	tmpl, err := template.New("dashboard").Parse(tmplContent)
+	require.NoError(t, err)
+
+	mockS := &mockScanner{} // No features needed for this test
+	srv := server.New(8080, mockS)
+
+	t.Run("feature not found", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/feature/non-existent-feature", nil)
+		rr := httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("feature found", func(t *testing.T) {
+		featureID := "sc-12345"
+		repo := "org/repo_name"
+
+		home, err := os.UserHomeDir()
+		require.NoError(t, err)
+		featureDir := filepath.Join(home, ".ai-session", "features", repo, featureID)
+		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "description.md"), []byte("# "+featureID), 0755))
+		defer func() { _ = os.RemoveAll(featureDir) }()
+
+		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+
+		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+		rr := httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+		require.Equal(t, http.StatusOK, rr.Code)
+		assert.Contains(t, rr.Body.String(), "<h1>Feature: sc-12345</h1>")
+		assert.Contains(t, rr.Body.String(), `<a href="/">Back</a>`)
+	})
 }

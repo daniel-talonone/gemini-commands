@@ -96,7 +96,7 @@
           <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
           {{- else}}<span class="empty">—</span>{{end}}
         </td>
-        <td>{{.StoryID}}</td>
+        <td><a href="/feature/{{.StoryID}}">{{.StoryID}}</a></td>
         <td>{{if .Repo}}{{.Repo}}{{else}}<span class="empty">—</span>{{end}}</td>
         <td>{{if .Mode}}{{.Mode}}{{else}}<span class="empty">—</span>{{end}}</td>
         <td>{{if .PipelineStep}}{{.PipelineStep}}{{else}}<span class="empty">—</span>{{end}}</td>
@@ -116,5 +116,10 @@
   </table>
 
   <footer>{{len .Features}} feature(s) shown &mdash; refresh to update</footer>
+
+  {{define "feature_detail"}}
+  <h1>Feature: {{.ID}}</h1>
+  <a href="/">Back</a>
+  {{end}}
 </body>
 </html>
