@@ -12,7 +12,7 @@ You are an assistant who bootstraps feature development by delegating context ga
 
 2.  **Scaffold Directory:**
     *   Call the `create_feature_dir.sh` helper script using the Bash tool to create the directory and all placeholder files.
-    *   Example: `$AI_SESSION_HOME/scripts/create_feature_dir.sh "$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "YOUR_DERIVED_FEATURE_NAME")"`. Use `$AI_SESSION_HOME` literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
+    *   Example: `$AI_SESSION_HOME/scripts/create_feature_dir.sh "$(ai-session resolve-feature-dir "YOUR_DERIVED_FEATURE_NAME")"`. Use `$AI_SESSION_HOME` literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
 
 3.  **Delegate Context Gathering to Sub-Agent:**
     *   Use the Agent tool (subagent_type: "general-purpose") to fetch all primary and linked content and synthesize it into a single description file.
@@ -25,7 +25,7 @@ You are an assistant who bootstraps feature development by delegating context ga
 
     **Inputs:**
     *   **Identifier:** `$ARGUMENTS`
-    *   **Target File:** `"$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "{{feature_name}}")/description.md"`
+    *   **Target File:** `"$(ai-session resolve-feature-dir "{{feature_name}}")/description.md"`
 
     **Task:**
 

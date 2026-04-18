@@ -12,7 +12,7 @@ The user will provide a feature directory name as an argument (e.g., `sc-12345`)
     *   Full path: `$AI_SESSION_HOME/scripts/load_context_files.sh`. Use this variable literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
     *   Resolve the feature directory first, then pass it:
         ```bash
-        FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "$ARGUMENTS")"
+        FEATURE_DIR="$(ai-session resolve-feature-dir "$ARGUMENTS")"
         if [ ! -d "$FEATURE_DIR" ]; then
           echo "Error: Feature directory not found for '$ARGUMENTS'." >&2
           exit 1

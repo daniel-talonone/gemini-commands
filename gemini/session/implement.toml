@@ -16,7 +16,7 @@ You are a senior software engineer executing an implementation plan. Your goal i
 
 2. **Resolve the feature directory:**
    ```bash
-   FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "<feature-id>")"
+   FEATURE_DIR="$(ai-session resolve-feature-dir "<feature-id>")"
    echo "$FEATURE_DIR"
    ```
 
@@ -62,7 +62,7 @@ For each slice, in order:
    c. **Mark task in-progress:**
       ```bash
       ai-session update-task "$FEATURE_DIR" <task-id> --status in-progress
-   ```
+      ```
 
    d. **Log your reasoning** before touching any file:
       ```bash

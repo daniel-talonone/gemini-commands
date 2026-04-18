@@ -38,10 +38,10 @@ scripts/          # Shared shell scripts referenced via $AI_SESSION_HOME/scripts
 
 ### Feature Directory Structure
 
-Each feature gets a directory, stored by default in `~/.ai-session/features/<org>/<repo>/<feature-id>/` (centralized). If `.features/<feature-id>/` already exists in the target project's CWD, that path is used instead (backward compatibility).
+Each feature gets a directory, stored by default in `~/.features/<org>/<repo>/<feature-id>/` (centralized). If `.features/<feature-id>/` already exists in the target project's CWD, that path is used instead (backward compatibility).
 
 ```
-~/.ai-session/features/talon-one/ai-sessions/sc-12345/
+~/.features/talon-one/ai-sessions/sc-12345/
   description.md    # User story and acceptance criteria (Markdown, unstructured)
   architecture.md   # Optional: implementation strategy, pattern refs, constraints, slice hints
   plan.yml          # Execution plan: slices (id, description, status, depends_on) containing tasks (id, task, status)

@@ -24,7 +24,7 @@ var serveCmd = &cobra.Command{
 	Short: "Start the read-only dashboard web server",
 	Long: `Starts a persistent HTTP server that displays all ai-session features.
 
-The dashboard scans ~/.ai-session/features/ on every page request and renders
+The dashboard scans ~/.features/ on every page request and renders
 a feature list with the current pipeline step, running state, and last done task.
 
 Filter by repo:   http://localhost:1004/?repo=org/name

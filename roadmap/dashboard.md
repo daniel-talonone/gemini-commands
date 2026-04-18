@@ -2,7 +2,7 @@
 
 ## Vision
 
-`ai-session` evolves from a collection of prompts into a **multi-interface development workflow platform**. All interfaces share the same data layer — `~/.ai-session/features/{org}/{repo}/{feature}/` — and the same YAML schemas. Adding a new interface never requires changing the underlying data.
+`ai-session` evolves from a collection of prompts into a **multi-interface development workflow platform**. All interfaces share the same data layer — `~/.features/{org}/{repo}/{feature}/` — and the same YAML schemas. Adding a new interface never requires changing the underlying data.
 
 | Interface | Who uses it | How |
 |---|---|---|
@@ -51,7 +51,7 @@ The mode is stored in `status.yaml` so the dashboard can display it and the orch
 Session commands today are interactive chat sessions. The orchestrator replaces chat-based state passing with direct file piping — each step reads inputs from the filesystem and writes outputs back:
 
 ```bash
-load_context_files.sh ~/.ai-session/features/org/repo/sc-1234 | gemini -p "$(cat headless/plan.md)"
+load_context_files.sh ~/.features/org/repo/sc-1234 | gemini -p "$(cat headless/plan.md)"
 ```
 
 ### `AGENTS.md` Discovery with Global Fallback
@@ -68,7 +68,7 @@ This provides flexibility for developers to maintain local, un-versioned `AGENTS
 Feature directories move from inside the repo (`.features/sc-1234/`) to a central location:
 
 ```
-~/.ai-session/features/
+~/.features/
   talon-one/payments-service/
     sc-1234/
       description.md   # includes repo (org/repo) and story_url
@@ -86,7 +86,7 @@ Feature directories move from inside the repo (`.features/sc-1234/`) to a centra
 
 This decouples task knowledge from the repo lifecycle. Temporary clones can be deleted; the feature dir and all its decisions persist. Over time this becomes a searchable knowledge base of every task ever worked on.
 
-`~/.ai-session/features/` is excluded from git via `.gitignore` — it is personal working state, not part of the repo.
+`~/.features/` is excluded from git via `.gitignore` — it is personal working state, not part of the repo.
 
 ### `status.yaml` Schema
 
@@ -219,7 +219,7 @@ Resolves the centralized feature dir path from the current git repo:
 ```bash
 # From inside any repo:
 resolve_feature_dir.sh sc-1234
-# → /Users/you/.ai-session/features/talon-one/payments-service/sc-1234
+# → /Users/you/.features/talon-one/payments-service/sc-1234
 ```
 
 Reads `git remote get-url origin`, extracts `org/repo`, returns the full central path. Used by all session commands to replace the hardcoded `.features/` prefix.
@@ -321,7 +321,7 @@ internal/
 #### Data Flow
 
 ```
-~/.ai-session/features/  →  scanner.go  →  state.go  →  HTTP handlers  →  frontend
+~/.features/  →  scanner.go  →  state.go  →  HTTP handlers  →  frontend
                                                 ↑
                                           fsnotify watch
                                           triggers SSE push
@@ -365,7 +365,7 @@ The dashboard is **read-only** — all writes happen through session commands an
 #### Next Iterations (post-MVP)
 
 **v2 — Real-time updates:**
-- Add `internal/watcher/watcher.go` (fsnotify wrapper) to watch `~/.ai-session/features/`
+- Add `internal/watcher/watcher.go` (fsnotify wrapper) to watch `~/.features/`
 - Add SSE endpoint (`/events`) that pushes a reload signal on file changes
 - Add minimal JS on the frontend to listen for SSE and refresh the page/component
 
@@ -404,7 +404,7 @@ The dashboard is **read-only** — all writes happen through session commands an
 | Go CLI (`ai-session`) — CLI subcommands | ✅ Done | 15 subcommands: `create-feature`, `resolve-feature-dir`, `append-log`, `update-task`, `update-slice`, `plan-list`, `plan-get`, `plan-write`, `plan-enrich-task`, `plan-split-task`, `load-context`, `implement`, `review`, `review-write`, `address-feedback`. Cobra CLI, yaml.Node API, testify. Makefile with build/test/lint. `plan-write` validates schema + writes atomically; `plan-enrich-task` updates single task field with injection guard and status lock; `plan-split-task` replaces one todo task with N atomic subtasks; `load-context` outputs feature dir files as XML blocks; `implement` is the Go orchestrator for the implementation phase (see `/session:implement` row). `review` fetches a diff and pipes it to a headless LLM prompt — supports `--strategy=branch` (full branch diff vs origin, default) or `--strategy=last-commit` (uncommitted changes vs HEAD); both strategies include untracked files. `review-write` validates and atomically writes review findings from stdin. `ai-session address-feedback sc-1234 [--regular] [--docs] [--devops] [--remote]`
 Reads open findings per review type via `internal/review` and pipes each to `gemini --yolo` using the headless address-feedback prompt. This command now uses the same retry and verification engine as `implement`, running the project's verification command after each attempt and retrying on failure. The `--remote` flag also fetches and addresses unresolved inline PR review threads from GitHub. |
 | `address-feedback --remote` | ✅ Done | Fetches unresolved PR review threads via `gh pr view --json reviewThreads` (no positional branch arg; `cmd.Dir` used for context) and injects them into a new `headless/session/address-feedback-remote.md` prompt. `internal/github` package (`GetUnresolvedReviewThreads`) encapsulates all GitHub CLI interactions; file-level comments omit the `:0` line suffix. Two new `pipeline_step` values: `feedback-local-done` and `feedback-remote-done`. Template uses `{{feature_dir}}` placeholder, replaced by the orchestrator at runtime. |
-| Go CLI (`ai-session serve`) — dashboard | ✅ Done | MVP read-only dashboard. Scans `~/.ai-session/features/` on each request. Feature list with repo/status filters. Per-feature: story ID, repo, mode, pipeline step, running indicator (`kill(pid,0)`), last done task. Quick-launch icons (📁 Finder / `</>` VSCode / ⬛ Terminal) when `work_dir` set. `GET /action/terminal` endpoint. Go templates + `go:embed`. Port 1004 default, `--port` flag. Graceful shutdown. `status.yaml` scaffolded by `create-feature` with `repo`, `branch`, `work_dir`, `started_at`, `updated_at` from git. |
+| Go CLI (`ai-session serve`) — dashboard | ✅ Done | MVP read-only dashboard. Scans `~/.features/` on each request. Feature list with repo/status filters. Per-feature: story ID, repo, mode, pipeline step, running indicator (`kill(pid,0)`), last done task. Quick-launch icons (📁 Finder / `</>` VSCode / ⬛ Terminal) when `work_dir` set. `GET /action/terminal` endpoint. Go templates + `go:embed`. Port 1004 default, `--port` flag. Graceful shutdown. `status.yaml` scaffolded by `create-feature` with `repo`, `branch`, `work_dir`, `started_at`, `updated_at` from git. |
 
 ### Scripts → Go CLI Migration Path
 

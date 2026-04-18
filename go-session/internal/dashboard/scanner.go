@@ -6,6 +6,8 @@ import (
 	"syscall"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/daniel-talonone/gemini-commands/internal/feature"
 )
 
 // defaultIsAlive checks whether a process is alive using kill(pid, 0).
@@ -16,15 +18,14 @@ func defaultIsAlive(pid int) bool {
 	return syscall.Kill(pid, 0) == nil
 }
 
-// ScanAll walks ~/.ai-session/features/<org>/<repo>/<story-id>/ and returns
+// ScanAll walks ~/.features/<org>/<repo>/<story-id>/ and returns
 // a FeatureState for every story directory found.
 // Returns an empty slice (not an error) if the features root does not exist.
 func ScanAll() ([]FeatureState, error) {
-	home, err := os.UserHomeDir()
+	root, err := feature.FeaturesDir()
 	if err != nil {
 		return nil, err
 	}
-	root := filepath.Join(home, ".ai-session", "features")
 	return ScanRoot(root)
 }
 

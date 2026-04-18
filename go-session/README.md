@@ -32,7 +32,7 @@ ai-session resolve-feature-dir <story-id>
 Prints the resolved path to a feature directory. Resolution order:
 1. If `story-id` contains `/` or starts with `.`/`~` — used as-is.
 2. If `.features/<story-id>/` exists in CWD — used (legacy).
-3. Otherwise — `~/.ai-session/features/<org>/<repo>/<story-id>/`.
+3. Otherwise — `~/.features/<org>/<repo>/<story-id>/`.
 
 ```bash
 ai-session load-context <story-id>
@@ -121,7 +121,7 @@ Headless plan generation. Invokes `gemini --yolo` with a plan prompt, then runs 
 ```bash
 ai-session serve [--port 1004]
 ```
-Starts a read-only HTTP dashboard at `http://localhost:1004`. Scans `~/.ai-session/features/` on every request. Supports filters (`?repo=org/name`, `?status=running|idle|done`) and sorting (`?sort=updated|started&order=asc|desc`). On macOS, exposes `/action/terminal?path=<dir>` and `/action/finder?path=<dir>` endpoints to open a directory in Terminal.app or Finder.
+Starts a read-only HTTP dashboard at `http://localhost:1004`. Scans `~/.features/` on every request. Supports filters (`?repo=org/name`, `?status=running|idle|done`) and sorting (`?sort=updated|started&order=asc|desc`). On macOS, exposes `/action/terminal?path=<dir>` and `/action/finder?path=<dir>` endpoints to open a directory in Terminal.app or Finder.
 
 ## Package structure
 

@@ -334,7 +334,7 @@ func TestFeatureDetailHandler(t *testing.T) {
 
 		home, err := os.UserHomeDir()
 		require.NoError(t, err)
-		featureDir := filepath.Join(home, ".ai-session", "features", repo, featureID)
+		featureDir := filepath.Join(home, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "description.md"), []byte("# "+featureID), 0755))
 		defer func() { _ = os.RemoveAll(featureDir) }()

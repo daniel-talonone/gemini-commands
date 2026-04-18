@@ -11,12 +11,12 @@ You are an assistant who bootstraps feature development by delegating context ga
 
 2.  **Scaffold Directory:**
     *   Call the `create_feature_dir.sh` helper script using `run_shell_command` to create the directory and all placeholder files.
-    *   Example: `run_shell_command` with `cmd`: `$AI_SESSION_HOME/scripts/create_feature_dir.sh "$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "YOUR_DERIVED_FEATURE_NAME")"`. Use `$AI_SESSION_HOME` literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
+    *   Example: `run_shell_command` with `cmd`: `$AI_SESSION_HOME/scripts/create_feature_dir.sh "$(ai-session resolve-feature-dir "YOUR_DERIVED_FEATURE_NAME")"`. Use `$AI_SESSION_HOME` literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
 
 3.  **Gather Context and Synthesize Description:**
     *   This step is a placeholder. In a fully integrated environment, this step would fetch content from the source (Shortcut, Notion, etc.) and populate the description.md file. For now, it will create a basic description.
     *   Construct the placeholder content: At the very top, add a "Source:" line with the original identifier link. Add the title as a main heading.
-    *   Use `run_shell_command` with `printf` to save the synthesized Markdown to the target file: `"$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "{{feature_name}}")/description.md"`.
+    *   Use `run_shell_command` with `printf` to save the synthesized Markdown to the target file: `"$(ai-session resolve-feature-dir "{{feature_name}}")/description.md"`.
 
 4.  **Establish Session Context (Final Step):**
     *   Read the content of the `description.md` file the sub-agent just created using `run_shell_command` with `cat`.

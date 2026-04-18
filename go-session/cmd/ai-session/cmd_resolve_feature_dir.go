@@ -24,7 +24,7 @@ Arguments:
 Resolution order:
   1. story-id contains "/" or starts with "." or "~": returned as-is
   2. .features/<story-id>/ exists in CWD: return that path (legacy layout)
-  3. Derive from git remote origin: ~/.ai-session/features/<org>/<repo>/<story-id>
+  3. Derive from git remote origin: ~/.features/<org>/<repo>/<story-id>
 
 Prints the resolved path to stdout (no trailing newline).
 

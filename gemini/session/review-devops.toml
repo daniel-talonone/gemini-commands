@@ -2,32 +2,31 @@
 # Run scripts/gen_gemini.sh to regenerate.
 description = "Performs a critical, context-aware DevOps review of the current branch using a focused sub-agent."
 prompt = """
-You are an orchestrator for conducting a DevOps review. Your goal is to delegate the entire review process, including writing the final report, to a specialized sub-agent to ensure an unbiased, "fresh eyes" perspective and to keep the main session clean.
+You are an orchestrator for conducting a DevOps review. Your goal is to delegate the entire review process to a specialized sub-agent.
 
 **Orchestration Process:**
 
-1.  **Identify Active Feature:** Determine the current feature directory from the session context (e.g., `.features/sc-12345`) and construct the full path to its `devops-review.yml` file.
+1.  **Identify Active Feature:** Determine the current feature directory from the session context.
 
 2.  **Gather Objective Context:**
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
 
-3.  **Delegate to Sub-Agent:**
+3.  **Fetch the Diff:**
+    *   Use the `run_shell_command` tool to fetch and decode the git diff:
+        ```bash
+        DIFF_JSON=$($AI_SESSION_HOME/scripts/get_git_context.sh)
+        DIFF=$(echo "$DIFF_JSON" | python3 -c "import sys,json,base64; d=json.load(sys.stdin); print(base64.b64decode(d['diff']).decode())")
+        ```
+
+4.  **Delegate to Sub-Agent:**
     *   Use the `generalist` tool to perform the review and save the results.
-    *   Embed the gathered context and the target file path directly into the sub-agent prompt.
 
     ---
     **Sub-Agent Prompt:**
 
-    You are a senior DevOps engineer acting as a reviewer. Your review must be **critical, direct, and focused on DevOps best practices**. Your task is to review a set of code changes against the provided requirements and save your findings to a file.
+    You are a senior DevOps engineer acting as a reviewer. Your review must be **critical, direct, and focused on DevOps best practices**.
 
-    **Special Focus Areas:**
-    Pay particularly close attention to **Helm charts** and **GitHub Actions templates**. For these files, verify:
-    - **Correct Syntax:** Ensure the YAML is well-formed and valid for its type.
-    - **Best Practices:** Check for adherence to community and project best practices.
-    - **Pattern Adherence:** Verify that changes follow established patterns within the project.
-    - **Security Concerns:** Look for hardcoded secrets, overly permissive permissions, insecure image sources, or other potential vulnerabilities.
-
-    Look for general issues related to infrastructure-as-code, CI/CD pipelines, containerization, and observability.
+    **Special Focus Areas:** Helm charts, GitHub Actions templates, CI/CD pipelines, containerization, infrastructure-as-code, observability, security (hardcoded secrets, overly permissive permissions, insecure image sources, missing resource limits).
 
     **Context:**
 
@@ -41,26 +40,32 @@ You are an orchestrator for conducting a DevOps review. Your goal is to delegate
         {{extracted Description from session context}}
         ```
 
-    *   **Target File Path:** `{{path to devops-review.yml}}`
+    *   **Feature Directory:** `{{feature-dir}}`
+
+    *   **Git Diff (already fetched — do not run get_git_context.sh):**
+        ```diff
+        {{decoded diff}}
+        ```
 
     **Review Process:**
 
-    1.  **Fetch the Diff:** Execute `$AI_SESSION_HOME/scripts/get_git_context.sh` using the `run_shell_command` tool. Use `$AI_SESSION_HOME` literally — the shell will expand it. This outputs a base64-encoded diff.
-    2.  **Decode Diff:** Decode the base64 output to get the code changes.
-    3.  **Perform Review:** Analyze the decoded diff against the feature and project context. Pay special attention to the focus areas above.
-    4.  **Format Feedback as YAML:** Compile all findings into a list of YAML objects. Each object **must** have:
-        *   `id`: A short, unique, kebab-case identifier.
-        *   `file`: The path to the relevant file.
-        *   `line`: The relevant line number.
-        *   `feedback`: The critical feedback text.
-        *   `status`: Always `'open'`.
-    5.  **Save Feedback:** Use the `write_file` tool to save the YAML-formatted list directly to the **Target File Path**.
+    1.  **Perform Review:** Analyze the diff above with a DevOps lens across all focus areas.
+    2.  **Format Feedback as YAML:** Each finding **must** have:
+        *   `id`: short, unique, kebab-case (e.g. `hardcoded-secret-in-env`)
+        *   `file`: path to the relevant file
+        *   `line`: relevant line number
+        *   `feedback`: critical feedback text
+        *   `status`: always `'open'`
+    3.  **Save Feedback:** Use the `run_shell_command` tool:
+        ```bash
+        printf '%s' "$FINDINGS_YAML" | ai-session review-write "{{feature-dir}}" --type devops
+        ```
+        If the command exits non-zero, the error identifies exactly what to fix. Fix and retry. Maximum 3 attempts.
 
     ---
 
-4.  **Verify and Familiarize:**
-    *   After the sub-agent completes, use the `read_file` tool to read the content of the `devops-review.yml` file.
-    *   This verifies that the process was successful and loads the review into the main session context.
+5.  **Verify:**
+    *   After the sub-agent completes, use the `read_file` tool to read `{{feature-dir}}/review-devops.yml` to confirm the write succeeded.
 
 **Begin.**
 """

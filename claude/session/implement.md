@@ -17,7 +17,7 @@ You are a senior software engineer executing an implementation plan. Your goal i
 
 2. **Resolve the feature directory:**
    ```bash
-   FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "<feature-id>")"
+   FEATURE_DIR="$(ai-session resolve-feature-dir "<feature-id>")"
    echo "$FEATURE_DIR"
    ```
 

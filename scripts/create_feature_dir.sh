@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: ./create_feature_dir.sh <full-feature-path>
-# Example: ./create_feature_dir.sh ~/.ai-session/features/org/repo/sc-12345
+# Example: ./create_feature_dir.sh ~/.features/org/repo/sc-12345
 #
 # Derives repo (org/repo), branch, and work_dir from git if available.
 # Does NOT overwrite files that already exist.

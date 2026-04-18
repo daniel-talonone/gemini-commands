@@ -6,7 +6,7 @@ Claude Code. The commands orchestrate a lifecycle for feature development, from
 creation and planning to review and pull request generation.
 
 The core of the workflow revolves around a "feature directory" (stored by default in
-`~/.ai-session/features/<org>/<repo>/<feature-id>/`) which acts as a single source
+`~/.features/<org>/<repo>/<feature-id>/`) which acts as a single source
 of truth for a given task, and an `AGENTS.md` file in each project which provides
 global context. See `spec/session/example-feature-document/` for a complete example
 of a feature directory.
@@ -74,7 +74,7 @@ terminal. Both tools use the same `/session:` prefix.
   `$AI_SESSION_HOME/scripts/` in all commands. Added to `$PATH` via `setup.sh`.
   Key scripts:
   - `scripts/load_context_files.sh` — **DEPRECATED**. Use `ai-session load-context <story-id>` instead.
-  - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.ai-session/features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`. Each row shows 📁/`</>`/⬛ quick-launch icons when `work_dir` is set in `status.yaml`.
+  - `ai-session serve [--port 1004]` — starts a read-only dashboard at http://localhost:1004. Scans `~/.features/` on every request. Filters: `?repo=org/name`, `?status=running|idle|done`. Each row shows 📁/`</>`/⬛ quick-launch icons when `work_dir` is set in `status.yaml`.
   - `GET /action/terminal?path=<dir>` — dashboard endpoint that opens Terminal.app at the given directory (macOS only).
   - `ai-session implement <story-id>` — Go orchestrator for the implementation phase. Resolves the feature dir, reads `AGENTS.md` for the verification command, runs an initial verification gate, iterates plan.yml slices (with dependency checks) and tasks, invokes `gemini --yolo` via stdin for each task, retries up to 5 times on verification failure, updates task/slice statuses atomically, and sets `pipeline_step: implement-done` on completion.
 - **Session Context Pattern:** To reduce token consumption, session commands use an

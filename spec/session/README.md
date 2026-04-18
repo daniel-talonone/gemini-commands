@@ -160,7 +160,7 @@ Please check the file [Command Details](command_details.md) for a full breakdown
 
     Example:
     ```
-    ~/.ai-session/features/org/repo/sc-12345/
+    ~/.features/org/repo/sc-12345/
         description.md     # what: requirements and acceptance criteria
         architecture.md    # how: optional implementation strategy, pattern refs, constraints, slice hints
         plan.yml           # in what order: execution steps

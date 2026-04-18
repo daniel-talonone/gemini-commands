@@ -63,7 +63,7 @@ func TestResolveFeatureDir_HTTPSRemote(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.True(t, strings.HasSuffix(result, filepath.Join("myorg", "myrepo", "sc-1234")))
-	assert.Contains(t, result, ".ai-session/features/")
+	assert.Contains(t, result, ".features/")
 }
 
 func TestResolveFeatureDir_SSHRemote(t *testing.T) {
@@ -73,7 +73,7 @@ func TestResolveFeatureDir_SSHRemote(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.True(t, strings.HasSuffix(result, filepath.Join("myorg", "myrepo", "sc-1234")))
-	assert.Contains(t, result, ".ai-session/features/")
+	assert.Contains(t, result, ".features/")
 }
 
 func TestResolveFeatureDir_NoRemoteNoLocal(t *testing.T) {

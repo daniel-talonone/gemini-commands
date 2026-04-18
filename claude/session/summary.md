@@ -11,7 +11,7 @@ The user has provided a feature directory name as an argument: `$ARGUMENTS`.
 1.  **Load Context:**
     *   Resolve the feature directory, then execute the `load_context_files.sh` script using the Bash tool:
         ```bash
-        FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "$ARGUMENTS")"
+        FEATURE_DIR="$(ai-session resolve-feature-dir "$ARGUMENTS")"
         if [ ! -d "$FEATURE_DIR" ]; then
           echo "Error: Feature directory not found for '$ARGUMENTS'." >&2
           exit 1

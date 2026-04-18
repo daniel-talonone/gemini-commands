@@ -35,7 +35,7 @@ Arguments:
 Resolution order:
   1. story-id contains "/" or starts with "." or "~": used as-is
   2. .features/<story-id>/ exists in CWD: use that path (legacy layout)
-  3. Derive from git remote origin: ~/.ai-session/features/<org>/<repo>/<story-id>
+  3. Derive from git remote origin: ~/.features/<org>/<repo>/<story-id>
 
 Errors:
   - Feature directory does not exist after resolution

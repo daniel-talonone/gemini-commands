@@ -12,7 +12,7 @@ The feature identifier is: {{args}}
 
 1. **Resolve Feature Directory:**
    Run via `run_shell_command`:
-     FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "{{args}}")"
+     FEATURE_DIR="$(ai-session resolve-feature-dir "{{args}}")"
    If the directory does not exist, exit with an error message.
 
 2. **Load Context:**

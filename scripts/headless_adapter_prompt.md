@@ -80,7 +80,7 @@ The headless command runs in a stateless pipeline with no prior conversation his
 Any step that says "find the Session Context block in the conversation history" must
 instead read the relevant files directly from disk using the feature directory path
 derived from the argument via `run_shell_command`:
-  FEATURE_DIR="$($AI_SESSION_HOME/scripts/resolve_feature_dir.sh "{{args}}")"
+  FEATURE_DIR="$(ai-session resolve-feature-dir "{{args}}")"
 
 ---
 

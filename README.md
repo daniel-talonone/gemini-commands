@@ -114,7 +114,7 @@ ai-session serve           # http://localhost:1004
 ai-session serve --port 8080
 ```
 
-Filter by repo (`?repo=org/name`) or status (`?status=running|idle|done`). The page scans `~/.ai-session/features/` on every refresh — no caching, no background process.
+Filter by repo (`?repo=org/name`) or status (`?status=running|idle|done`). The page scans `~/.features/` on every refresh — no caching, no background process.
 
 ## Go CLI
 

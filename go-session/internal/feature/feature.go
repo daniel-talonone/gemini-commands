@@ -83,11 +83,21 @@ func ResolveFeatureDir(storyID, cwd, remoteURL string) (string, error) {
 		return "", fmt.Errorf("cannot parse org/repo from remote URL: %s", remoteURL)
 	}
 
+	base, err := FeaturesDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(base, orgRepo, storyID), nil
+}
+
+// FeaturesDir returns the root directory where all feature directories are stored.
+// This is the single source of truth for the features base path.
+func FeaturesDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolving home directory: %w", err)
 	}
-	return filepath.Join(home, ".ai-session", "features", orgRepo, storyID), nil
+	return filepath.Join(home, ".features"), nil
 }
 
 // LoadContext reads all .md, .yml, .yaml files from featureDir (excluding _* files),

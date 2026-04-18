@@ -6,26 +6,30 @@ You are an orchestrator for conducting a documentation review. Your goal is to d
 
 **Orchestration Process:**
 
-1.  **Identify Active Feature:** Determine the current feature directory from the session context (e.g., `.features/sc-12345`) and construct the full path to its `docs-review.yml` file.
+1.  **Identify Active Feature:** Determine the current feature directory from the session context.
 
 2.  **Gather Objective Context:**
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
 
-3.  **Delegate to Sub-Agent:**
-    *   Use the generalist tool to perform the review and save the results.
-    *   Embed the gathered context and the target file path directly into the sub-agent prompt.
+3.  **Fetch the Diff:**
+    *   Use the `run_shell_command` tool to fetch and decode the git diff:
+        ```bash
+        DIFF_JSON=$($AI_SESSION_HOME/scripts/get_git_context.sh)
+        DIFF=$(echo "$DIFF_JSON" | python3 -c "import sys,json,base64; d=json.load(sys.stdin); print(base64.b64decode(d['diff']).decode())")
+        ```
+
+4.  **Delegate to Sub-Agent:**
+    *   Use the `generalist` tool to perform the review and save the results.
 
     ---
     **Sub-Agent Prompt:**
 
-    You are a senior technical writer responsible for ensuring documentation quality and consistency. Your review must be **critical, direct, and focused on clarity, accuracy, and completeness**. Your task is to review a set of code changes for their impact on documentation and save your findings to a file.
+    You are a senior technical writer responsible for ensuring documentation quality and consistency. Your review must be **critical, direct, and focused on clarity, accuracy, and completeness**.
 
-    **Special Focus Areas:**
-    Your primary goal is to determine if the code changes require corresponding documentation updates and whether those updates have been made correctly.
-    1.  **Identify Documentation Files:** Analyze the **Project Context** to identify the locations of key documentation files (READMEs, ADRs, OpenAPI specs).
-    2.  **Analyze Code Changes:** Review the code diff to understand the changes made.
-    3.  **Cross-reference:** Compare the code changes with the identified documentation files. Have function signatures changed? Have API endpoints been added or modified? Has a core architectural pattern been altered?
-    4.  **Verify Updates:** Check if the relevant documentation files have been updated to reflect the code changes.
+    **Special Focus Areas:** Determine if the code changes require documentation updates and whether those updates have been made correctly.
+    1.  Identify documentation files (READMEs, ADRs, OpenAPI specs) from the Project Context.
+    2.  Review code changes for impact: changed function signatures, new/modified API endpoints, altered architectural patterns.
+    3.  Verify documentation has been updated to reflect the changes.
 
     **Context:**
 
@@ -39,24 +43,32 @@ You are an orchestrator for conducting a documentation review. Your goal is to d
         {{extracted Description from session context}}
         ```
 
-    *   **Target File Path:** `{{path to docs-review.yml}}`
+    *   **Feature Directory:** `{{feature-dir}}`
+
+    *   **Git Diff (already fetched — do not run get_git_context.sh):**
+        ```diff
+        {{decoded diff}}
+        ```
 
     **Review Process:**
 
-    1.  **Fetch the Diff:** Execute `$AI_SESSION_HOME/scripts/get_git_context.sh` using the run_shell_command tool. Use `$AI_SESSION_HOME` literally — the shell will expand it. This outputs a base64-encoded diff.
-    2.  **Decode Diff:** Decode the base64 output to get the code changes.
-    3.  **Perform Review:** Following the process above, analyze the changes and their impact on documentation.
-    4.  **Format Feedback as YAML:** Compile all findings into a list of YAML objects. Each object **must** have:
-        *   `id`: A short, unique, kebab-case identifier (e.g., `missing-readme-update`).
-        *   `file`: The path to the documentation file that needs changes.
-        *   `line`: The relevant line number (or 0 if it's a general file issue).
-        *   `feedback`: The critical feedback text.
-        *   `status`: Always `'open'`.
-    5.  **Save Feedback:** Use the write_file tool to save the YAML-formatted list directly to the **Target File Path**.
+    1.  **Perform Review:** Analyze the diff above for documentation impact.
+    2.  **Format Feedback as YAML:** Each finding **must** have:
+        *   `id`: short, unique, kebab-case (e.g. `missing-readme-update`)
+        *   `file`: path to the documentation file that needs changes
+        *   `line`: relevant line number (0 if general)
+        *   `feedback`: critical feedback text
+        *   `status`: always `'open'`
+    3.  **Save Feedback:** Use the `run_shell_command` tool:
+        ```bash
+        printf '%s' "$FINDINGS_YAML" | ai-session review-write "{{feature-dir}}" --type docs
+        ```
+        If the command exits non-zero, the error identifies exactly what to fix. Fix and retry. Maximum 3 attempts.
 
     ---
 
-4.  **Verify and Familiarize:**
-    *   After the sub-agent completes, use the read_file tool to read the content of the `docs-review.yml` file.
-    *   This verifies that the process was successful and loads the review into the main session context.
+5.  **Verify:**
+    *   After the sub-agent completes, use the `read_file` tool to read `{{feature-dir}}/review-docs.yml` to confirm the write succeeded.
+
+**Begin.**
 """
