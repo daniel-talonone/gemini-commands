@@ -15,6 +15,7 @@ import (
 	"github.com/daniel-talonone/gemini-commands/internal/dashboard"
 	"github.com/daniel-talonone/gemini-commands/internal/description"
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
+	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 )
 
@@ -40,6 +41,7 @@ type FeatureDetailData struct {
 	PRURL       string
 	StoryURL    string
 	WorkDir     string
+	Plan        plan.Plan
 }
 
 // Server is the dashboard HTTP server.
@@ -282,7 +284,9 @@ func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerF
 			data.StoryURL = st.StoryURL
 			data.WorkDir = st.WorkDir
 		}
-
+		if pln, err := plan.LoadPlan(dir); err == nil {
+			data.Plan = pln
+		}
 		var buf bytes.Buffer
 		if err := tmpl.ExecuteTemplate(&buf, "feature_detail", data); err != nil {
 			http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)

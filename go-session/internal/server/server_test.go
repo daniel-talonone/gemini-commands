@@ -338,6 +338,27 @@ func TestFeatureDetailHandler(t *testing.T) {
   </div>
 </details>
 {{end}}
+{{if .Plan}}
+<details open>
+  <summary>Plan</summary>
+  <div class="plan-content">
+    {{range .Plan}}
+    <div class="slice">
+      <h3>{{.ID}} — {{.Description}}</h3>
+      <span class="status-badge {{.Status}}">{{.Status}}</span>
+      <ul>
+        {{range .Tasks}}
+        <li>
+          <strong>{{.ID}}</strong>: {{.Task}}
+          <span class="status-badge {{.Status}}">{{.Status}}</span>
+        </li>
+        {{end}}
+      </ul>
+    </div>
+    {{end}}
+  </div>
+</details>
+{{end}}
 {{end}}`
 
 	funcMap := template.FuncMap{
@@ -435,4 +456,81 @@ func TestFeatureDetailHandler(t *testing.T) {
 		assert.NotContains(t, body, "<details>", "expected no details section when description is missing")
 		assert.NotContains(t, body, "<summary>Description</summary>", "expected no description summary")
 	})
+
+	t.Run("plan.yml exists and is loaded", func(t *testing.T) {
+		featureID := "sc-plan-exists"
+		repo := "org/repo_name"
+
+		home, err := os.UserHomeDir()
+		require.NoError(t, err)
+		featureDir := filepath.Join(home, ".features", repo, featureID)
+		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+		defer func() { _ = os.RemoveAll(featureDir) }()
+
+		// Create a plan.yml file
+		planContent := `- id: slice-1
+  description: First slice
+  status: todo
+  tasks:
+    - id: task-1
+      task: First task
+      status: todo
+    - id: task-2
+      task: Second task
+      status: in-progress
+- id: slice-2
+  description: Second slice
+  status: in-progress
+  tasks:
+    - id: task-3
+      task: Third task
+      status: done
+`
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "plan.yml"), []byte(planContent), 0644))
+
+		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+
+		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+		rr := httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+		require.Equal(t, http.StatusOK, rr.Code)
+
+		body := rr.Body.String()
+		// Verify plan section is rendered
+		assert.Contains(t, body, "slice-1", "expected slice ID to be rendered")
+		assert.Contains(t, body, "First slice", "expected slice description to be rendered")
+		assert.Contains(t, body, "task-1", "expected task ID to be rendered")
+		assert.Contains(t, body, "todo", "expected status badge to be rendered")
+		assert.Contains(t, body, "in-progress", "expected in-progress status badge to be rendered")
+		assert.Contains(t, body, "done", "expected done status badge to be rendered")
+	})
+
+	t.Run("missing plan.yml hides plan section", func(t *testing.T) {
+		featureID := "sc-no-plan"
+		repo := "org/repo_name"
+
+		home, err := os.UserHomeDir()
+		require.NoError(t, err)
+		featureDir := filepath.Join(home, ".features", repo, featureID)
+		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+		// Do NOT create plan.yml
+		defer func() { _ = os.RemoveAll(featureDir) }()
+
+		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+
+		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+		rr := httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+		require.Equal(t, http.StatusOK, rr.Code)
+
+		body := rr.Body.String()
+		// Verify feature still renders but plan section doesn't
+		assert.Contains(t, body, "<h1>sc-no-plan</h1>", "expected feature ID to be rendered")
+		// The plan section should not be rendered (checking for plan-specific content)
+		assert.NotContains(t, body, "Plan", "expected no Plan section when plan is missing")
+		assert.NotContains(t, body, "task-1", "expected no task IDs when plan is missing")
+	})
+
 }

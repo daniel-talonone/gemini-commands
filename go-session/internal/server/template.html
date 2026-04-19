@@ -42,6 +42,8 @@
     .running { color: #2a7a2a; font-weight: bold; }
     .done    { color: #0055aa; }
     .idle    { color: #888; }
+    .todo    { color: #999; }
+    .in-progress { color: #2a7a2a; font-weight: bold; }
     .empty   { color: #aaa; font-style: italic; }
     .actions a { text-decoration: none; margin-right: 0.4rem; font-size: 1rem; }
     .actions a:hover { opacity: 0.7; }
@@ -55,6 +57,16 @@
     .description-content code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 2px; font-family: monospace; }
     .description-content pre { background: #f5f5f5; padding: 0.8rem; border-radius: 3px; overflow-x: auto; margin: 0.5rem 0; }
     .description-content pre code { background: none; padding: 0; }
+    .status-badge { padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.85rem; font-weight: bold; }
+    .status-badge.todo { background: #fff3cd; color: #856404; }
+    .status-badge.in-progress { background: #d1ecf1; color: #0c5460; }
+    .status-badge.done { background: #d4edda; color: #155724; }
+    .plan-content { margin-top: 0.8rem; }
+    .slice { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+    .slice h3 { margin: 0.5rem 0; font-size: 1rem; }
+    .slice ul { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .slice li { margin: 0.3rem 0; }
+
   </style>
 </head>
 <body>
@@ -127,6 +139,42 @@
   <footer>{{len .Features}} feature(s) shown &mdash; refresh to update</footer>
 
   {{define "feature_detail"}}
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ai-session — {{.ID}}</title>
+    <style>
+      body { font-family: monospace; padding: 1rem 2rem; background: #fafafa; color: #222; }
+      h1 { margin-bottom: 0.5rem; font-size: 1.4rem; }
+      a { color: #0055aa; }
+      .running { color: #2a7a2a; font-weight: bold; }
+      .done    { color: #0055aa; }
+      .idle    { color: #888; }
+      .todo    { color: #999; }
+      .in-progress { color: #2a7a2a; font-weight: bold; }
+      details { margin: 1rem 0; border: 1px solid #ddd; border-radius: 3px; padding: 0.8rem; background: #fafafa; }
+      summary { cursor: pointer; font-weight: bold; user-select: none; padding: 0.3rem; margin: -0.3rem; }
+      summary:hover { background: #f0f0f0; border-radius: 2px; }
+      .description-content { margin-top: 0.8rem; line-height: 1.6; }
+      .description-content h1, .description-content h2, .description-content h3 { margin: 1rem 0 0.5rem 0; font-size: 1rem; }
+      .description-content ul, .description-content ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+      .description-content code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 2px; font-family: monospace; }
+      .description-content pre { background: #f5f5f5; padding: 0.8rem; border-radius: 3px; overflow-x: auto; margin: 0.5rem 0; }
+      .description-content pre code { background: none; padding: 0; }
+      .status-badge { padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.85rem; font-weight: bold; }
+      .status-badge.todo { background: #fff3cd; color: #856404; }
+      .status-badge.in-progress { background: #d1ecf1; color: #0c5460; }
+      .status-badge.done { background: #d4edda; color: #155724; }
+      .plan-content { margin-top: 0.8rem; }
+      .slice { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+      .slice h3 { margin: 0.5rem 0; font-size: 1rem; }
+      .slice ul { margin: 0.5rem 0; padding-left: 1.5rem; }
+      .slice li { margin: 0.3rem 0; }
+    </style>
+  </head>
+  <body>
   <a href="/">← Back</a>
   <h1>{{.ID}}</h1>
   <p>
@@ -151,6 +199,30 @@
     </div>
   </details>
   {{end}}
+  {{if .Plan}}
+  <details open>
+    <summary>Plan</summary>
+    <div class="plan-content">
+      {{range .Plan}}
+      <div class="slice">
+        <h3>{{.ID}} — {{.Description}}</h3>
+        <span class="status-badge {{.Status}}">{{.Status}}</span>
+        <ul>
+          {{range .Tasks}}
+          <li>
+            <strong>{{.ID}}</strong>: {{.Task}}
+            <span class="status-badge {{.Status}}">{{.Status}}</span>
+          </li>
+          {{end}}
+        </ul>
+      </div>
+      {{end}}
+    </div>
+  </details>
+  {{end}}
+
+  </body>
+  </html>
   {{end}}
 </body>
 </html>
