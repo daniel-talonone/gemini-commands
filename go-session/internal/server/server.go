@@ -15,6 +15,7 @@ import (
 	"github.com/daniel-talonone/gemini-commands/internal/dashboard"
 	"github.com/daniel-talonone/gemini-commands/internal/description"
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
+	"github.com/daniel-talonone/gemini-commands/internal/log"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 )
@@ -36,6 +37,7 @@ type PageData struct {
 type FeatureDetailData struct {
 	ID          string
 	Description template.HTML
+	Log         template.HTML
 	Repo        string
 	Branch      string
 	PRURL       string
@@ -278,6 +280,11 @@ func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerF
 		desc, _ := description.LoadDescription(dir)
 
 		data := FeatureDetailData{ID: id, Description: description.RenderMarkdown(desc), Repo: found.Repo}
+
+		// Load and render log
+		logContent, _ := log.LoadLog(dir)
+		data.Log = description.RenderMarkdown(logContent)
+
 		if st, err := status.LoadStatus(dir); err == nil {
 			data.Branch = st.Branch
 			data.PRURL = st.PRURL

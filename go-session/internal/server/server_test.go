@@ -338,6 +338,14 @@ func TestFeatureDetailHandler(t *testing.T) {
   </div>
 </details>
 {{end}}
+{{if .Log}}
+<details>
+  <summary>Log</summary>
+  <div class="log-content">
+    {{.Log}}
+  </div>
+</details>
+{{end}}
 {{if .Plan}}
 <details open>
   <summary>Plan</summary>
@@ -453,7 +461,6 @@ func TestFeatureDetailHandler(t *testing.T) {
 		assert.Contains(t, body, "<h1>sc-67890</h1>", "expected feature ID to be rendered")
 		assert.Contains(t, body, "org/repo_name", "expected repo to be rendered")
 		// Verify description section is hidden
-		assert.NotContains(t, body, "<details>", "expected no details section when description is missing")
 		assert.NotContains(t, body, "<summary>Description</summary>", "expected no description summary")
 	})
 
@@ -533,4 +540,116 @@ func TestFeatureDetailHandler(t *testing.T) {
 		assert.NotContains(t, body, "task-1", "expected no task IDs when plan is missing")
 	})
 
+}
+
+func TestFeatureDetailHandler_LogLoading(t *testing.T) {
+	// Template with Log section support
+	tmplContent := `{{define "feature_detail"}}
+<a href="/">← Back</a>
+<h1>{{.ID}}</h1>
+{{if .Log}}
+<details>
+  <summary>Log</summary>
+  <div class="log-content">
+    {{.Log}}
+  </div>
+</details>
+{{end}}
+{{end}}`
+
+	funcMap := template.FuncMap{
+		"safeURL": func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+	require.NoError(t, err)
+
+	mockS := &mockScanner{}
+	srv := server.New(8080, mockS)
+
+	tests := []struct {
+		name              string
+		featureID         string
+		repo              string
+		logContent        string
+		deleteLog         bool
+		assertions        func(t *testing.T, body string)
+	}{
+		{
+			name:       "Log with markdown content is rendered as HTML",
+			featureID:  "sc-log-markdown",
+			repo:       "org/repo",
+			logContent: "# Log Title\n\n**Bold entry** and _italic note_\n\n- Item 1\n- Item 2",
+			deleteLog:  false,
+			assertions: func(t *testing.T, body string) {
+				// Verify log section exists
+				assert.Contains(t, body, "<summary>Log</summary>", "expected Log section summary")
+				assert.Contains(t, body, `<div class="log-content">`, "expected log content div")
+				// Verify markdown rendering
+				assert.Contains(t, body, "<h1>Log Title</h1>", "expected h1 heading from log")
+				assert.Contains(t, body, "<strong>Bold entry</strong>", "expected strong tag from log")
+				assert.Contains(t, body, "<em>italic note</em>", "expected em tag from log")
+				assert.Contains(t, body, "<li>Item 1</li>", "expected list item from log")
+				// Verify HTML tags are not escaped
+				assert.NotContains(t, body, "&lt;h1&gt;", "HTML tags should not be escaped")
+				assert.NotContains(t, body, "&lt;strong&gt;", "HTML tags should not be escaped")
+			},
+		},
+		{
+			name:       "Missing log.md hides log section",
+			featureID:  "sc-no-log",
+			repo:       "org/repo",
+			logContent: "",
+			deleteLog:  true,
+			assertions: func(t *testing.T, body string) {
+				// Verify feature still renders
+				assert.Contains(t, body, "<h1>sc-no-log</h1>", "expected feature ID to be rendered")
+				// Verify log section is hidden
+				assert.NotContains(t, body, "<summary>Log</summary>", "expected no Log section when log.md missing")
+				assert.NotContains(t, body, `<div class="log-content">`, "expected no log content div when log.md missing")
+			},
+		},
+		{
+			name:       "Complex log with code blocks renders correctly",
+			featureID:  "sc-log-code",
+			repo:       "org/repo",
+			logContent: "## Development Notes\n\n```go\nfunc test() {\n  fmt.Println(\"code\")\n}\n```\n\nSee the code above.",
+			deleteLog:  false,
+			assertions: func(t *testing.T, body string) {
+				assert.Contains(t, body, "<h2>Development Notes</h2>", "expected h2 heading from log")
+				assert.Contains(t, body, "<pre>", "expected pre tag for code block")
+				assert.Contains(t, body, "fmt.Println", "expected code content to be preserved")
+				assert.Contains(t, body, "See the code above", "expected text after code block")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home, err := os.UserHomeDir()
+			require.NoError(t, err)
+			featureDir := filepath.Join(home, ".features", tt.repo, tt.featureID)
+			require.NoError(t, feature.CreateFeature(featureDir, tt.repo, "main", ""))
+			defer func() { _ = os.RemoveAll(featureDir) }()
+
+			logPath := filepath.Join(featureDir, "log.md")
+			if tt.deleteLog {
+				// Remove the auto-created log.md file to test missing log scenario
+				require.NoError(t, os.Remove(logPath))
+			} else if tt.logContent != "" {
+				// Overwrite with custom content
+				require.NoError(t, os.WriteFile(logPath, []byte(tt.logContent), 0644))
+			}
+
+			mockS.features = []dashboard.FeatureState{{StoryID: tt.featureID, Repo: tt.repo}}
+
+			req := httptest.NewRequest(http.MethodGet, "/feature/"+tt.featureID, nil)
+			rr := httptest.NewRecorder()
+			srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+			require.Equal(t, http.StatusOK, rr.Code)
+			body := rr.Body.String()
+			tt.assertions(t, body)
+		})
+	}
 }
