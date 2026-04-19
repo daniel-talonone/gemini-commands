@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath" // Added missing import
 	"sort"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
+	"github.com/daniel-talonone/gemini-commands/internal/review"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 )
 
@@ -44,8 +46,23 @@ type FeatureDetailData struct {
 	StoryURL    string
 	WorkDir     string
 	Plan        plan.Plan
-}
 
+	// ReviewFiles holds the discovered review type names (e.g., "", "docs", "devops").
+	// Populated by the detail handler via review.DiscoverTypes.
+	ReviewFiles []string
+
+	// SelectedReview is the review type name currently selected in the UI.
+	// Populated from the "review" query parameter.
+	SelectedReview string
+
+	// Reviews holds the findings for the selected review type.
+	// Populated by the detail handler by loading the corresponding review file.
+	Reviews []review.Finding
+
+	// HasOpenFindings is true if any finding in the selected review has status "open".
+	// Populated by the detail handler after loading findings.
+	HasOpenFindings bool
+}
 // Server is the dashboard HTTP server.
 //go:generate mockgen -source=server.go -destination=mock_server.go -package=server
 type Scanner interface {
@@ -294,6 +311,67 @@ func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerF
 		if pln, err := plan.LoadPlan(dir); err == nil {
 			data.Plan = pln
 		}
+
+		// Load review files
+		reviewTypes, err := review.DiscoverTypes(dir)
+		if err != nil {
+			http.Error(w, "error discovering review files: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		selectedReviewType := r.URL.Query().Get("review")
+
+		// Add selected type to list if not present, so dropdown shows it
+		if selectedReviewType != "" {
+			found := false
+			for _, rt := range reviewTypes {
+				if rt == selectedReviewType {
+					found = true
+					break
+				}
+			}
+			if !found {
+				reviewTypes = append(reviewTypes, selectedReviewType)
+				sort.Strings(reviewTypes)
+			}
+		}
+		data.ReviewFiles = reviewTypes
+		data.SelectedReview = selectedReviewType
+
+		var reviewFilename string
+		if len(data.ReviewFiles) > 0 {
+			reviewName := "review"
+			if selectedReviewType != "" {
+				reviewName = "review-" + selectedReviewType
+			}
+
+			// Try .yml first, then .yaml
+			ymlPath := filepath.Join(dir, reviewName+".yml")
+			if _, err := os.Stat(ymlPath); err == nil {
+				reviewFilename = reviewName + ".yml"
+			} else {
+				yamlPath := filepath.Join(dir, reviewName+".yaml")
+				if _, err := os.Stat(yamlPath); err == nil {
+					reviewFilename = reviewName + ".yaml"
+				}
+			}
+		}
+
+		if reviewFilename != "" {
+			findings, err := review.LoadByFilename(dir, reviewFilename)
+			if err != nil {
+				http.Error(w, "error loading review findings: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			data.Reviews = findings
+			for _, f := range findings {
+				if f.Status == "open" {
+					data.HasOpenFindings = true
+					break
+				}
+			}
+		}
+
 		var buf bytes.Buffer
 		if err := tmpl.ExecuteTemplate(&buf, "feature_detail", data); err != nil {
 			http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)

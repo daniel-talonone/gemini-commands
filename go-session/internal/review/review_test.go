@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"gopkg.in/yaml.v3" // Added yaml import
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -265,6 +266,65 @@ func TestAppend_RejectsInvalidStatus_DocsType(t *testing.T) {
 	assert.True(t, os.IsNotExist(statErr), "review-docs.yml must not exist after a rejected write")
 }
 
+// --- DiscoverTypes ---
+
+func TestDiscoverTypes_NoFilesFound(t *testing.T) {
+	dir := t.TempDir()
+	types, err := DiscoverTypes(dir)
+	require.NoError(t, err)
+	assert.Empty(t, types)
+}
+
+func TestDiscoverTypes_DefaultReviewYml(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "review.yml"), []byte(""), 0644))
+	types, err := DiscoverTypes(dir)
+	require.NoError(t, err)
+	assert.Equal(t, []string{""}, types)
+}
+
+func TestDiscoverTypes_DocsReviewYml(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "review-docs.yml"), []byte(""), 0644))
+	types, err := DiscoverTypes(dir)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"docs"}, types)
+}
+
+func TestDiscoverTypes_DevOpsReviewYaml(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "review-devops.yaml"), []byte(""), 0644))
+	types, err := DiscoverTypes(dir)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"devops"}, types)
+}
+
+func TestDiscoverTypes_MixedFilesAndExtensions(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "review.yml"), []byte(""), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "review-docs.yaml"), []byte(""), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "review-custom.yml"), []byte(""), 0644))
+	types, err := DiscoverTypes(dir)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"", "custom", "docs"}, types) // Should be sorted alphabetically
+}
+
+func TestDiscoverTypes_OtherFilesIgnored(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "review.yml"), []byte(""), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "notes.txt"), []byte(""), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.json"), []byte(""), 0644))
+	types, err := DiscoverTypes(dir)
+	require.NoError(t, err)
+	assert.Equal(t, []string{""}, types)
+}
+
+func TestDiscoverTypes_FeatureDirDoesNotExist(t *testing.T) {
+	_, err := DiscoverTypes("/nonexistent/path")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "feature directory does not exist")
+}
+
 // --- Write ---
 
 func TestWrite_HappyPath(t *testing.T) {
@@ -424,6 +484,65 @@ func TestReadFindings_UnknownType(t *testing.T) {
 	dir := t.TempDir()
 	_, err := ReadFindings(dir, Type("unknown"))
 	require.Error(t, err)
+}
+
+// --- LoadByFilename ---
+
+func TestLoadByFilename_FileNotFound(t *testing.T) {
+	dir := t.TempDir()
+	findings, err := LoadByFilename(dir, "review-nonexistent.yml")
+	require.NoError(t, err)
+	assert.Empty(t, findings)
+}
+
+func TestLoadByFilename_HappyPath(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "review-custom.yml")
+	finding := validFinding("custom-find-1")
+	data, err := yaml.Marshal([]Finding{finding})
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path, data, 0644))
+
+	findings, err := LoadByFilename(dir, "review-custom.yml")
+	require.NoError(t, err)
+	require.Len(t, findings, 1)
+	assert.Equal(t, "custom-find-1", findings[0].ID)
+}
+
+func TestLoadByFilename_InvalidYAML(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "review-invalid.yml")
+	require.NoError(t, os.WriteFile(path, []byte(":\tinvalid: yaml: :"), 0644))
+	_, err := LoadByFilename(dir, "review-invalid.yml")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "parsing review-invalid.yml")
+}
+
+func TestLoadByFilename_InvalidFinding_BadStatus(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "review-bad-status.yml")
+	require.NoError(t, os.WriteFile(path, []byte("- id: find-1\n  feedback: oops\n  status: invalid\n"), 0644))
+	_, err := LoadByFilename(dir, "review-bad-status.yml")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid finding in review-bad-status.yml")
+}
+
+func TestLoadByFilename_InvalidFinding_BadID(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "review-bad-id.yml")
+	require.NoError(t, os.WriteFile(path, []byte("- id: Not_Valid\n  feedback: oops\n  status: open\n"), 0644))
+	_, err := LoadByFilename(dir, "review-bad-id.yml")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid finding in review-bad-id.yml")
+}
+
+func TestLoadByFilename_InvalidFinding_EmptyFeedback(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "review-empty-feedback.yml")
+	require.NoError(t, os.WriteFile(path, []byte("- id: find-1\n  feedback: \"\"\n  status: open\n"), 0644))
+	_, err := LoadByFilename(dir, "review-empty-feedback.yml")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid finding in review-empty-feedback.yml")
 }
 
 // --- helpers ---

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort" // Added sort package
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,6 +19,57 @@ const (
 	TypeDevOps  Type = "devops"  // maps to review-devops.yml
 	TypeRemote  Type = "remote"  // virtual type for remote findings
 )
+
+// DiscoverTypes scans the feature directory for review files (review*.yml, review*.yaml)
+// and returns a sorted list of their type names.
+// "" represents review.yml, "docs" for review-docs.yml, etc.
+// Returns an empty slice if no review files are found.
+func DiscoverTypes(featureDir string) ([]string, error) {
+	if _, err := os.Stat(featureDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("feature directory does not exist: %s", featureDir)
+	}
+
+	patterns := []string{
+		filepath.Join(featureDir, "review*.yml"),
+		filepath.Join(featureDir, "review*.yaml"),
+	}
+
+	var matches []string
+	for _, pattern := range patterns {
+		m, err := filepath.Glob(pattern)
+		if err != nil {
+			return nil, fmt.Errorf("globbing for %q: %w", pattern, err)
+		}
+		matches = append(matches, m...)
+	}
+
+	if len(matches) == 0 {
+		return []string{}, nil
+	}
+
+	typeNames := make(map[string]struct{})
+	reviewFileRegex := regexp.MustCompile(`^review-(.+)`)
+	for _, match := range matches {
+		base := filepath.Base(match)
+		ext := filepath.Ext(base)
+		nameWithoutExt := base[:len(base)-len(ext)] // remove .yml or .yaml
+
+		if nameWithoutExt == "review" {
+			typeNames[""] = struct{}{} // Default type for review.yml
+		} else if matches := reviewFileRegex.FindStringSubmatch(nameWithoutExt); len(matches) > 1 {
+			typeName := matches[1]
+			typeNames[typeName] = struct{}{}
+		}
+	}
+
+	var result []string
+	for tn := range typeNames {
+		result = append(result, tn)
+	}
+	sort.Strings(result)
+
+	return result, nil
+}
 
 // Finding represents a single review comment or issue.
 type Finding struct {
@@ -104,8 +156,8 @@ func validate(f Finding) error {
 	if f.Feedback == "" {
 		return fmt.Errorf("finding Feedback must not be empty")
 	}
-	if f.Status != "open" && f.Status != "resolved" {
-		return fmt.Errorf("finding Status %q must be \"open\" or \"resolved\"", f.Status)
+	if f.Status != "open" && f.Status != "resolved" && f.Status != "skipped" {
+		return fmt.Errorf("finding Status %q must be \"open\" or \"resolved\" or \"skipped\"", f.Status)
 	}
 	return nil
 }
@@ -162,21 +214,27 @@ func Load(featureDir string, t Type) ([]Finding, error) {
 	if err != nil {
 		return nil, err
 	}
-	path := filepath.Join(featureDir, name)
+	return LoadByFilename(featureDir, name)
+}
+
+// LoadByFilename reads and validates all findings from a specific review file.
+// Returns an empty slice if the file does not exist.
+func LoadByFilename(featureDir, filename string) ([]Finding, error) {
+	path := filepath.Join(featureDir, filename)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []Finding{}, nil
 		}
-		return nil, fmt.Errorf("reading %s: %w", name, err)
+		return nil, fmt.Errorf("reading %s: %w", filename, err)
 	}
 	var findings []Finding
 	if err := yaml.Unmarshal(data, &findings); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", name, err)
+		return nil, fmt.Errorf("parsing %s: %w", filename, err)
 	}
 	for _, f := range findings {
 		if err := validate(f); err != nil {
-			return nil, fmt.Errorf("invalid finding in %s: %w", name, err)
+			return nil, fmt.Errorf("invalid finding in %s: %w", filename, err)
 		}
 	}
 	return findings, nil

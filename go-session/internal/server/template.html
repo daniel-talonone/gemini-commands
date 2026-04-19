@@ -172,9 +172,31 @@
       .slice h3 { margin: 0.5rem 0; font-size: 1rem; }
       .slice ul { margin: 0.5rem 0; padding-left: 1.5rem; }
       .slice li { margin: 0.3rem 0; }
-    </style>
-  </head>
-  <body>
+
+      /* Review Section Styles */
+      .review-section-content { margin-top: 0.8rem; }
+      .review-file-selector { margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+      .review-card {
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 0.8rem;
+        margin-bottom: 0.5rem;
+        background: #fff;
+      }
+      .review-card.open { border-left: 5px solid #d9534f; } /* Red for open */
+      .review-card.resolved { border-left: 5px solid #5cb85c; } /* Green for resolved */
+      .review-card.skipped { border-left: 5px solid #c0c851; } /* Yellow for skipped */
+      .review-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+      }
+      .review-card-feedback { margin: 0; line-height: 1.5; font-size: 0.9rem; }
+      </style>
+      </head>
+      <body>
   <a href="/">← Back</a>
   <h1>{{.ID}}</h1>
   <p>
@@ -220,6 +242,38 @@
     </div>
   </details>
   {{end}}
+
+  {{if .ReviewFiles}}
+  <details {{if .HasOpenFindings}}open{{end}}>
+    <summary>Review Findings</summary>
+    <div class="review-section-content">
+      <div class="review-file-selector">
+        <label for="review-type">Select Review File:</label>
+        <select id="review-type" onchange="window.location.href = '?review=' + this.value;">
+          {{range .ReviewFiles}}
+            <option value="{{.}}" {{if eq . $.SelectedReview}}selected{{end}}>
+              {{if eq . ""}}review{{else}}review-{{.}}{{end}}
+            </option>
+          {{end}}
+        </select>
+      </div>
+      {{if .Reviews}}
+        {{range .Reviews}}
+        <div class="review-card {{.Status}}">
+          <div class="review-card-header">
+            <strong>{{.File}}:{{.Line}}</strong>
+            <span class="status-badge {{.Status}}">{{.Status}}</span>
+          </div>
+          <p class="review-card-feedback">{{.Feedback}}</p>
+        </div>
+        {{end}}
+      {{else}}
+        <p class="empty">No findings for this review file.</p>
+      {{end}}
+    </div>
+  </details>
+  {{end}}
+
   {{if .Log}}
   <details>
     <summary>Log</summary>

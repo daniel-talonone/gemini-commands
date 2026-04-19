@@ -116,6 +116,10 @@ ai-session serve --port 8080
 
 Filter by repo (`?repo=org/name`) or status (`?status=running|idle|done`). The page scans `~/.features/` on every refresh — no caching, no background process.
 
+### Detail View
+
+The detail view for a feature provides a comprehensive overview of its state. It now supports the discovery of multiple review files (e.g., `review.yml`, `review-docs.yml`). If more than one review file is found, a dropdown selector is displayed, allowing you to switch between the different sets of review findings. This is useful for separating different types of reviews, such as documentation, DevOps, and regular code reviews.
+
 ## Go CLI
 
 The `ai-session` binary provides deterministic file operations used by prompts and orchestrators:

@@ -3,10 +3,15 @@ Adhere to the following writing style: no LLM prose, no adjectives, no superlati
 Especially for the solution, use bullet points and short declarative sentences only. Avoid using a long paragraph explaining everything. Direct and factual.
 Explicitly extract and include any PR URLs referenced in the description content below.
 
-Write ONLY the PR description as plain markdown — no commentary, no explanations, no code fences. Save it by running this shell command, substituting the description in place of the heredoc body:
-  cat << 'EOF' | ai-session pr write-description {{story_id_here}}
-  <PR description here>
-  EOF
+Write ONLY the PR description as plain markdown — no commentary, no explanations, no code fences.
+when you have finished, EXECUTE a shell command like this:
+```
+DESCRIPTION="$(cat <<'EOM'
+<PR description here>
+EOM
+)"
+ai-session pr write-description "{{story_id_here}}" "$DESCRIPTION"
+```
 
 **Context:**
 

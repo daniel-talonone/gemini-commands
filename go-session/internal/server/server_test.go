@@ -311,101 +311,34 @@ func TestHandlerWithRealTemplate(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "just now")
 }
 
-func TestFeatureDetailHandler(t *testing.T) {
-	// Full feature_detail template block to test markdown rendering
-	tmplContent := `{{define "feature_detail"}}
-<a href="/">← Back</a>
-<h1>{{.ID}}</h1>
-<p>
-  {{if .Repo}}<strong>Repo:</strong> <a href="https://github.com/{{.Repo}}" target="_blank">{{.Repo}}</a>{{end}}
-  {{if .Branch}} | <strong>Branch:</strong> {{.Branch}}{{end}}
-  {{if .StoryURL}} | <a href="{{.StoryURL}}" target="_blank">Story</a>{{end}}
-  {{if .PRURL}} | <a href="{{.PRURL}}" target="_blank">Pull Request</a>{{end}}
-</p>
-{{if .WorkDir}}
-<p>
-  <strong>Quick Launch:</strong>
-  <a href="/action/finder?path={{.WorkDir | urlquery}}" title="Open in Finder">📁</a>
-  <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode">VSCode</a>
-  <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
-</p>
-{{end}}
-{{if .Description}}
-<details open>
-  <summary>Description</summary>
-  <div class="description-content">
-    {{.Description}}
-  </div>
-</details>
-{{end}}
-{{if .Log}}
-<details>
-  <summary>Log</summary>
-  <div class="log-content">
-    {{.Log}}
-  </div>
-</details>
-{{end}}
-{{if .Plan}}
-<details open>
-  <summary>Plan</summary>
-  <div class="plan-content">
-    {{range .Plan}}
-    <div class="slice">
-      <h3>{{.ID}} — {{.Description}}</h3>
-      <span class="status-badge {{.Status}}">{{.Status}}</span>
-      <ul>
-        {{range .Tasks}}
-        <li>
-          <strong>{{.ID}}</strong>: {{.Task}}
-          <span class="status-badge {{.Status}}">{{.Status}}</span>
-        </li>
-        {{end}}
-      </ul>
-    </div>
-    {{end}}
-  </div>
-</details>
-{{end}}
-{{end}}`
-
-	funcMap := template.FuncMap{
-		"safeURL": func(s string) template.URL { return template.URL(s) },
-		"urlquery": func(s string) string { return url.QueryEscape(s) },
-	}
-	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+func setupFeatureDetailHandlerTest(t *testing.T) (*server.Server, *template.Template, *mockScanner) {
+	tmplContent, err := os.ReadFile("template.html")
 	require.NoError(t, err)
 
-	mockS := &mockScanner{} // No features needed for this test
+	funcMap := template.FuncMap{
+		"safeURL":  func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(string(tmplContent))
+	require.NoError(t, err)
+
+	mockS := &mockScanner{}
 	srv := server.New(8080, mockS)
+	return srv, tmpl, mockS
+}
 
-	t.Run("feature not found", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/feature/non-existent-feature", nil)
-		rr := httptest.NewRecorder()
-		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+func TestFeatureDetailHandler(t *testing.T) {
+	srv, tmpl, mockS := setupFeatureDetailHandlerTest(t)
 
-		assert.Equal(t, http.StatusNotFound, rr.Code)
-	})
-
-	t.Run("feature found with markdown description", func(t *testing.T) {
-		featureID := "sc-12345"
-		repo := "org/repo_name"
-
-		home, err := os.UserHomeDir()
-		require.NoError(t, err)
+	t.Run("no review files", func(t *testing.T) {
+		featureID := "sc-no-review"
+		repo := "org/repo"
+		home, _ := os.UserHomeDir()
 		featureDir := filepath.Join(home, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
-
-		// Create description.md with diverse markdown content
-		descriptionContent := "# Test Feature\n\n" +
-			"**Bold text** and _italic text_\n\n" +
-			"- Item 1\n- Item 2\n- Item 3\n\n" +
-			"1. First item\n2. Second item\n\n" +
-			"`code snippet`\n\n" +
-			"```go\nfunc main() {\n  fmt.Println(\"test\")\n}\n```"
-
-		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "description.md"), []byte(descriptionContent), 0755))
 		defer func() { _ = os.RemoveAll(featureDir) }()
+		// Remove the default review file to simulate no review files existing
+		require.NoError(t, os.Remove(filepath.Join(featureDir, "review.yml")))
 
 		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
 
@@ -414,132 +347,194 @@ func TestFeatureDetailHandler(t *testing.T) {
 		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
 
 		require.Equal(t, http.StatusOK, rr.Code)
-
-		body := rr.Body.String()
-		// Verify feature metadata is present
-		assert.Contains(t, body, "<h1>sc-12345</h1>")
-		assert.Contains(t, body, "org/repo_name")
-
-		// Verify markdown rendering: headings
-		assert.Contains(t, body, "<h1>Test Feature</h1>", "expected h1 heading to be rendered")
-		// Verify markdown rendering: bold and italic
-		assert.Contains(t, body, "<strong>Bold text</strong>", "expected strong tag for bold text")
-		assert.Contains(t, body, "<em>italic text</em>", "expected em tag for italic text")
-		// Verify markdown rendering: lists
-		assert.Contains(t, body, "<li>Item 1</li>", "expected list items to be rendered")
-		assert.Contains(t, body, "<ol>", "expected ordered list to be rendered")
-		// Verify markdown rendering: inline code
-		assert.Contains(t, body, "<code>code snippet</code>", "expected inline code to be rendered")
-		// Verify markdown rendering: code block
-		assert.Contains(t, body, "<pre>", "expected pre tag for code block")
-		// Verify description section structure
-		assert.Contains(t, body, "<details open>", "expected details section to be open")
-		assert.Contains(t, body, "<summary>Description</summary>", "expected description summary")
+		assert.NotContains(t, rr.Body.String(), "<summary>Review Findings</summary>")
 	})
 
-	t.Run("missing description hides section", func(t *testing.T) {
-		featureID := "sc-67890"
-		repo := "org/repo_name"
-
-		home, err := os.UserHomeDir()
-		require.NoError(t, err)
+	t.Run("default selection", func(t *testing.T) {
+		featureID := "sc-review-default"
+		repo := "org/repo"
+		home, _ := os.UserHomeDir()
 		featureDir := filepath.Join(home, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
-		// Do NOT create description.md
 		defer func() { _ = os.RemoveAll(featureDir) }()
-
 		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "review.yml"), []byte(`- id: find-1
+  feedback: default feedback
+  status: open
+  file: main.go
+  line: 10`), 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "review-docs.yml"), []byte(`- id: find-2
+  feedback: docs feedback
+  status: open`), 0644))
 
 		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
 		rr := httptest.NewRecorder()
 		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
 
 		require.Equal(t, http.StatusOK, rr.Code)
-
 		body := rr.Body.String()
-		// Verify feature metadata is still rendered
-		assert.Contains(t, body, "<h1>sc-67890</h1>", "expected feature ID to be rendered")
-		assert.Contains(t, body, "org/repo_name", "expected repo to be rendered")
-		// Verify description section is hidden
-		assert.NotContains(t, body, "<summary>Description</summary>", "expected no description summary")
+		assert.Contains(t, body, "<summary>Review Findings</summary>")
+		assert.Contains(t, body, `<option value="" selected`)
+		assert.Contains(t, body, "default feedback")
+		assert.NotContains(t, body, "docs feedback")
+		assert.Equal(t, 1, strings.Count(body, `class="review-card open"`))
 	})
 
-	t.Run("plan.yml exists and is loaded", func(t *testing.T) {
-		featureID := "sc-plan-exists"
-		repo := "org/repo_name"
-
-		home, err := os.UserHomeDir()
-		require.NoError(t, err)
+	t.Run("query param selection", func(t *testing.T) {
+		featureID := "sc-review-query"
+		repo := "org/repo"
+		home, _ := os.UserHomeDir()
 		featureDir := filepath.Join(home, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 		defer func() { _ = os.RemoveAll(featureDir) }()
+		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
 
-		// Create a plan.yml file
-		planContent := `- id: slice-1
-  description: First slice
-  status: todo
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "review.yml"), []byte(`- id: find-1
+  feedback: default feedback
+  status: open`), 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "review-docs.yml"), []byte(`- id: find-2
+  feedback: docs feedback
+  status: open
+  file: README.md
+  line: 5`), 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "review-devops.yaml"), []byte(`- id: find-3
+  feedback: devops feedback
+  status: open`), 0644))
+
+		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID+"?review=docs", nil)
+		rr := httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+		require.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, `<option value="docs" selected`)
+		assert.NotContains(t, body, "default feedback")
+		assert.Contains(t, body, "docs feedback")
+		assert.NotContains(t, body, "devops feedback")
+
+		req = httptest.NewRequest(http.MethodGet, "/feature/"+featureID+"?review=devops", nil)
+		rr = httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+		require.Equal(t, http.StatusOK, rr.Code)
+		body = rr.Body.String()
+		assert.Contains(t, body, `<option value="devops" selected`)
+		assert.Contains(t, body, "devops feedback")
+	})
+
+	t.Run("details open with open findings", func(t *testing.T) {
+		featureID := "sc-review-open"
+		repo := "org/repo"
+		home, _ := os.UserHomeDir()
+		featureDir := filepath.Join(home, ".features", repo, featureID)
+		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+		defer func() { _ = os.RemoveAll(featureDir) }()
+		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "review.yml"), []byte(`- id: f1
+  feedback: open
+  status: open`), 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "review-docs.yml"), []byte(`- id: f2
+  feedback: resolved
+  status: resolved`), 0644))
+
+		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+		rr := httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+		require.Equal(t, http.StatusOK, rr.Code)
+		assert.Contains(t, rr.Body.String(), "<details open>", "details should be open when open findings exist")
+
+		req = httptest.NewRequest(http.MethodGet, "/feature/"+featureID+"?review=docs", nil)
+		rr = httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+		require.Equal(t, http.StatusOK, rr.Code)
+		assert.NotContains(t, rr.Body.String(), "<details open>", "details should be closed when no open findings")
+	})
+
+	t.Run("non-existent type gracefully handled", func(t *testing.T) {
+		featureID := "sc-review-nonexistent"
+		repo := "org/repo"
+		home, _ := os.UserHomeDir()
+		featureDir := filepath.Join(home, ".features", repo, featureID)
+		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+		defer func() { _ = os.RemoveAll(featureDir) }()
+		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+		// review.yml is created by default
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "review.yml"), []byte(`- id: f1
+  feedback: default
+  status: open`), 0644))
+
+		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID+"?review=nonexistent", nil)
+		rr := httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+		require.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+
+		assert.Contains(t, body, "<summary>Review Findings</summary>")
+		assert.Contains(t, body, `<option value="nonexistent" selected`)
+		assert.Contains(t, body, `<p class="empty">No findings for this review file.</p>`)
+		assert.NotContains(t, body, `class="review-card`)
+	})
+}
+
+
+func TestFeatureDetailHandler_ContentRendering(t *testing.T) {
+	srv, tmpl, mockS := setupFeatureDetailHandlerTest(t)
+
+	featureID := "sc-content-rendering"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+	mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+
+	// 1. Test with Description and Plan
+	descContent := "# My Feature\n\n- Point 1\n- Point 2"
+	planContent := `- id: slice-1
+  description: The first slice
+  status: done
   tasks:
     - id: task-1
       task: First task
-      status: todo
-    - id: task-2
-      task: Second task
-      status: in-progress
-- id: slice-2
-  description: Second slice
-  status: in-progress
-  tasks:
-    - id: task-3
-      task: Third task
-      status: done
-`
-		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "plan.yml"), []byte(planContent), 0644))
+      status: done`
+	require.NoError(t, os.WriteFile(filepath.Join(featureDir, "description.md"), []byte(descContent), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(featureDir, "plan.yml"), []byte(planContent), 0644))
+	// Remove review file to isolate content rendering
+	require.NoError(t, os.Remove(filepath.Join(featureDir, "review.yml")))
 
-		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+	req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+	rr := httptest.NewRecorder()
+	srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
 
-		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
-		rr := httptest.NewRecorder()
-		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
 
-		require.Equal(t, http.StatusOK, rr.Code)
+	// Assert Description is rendered
+	assert.Contains(t, body, "<summary>Description</summary>", "should show description section")
+	assert.Contains(t, body, "<h1>My Feature</h1>", "should render description markdown")
+	assert.Contains(t, body, "<li>Point 1</li>", "should render description list")
 
-		body := rr.Body.String()
-		// Verify plan section is rendered
-		assert.Contains(t, body, "slice-1", "expected slice ID to be rendered")
-		assert.Contains(t, body, "First slice", "expected slice description to be rendered")
-		assert.Contains(t, body, "task-1", "expected task ID to be rendered")
-		assert.Contains(t, body, "todo", "expected status badge to be rendered")
-		assert.Contains(t, body, "in-progress", "expected in-progress status badge to be rendered")
-		assert.Contains(t, body, "done", "expected done status badge to be rendered")
-	})
+	// Assert Plan is rendered
+	assert.Contains(t, body, "<summary>Plan</summary>", "should show plan section")
+	assert.Contains(t, body, "<h3>slice-1 — The first slice</h3>", "should render slice description")
+	assert.Contains(t, body, "<strong>task-1</strong>: First task", "should render task")
+	assert.Contains(t, body, `<span class="status-badge done">done</span>`, "should render status badges")
 
-	t.Run("missing plan.yml hides plan section", func(t *testing.T) {
-		featureID := "sc-no-plan"
-		repo := "org/repo_name"
+	// Assert other sections are hidden
+	assert.NotContains(t, body, "<summary>Review Findings</summary>", "should hide review section")
 
-		home, err := os.UserHomeDir()
-		require.NoError(t, err)
-		featureDir := filepath.Join(home, ".features", repo, featureID)
-		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
-		// Do NOT create plan.yml
-		defer func() { _ = os.RemoveAll(featureDir) }()
+	// 2. Test with no Description and no Plan
+	require.NoError(t, os.Remove(filepath.Join(featureDir, "description.md")))
+	require.NoError(t, os.Remove(filepath.Join(featureDir, "plan.yml")))
 
-		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
-
-		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
-		rr := httptest.NewRecorder()
-		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
-
-		require.Equal(t, http.StatusOK, rr.Code)
-
-		body := rr.Body.String()
-		// Verify feature still renders but plan section doesn't
-		assert.Contains(t, body, "<h1>sc-no-plan</h1>", "expected feature ID to be rendered")
-		// The plan section should not be rendered (checking for plan-specific content)
-		assert.NotContains(t, body, "Plan", "expected no Plan section when plan is missing")
-		assert.NotContains(t, body, "task-1", "expected no task IDs when plan is missing")
-	})
-
+	req = httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+	rr = httptest.NewRecorder()
+	srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+	body = rr.Body.String()
+	assert.NotContains(t, body, "<summary>Description</summary>", "should hide description when file is missing")
+	assert.NotContains(t, body, "<summary>Plan</summary>", "should hide plan when file is missing")
 }
 
 func TestFeatureDetailHandler_LogLoading(t *testing.T) {
@@ -550,7 +545,7 @@ func TestFeatureDetailHandler_LogLoading(t *testing.T) {
 {{if .Log}}
 <details>
   <summary>Log</summary>
-  <div class="log-content">
+  <div class="description-content">
     {{.Log}}
   </div>
 </details>
@@ -558,7 +553,7 @@ func TestFeatureDetailHandler_LogLoading(t *testing.T) {
 {{end}}`
 
 	funcMap := template.FuncMap{
-		"safeURL": func(s string) template.URL { return template.URL(s) },
+		"safeURL":  func(s string) template.URL { return template.URL(s) },
 		"urlquery": func(s string) string { return url.QueryEscape(s) },
 	}
 	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
@@ -568,23 +563,28 @@ func TestFeatureDetailHandler_LogLoading(t *testing.T) {
 	srv := server.New(8080, mockS)
 
 	tests := []struct {
-		name              string
-		featureID         string
-		repo              string
-		logContent        string
-		deleteLog         bool
-		assertions        func(t *testing.T, body string)
+		name       string
+		featureID  string
+		repo       string
+		logContent string
+		deleteLog  bool
+		assertions func(t *testing.T, body string)
 	}{
 		{
 			name:       "Log with markdown content is rendered as HTML",
 			featureID:  "sc-log-markdown",
 			repo:       "org/repo",
-			logContent: "# Log Title\n\n**Bold entry** and _italic note_\n\n- Item 1\n- Item 2",
+			logContent: `# Log Title
+
+**Bold entry** and _italic note_
+
+- Item 1
+- Item 2`,
 			deleteLog:  false,
 			assertions: func(t *testing.T, body string) {
 				// Verify log section exists
 				assert.Contains(t, body, "<summary>Log</summary>", "expected Log section summary")
-				assert.Contains(t, body, `<div class="log-content">`, "expected log content div")
+				assert.Contains(t, body, `<div class="description-content">`, "expected log content div")
 				// Verify markdown rendering
 				assert.Contains(t, body, "<h1>Log Title</h1>", "expected h1 heading from log")
 				assert.Contains(t, body, "<strong>Bold entry</strong>", "expected strong tag from log")
@@ -606,14 +606,22 @@ func TestFeatureDetailHandler_LogLoading(t *testing.T) {
 				assert.Contains(t, body, "<h1>sc-no-log</h1>", "expected feature ID to be rendered")
 				// Verify log section is hidden
 				assert.NotContains(t, body, "<summary>Log</summary>", "expected no Log section when log.md missing")
-				assert.NotContains(t, body, `<div class="log-content">`, "expected no log content div when log.md missing")
+				assert.NotContains(t, body, `<div class="description-content">`, "expected no log content div when log.md missing")
 			},
 		},
 		{
 			name:       "Complex log with code blocks renders correctly",
 			featureID:  "sc-log-code",
 			repo:       "org/repo",
-			logContent: "## Development Notes\n\n```go\nfunc test() {\n  fmt.Println(\"code\")\n}\n```\n\nSee the code above.",
+			logContent: `## Development Notes
+
+` + "```go" + `
+func test() {
+  fmt.Println("code")
+}
+` + "```" + `
+
+See the code above.`,
 			deleteLog:  false,
 			assertions: func(t *testing.T, body string) {
 				assert.Contains(t, body, "<h2>Development Notes</h2>", "expected h2 heading from log")

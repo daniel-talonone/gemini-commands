@@ -104,6 +104,14 @@ ai-session address-feedback <story-id> [--regular] [--docs] [--devops] [--remote
 ```
 Reads open findings per review type via `internal/review.ReadFindings` and pipes each to `gemini --yolo` using `headless/session/address-feedback.md`. This command now uses the same retry and verification engine as `implement`, running the project's verification command after each attempt and retrying on failure. Resolved findings are filtered out before the prompt is built. No flags → all three types are addressed. Types with no open findings are skipped automatically. The `--remote` flag fetches and addresses unresolved inline PR review threads from GitHub. It is mutually exclusive with the other flags and requires the `gh` CLI to be installed and authenticated.
 
+#### Public API
+
+-   `DiscoverTypes(featureDir string) ([]string, error)`
+    Scans the feature directory for review files (`review*.yml`, `review*.yaml`) and returns a sorted list of their type names. An empty string (`""`) represents `review.yml`, `"docs"` represents `review-docs.yml`, and so on. Returns an empty slice if no review files are found.
+
+-   `LoadByFilename(featureDir, filename string) ([]Finding, error)`
+    Reads and validates all findings from a specific review file by its full name (e.g., `review-docs.yml`). Returns an empty slice if the file does not exist. It's the caller's responsibility to construct the correct filename or discover it first.
+
 ### Orchestration
 
 ```bash

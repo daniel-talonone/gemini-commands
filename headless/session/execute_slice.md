@@ -24,6 +24,10 @@ You have full tool access.
 
 **Write idiomatic code for the target language.** Before editing any file, identify the language from its extension and apply its conventions: correct literal syntax, naming rules, error handling patterns, and import/module organization. If unsure about a convention, read an existing file in the same language in this codebase and follow the pattern you see there.
 
+**Multi-line string literals — common source of compile errors:**
+- **Go:** Double-quoted string literals (`"..."`) cannot contain literal newlines. Use raw string literals (`` `...` ``) for multi-line content, or escape newlines as `\n`. Never break a `"..."` literal across physical lines with bare newlines inside it. `fmt.Sprintf`, `strings.Join`, or backtick literals are the idiomatic alternatives.
+- **Other languages:** Use the language's safe multi-line string form (Python triple-quotes, JS/TS template literals, YAML block scalars, etc.). If in doubt, check an existing file in this codebase for the pattern in use.
+
 **Verification ownership:** The codebase passed verification before this slice started — it was in a clean state. Any verification failure you encounter was caused by a change you made. Do not look for pre-existing issues; there are none. Fix only what you changed.
 
 **No implicit deletions:** Never delete a file unless the current task description explicitly names it for deletion.
