@@ -46,6 +46,15 @@
     .actions a { text-decoration: none; margin-right: 0.4rem; font-size: 1rem; }
     .actions a:hover { opacity: 0.7; }
     footer   { margin-top: 1rem; color: #999; font-size: 0.8rem; }
+    details { margin: 1rem 0; border: 1px solid #ddd; border-radius: 3px; padding: 0.8rem; background: #fafafa; }
+    summary { cursor: pointer; font-weight: bold; user-select: none; padding: 0.3rem; margin: -0.3rem; }
+    summary:hover { background: #f0f0f0; border-radius: 2px; }
+    .description-content { margin-top: 0.8rem; line-height: 1.6; }
+    .description-content h1, .description-content h2, .description-content h3 { margin: 1rem 0 0.5rem 0; font-size: 1rem; }
+    .description-content ul, .description-content ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .description-content code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 2px; font-family: monospace; }
+    .description-content pre { background: #f5f5f5; padding: 0.8rem; border-radius: 3px; overflow-x: auto; margin: 0.5rem 0; }
+    .description-content pre code { background: none; padding: 0; }
   </style>
 </head>
 <body>
@@ -133,6 +142,14 @@
     <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode">VSCode</a>
     <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
   </p>
+  {{end}}
+  {{if .Description}}
+  <details open>
+    <summary>Description</summary>
+    <div class="description-content">
+      {{.Description}}
+    </div>
+  </details>
   {{end}}
   {{end}}
 </body>

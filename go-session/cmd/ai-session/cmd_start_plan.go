@@ -10,6 +10,7 @@ import (
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
 	"github.com/daniel-talonone/gemini-commands/internal/git"
+	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 	"github.com/spf13/cobra"
 )
@@ -80,6 +81,26 @@ This command replaces the 'orchestrate.sh --plan' script.`,
 		}
 
 		logger.Info("Gemini command finished successfully")
+		logger.Info("Validating generated plan")
+		p, err := plan.LoadPlan(featureDir)
+		if err != nil {
+			logger.Error("Failed to load plan.yml", "error", err)
+			fmt.Fprintf(os.Stderr, "Error: plan.yml is missing or invalid: %v\n", err)
+			if writeErr := status.Write(featureDir, "plan-failed", repo, branch); writeErr != nil {
+				logger.Error("Failed to write plan-failed status", "error", writeErr)
+			}
+			return fmt.Errorf("plan.yml is missing or invalid: %w", err)
+		}
+		if len(p) == 0 {
+			logger.Error("Plan is empty")
+			fmt.Fprintf(os.Stderr, "Error: plan.yml is empty — LLM did not generate any plan content\n")
+			if writeErr := status.Write(featureDir, "plan-failed", repo, branch); writeErr != nil {
+				logger.Error("Failed to write plan-failed status", "error", writeErr)
+			}
+			return fmt.Errorf("plan.yml is empty: LLM did not generate any plan content")
+		}
+		logger.Info("Plan validation passed")
+
 		if err := status.Write(featureDir, "plan-done", repo, branch); err != nil {
 			return fmt.Errorf("updating status to plan-done: %w", err)
 		}

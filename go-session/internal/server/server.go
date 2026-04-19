@@ -34,7 +34,7 @@ type PageData struct {
 // FeatureDetailData is passed to the feature_detail template.
 type FeatureDetailData struct {
 	ID          string
-	Description string
+	Description template.HTML
 	Repo        string
 	Branch      string
 	PRURL       string
@@ -275,7 +275,7 @@ func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerF
 
 		desc, _ := description.LoadDescription(dir)
 
-		data := FeatureDetailData{ID: id, Description: desc, Repo: found.Repo}
+		data := FeatureDetailData{ID: id, Description: description.RenderMarkdown(desc), Repo: found.Repo}
 		if st, err := status.LoadStatus(dir); err == nil {
 			data.Branch = st.Branch
 			data.PRURL = st.PRURL

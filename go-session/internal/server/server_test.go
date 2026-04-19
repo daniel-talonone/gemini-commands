@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -311,10 +312,39 @@ func TestHandlerWithRealTemplate(t *testing.T) {
 }
 
 func TestFeatureDetailHandler(t *testing.T) {
-	// This template is a simplified version of the real one, only containing
-	// the parts needed for this test.
-	tmplContent := `{{define "feature_detail"}}<h1>Feature: {{.ID}}</h1><a href="/">Back</a>{{end}}`
-	tmpl, err := template.New("dashboard").Parse(tmplContent)
+	// Full feature_detail template block to test markdown rendering
+	tmplContent := `{{define "feature_detail"}}
+<a href="/">← Back</a>
+<h1>{{.ID}}</h1>
+<p>
+  {{if .Repo}}<strong>Repo:</strong> <a href="https://github.com/{{.Repo}}" target="_blank">{{.Repo}}</a>{{end}}
+  {{if .Branch}} | <strong>Branch:</strong> {{.Branch}}{{end}}
+  {{if .StoryURL}} | <a href="{{.StoryURL}}" target="_blank">Story</a>{{end}}
+  {{if .PRURL}} | <a href="{{.PRURL}}" target="_blank">Pull Request</a>{{end}}
+</p>
+{{if .WorkDir}}
+<p>
+  <strong>Quick Launch:</strong>
+  <a href="/action/finder?path={{.WorkDir | urlquery}}" title="Open in Finder">📁</a>
+  <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode">VSCode</a>
+  <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
+</p>
+{{end}}
+{{if .Description}}
+<details open>
+  <summary>Description</summary>
+  <div class="description-content">
+    {{.Description}}
+  </div>
+</details>
+{{end}}
+{{end}}`
+
+	funcMap := template.FuncMap{
+		"safeURL": func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
 	require.NoError(t, err)
 
 	mockS := &mockScanner{} // No features needed for this test
@@ -328,7 +358,7 @@ func TestFeatureDetailHandler(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
-	t.Run("feature found", func(t *testing.T) {
+	t.Run("feature found with markdown description", func(t *testing.T) {
 		featureID := "sc-12345"
 		repo := "org/repo_name"
 
@@ -336,7 +366,16 @@ func TestFeatureDetailHandler(t *testing.T) {
 		require.NoError(t, err)
 		featureDir := filepath.Join(home, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
-		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "description.md"), []byte("# "+featureID), 0755))
+
+		// Create description.md with diverse markdown content
+		descriptionContent := "# Test Feature\n\n" +
+			"**Bold text** and _italic text_\n\n" +
+			"- Item 1\n- Item 2\n- Item 3\n\n" +
+			"1. First item\n2. Second item\n\n" +
+			"`code snippet`\n\n" +
+			"```go\nfunc main() {\n  fmt.Println(\"test\")\n}\n```"
+
+		require.NoError(t, os.WriteFile(filepath.Join(featureDir, "description.md"), []byte(descriptionContent), 0755))
 		defer func() { _ = os.RemoveAll(featureDir) }()
 
 		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
@@ -346,7 +385,54 @@ func TestFeatureDetailHandler(t *testing.T) {
 		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
 
 		require.Equal(t, http.StatusOK, rr.Code)
-		assert.Contains(t, rr.Body.String(), "<h1>Feature: sc-12345</h1>")
-		assert.Contains(t, rr.Body.String(), `<a href="/">Back</a>`)
+
+		body := rr.Body.String()
+		// Verify feature metadata is present
+		assert.Contains(t, body, "<h1>sc-12345</h1>")
+		assert.Contains(t, body, "org/repo_name")
+
+		// Verify markdown rendering: headings
+		assert.Contains(t, body, "<h1>Test Feature</h1>", "expected h1 heading to be rendered")
+		// Verify markdown rendering: bold and italic
+		assert.Contains(t, body, "<strong>Bold text</strong>", "expected strong tag for bold text")
+		assert.Contains(t, body, "<em>italic text</em>", "expected em tag for italic text")
+		// Verify markdown rendering: lists
+		assert.Contains(t, body, "<li>Item 1</li>", "expected list items to be rendered")
+		assert.Contains(t, body, "<ol>", "expected ordered list to be rendered")
+		// Verify markdown rendering: inline code
+		assert.Contains(t, body, "<code>code snippet</code>", "expected inline code to be rendered")
+		// Verify markdown rendering: code block
+		assert.Contains(t, body, "<pre>", "expected pre tag for code block")
+		// Verify description section structure
+		assert.Contains(t, body, "<details open>", "expected details section to be open")
+		assert.Contains(t, body, "<summary>Description</summary>", "expected description summary")
+	})
+
+	t.Run("missing description hides section", func(t *testing.T) {
+		featureID := "sc-67890"
+		repo := "org/repo_name"
+
+		home, err := os.UserHomeDir()
+		require.NoError(t, err)
+		featureDir := filepath.Join(home, ".features", repo, featureID)
+		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+		// Do NOT create description.md
+		defer func() { _ = os.RemoveAll(featureDir) }()
+
+		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
+
+		req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+		rr := httptest.NewRecorder()
+		srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+		require.Equal(t, http.StatusOK, rr.Code)
+
+		body := rr.Body.String()
+		// Verify feature metadata is still rendered
+		assert.Contains(t, body, "<h1>sc-67890</h1>", "expected feature ID to be rendered")
+		assert.Contains(t, body, "org/repo_name", "expected repo to be rendered")
+		// Verify description section is hidden
+		assert.NotContains(t, body, "<details>", "expected no details section when description is missing")
+		assert.NotContains(t, body, "<summary>Description</summary>", "expected no description summary")
 	})
 }
