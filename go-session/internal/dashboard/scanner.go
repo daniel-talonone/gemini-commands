@@ -3,6 +3,7 @@ package dashboard
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"gopkg.in/yaml.v3"
@@ -44,7 +45,7 @@ func ScanRoot(root string) ([]FeatureState, error) {
 	}
 
 	for _, orgEntry := range orgEntries {
-		if !orgEntry.IsDir() {
+		if !orgEntry.IsDir() || strings.HasPrefix(orgEntry.Name(), ".") {
 			continue
 		}
 		orgPath := filepath.Join(root, orgEntry.Name())
@@ -55,7 +56,7 @@ func ScanRoot(root string) ([]FeatureState, error) {
 		}
 
 		for _, repoEntry := range repoEntries {
-			if !repoEntry.IsDir() {
+			if !repoEntry.IsDir() || strings.HasPrefix(repoEntry.Name(), ".") {
 				continue
 			}
 			repoPath := filepath.Join(orgPath, repoEntry.Name())
@@ -67,7 +68,7 @@ func ScanRoot(root string) ([]FeatureState, error) {
 			}
 
 			for _, storyEntry := range storyEntries {
-				if !storyEntry.IsDir() {
+				if !storyEntry.IsDir() || strings.HasPrefix(storyEntry.Name(), ".") {
 					continue
 				}
 				storyDir := filepath.Join(repoPath, storyEntry.Name())

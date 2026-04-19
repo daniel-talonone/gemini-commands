@@ -95,3 +95,21 @@ func TestScanRoot_PartialPlanYAML(t *testing.T) {
 	assert.False(t, results[0].AllDone)
 	assert.Equal(t, "t1", results[0].LastDoneTask)
 }
+
+func TestScanRoot_SkipsHiddenFolders(t *testing.T) {
+	root := t.TempDir()
+
+	// Create valid feature directory
+	makeFeatureDir(t, root, "myorg", "myrepo", "sc-1234")
+
+	// Create hidden directories at each level that should be skipped
+	require.NoError(t, os.MkdirAll(filepath.Join(root, ".git"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "myorg", ".hidden"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(root, "myorg", "myrepo", ".cache"), 0755))
+
+	results, err := dashboard.ScanRoot(root)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "sc-1234", results[0].StoryID)
+	assert.Equal(t, "myorg/myrepo", results[0].Repo)
+}
