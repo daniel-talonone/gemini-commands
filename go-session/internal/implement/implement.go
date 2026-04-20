@@ -41,22 +41,22 @@ func RunJob(featureDir string, maxRetries int, retryDelay time.Duration, logger 
 			return fmt.Errorf("building prompt (attempt %d): %w", attempt, err)
 		}
 
-		var geminiOutput bytes.Buffer
-		var geminiErr error
+		var llmOutput bytes.Buffer
+		var llmErr error
 		if os.Getenv("IN_TEST_MODE") != "true" {
 			appendLog(logger, featureDir, fmt.Sprintf("Invoking LLM (attempt %d)", attempt))
-			logger.Info("Invoking Gemini", "attempt", attempt)
-			geminiErr = runner.Run(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &geminiOutput), io.MultiWriter(os.Stderr, &geminiOutput))
+			logger.Info("Invoking LLM", "attempt", attempt)
+			llmErr = runner.Run(strings.NewReader(promptContent), io.MultiWriter(os.Stdout, &llmOutput), io.MultiWriter(os.Stderr, &llmOutput))
 		} else {
-			logger.Info("Skipping Gemini invocation (test mode)", "attempt", attempt)
+			logger.Info("Skipping LLM invocation (test mode)", "attempt", attempt)
 		}
 
-		if geminiErr != nil {
-			appendLog(logger, featureDir, fmt.Sprintf("Gemini exited with error (attempt %d): %v", attempt, geminiErr))
-			if isRateLimitError(geminiOutput.String()) {
+		if llmErr != nil {
+			appendLog(logger, featureDir, fmt.Sprintf("LLM exited with error (attempt %d): %v", attempt, llmErr))
+			if isRateLimitError(llmOutput.String()) {
 				rateLimitRetries++
 				if rateLimitRetries >= maxRateLimitRetries {
-					return fmt.Errorf("exceeded rate-limit retry budget (%d retries): %w", maxRateLimitRetries, geminiErr)
+					return fmt.Errorf("exceeded rate-limit retry budget (%d retries): %w", maxRateLimitRetries, llmErr)
 				}
 				continue
 			}

@@ -16,16 +16,13 @@ This is a **conversational command**. Propose, iterate, and get approval before 
 
 ## 1. Load Context
 
-Find the `### ✨ Session Context Loaded for \`<feature-id>\`` block in the conversation history and extract:
+Find the `### ✨ Session Context Loaded for `<feature-id>`` block in the conversation history and extract:
 - The **feature ID** (e.g., `dashboard-feature-detail-page`).
 - The **description** (the full content under `**Description:**`).
 
 If no context block is present, stop and ask the user to run `/session:start <feature-id>` first.
 
-Resolve the feature directory path by running:
-```bash
-ai-session resolve-feature-dir "<feature-id>"
-```
+Use the `run_shell_command` tool with the command: `ai-session resolve-feature-dir "<feature-id>"` to resolve the feature directory path.
 
 Read `status.yaml` from that path to extract `repo`, `branch`, and `work_dir` — you will need these when creating sub-story directories.
 
@@ -72,14 +69,9 @@ Once approved, for each sub-story in order:
    ```
 
 3. Create the feature directory, inheriting `repo` and `work_dir` from the parent's `status.yaml`:
-   ```bash
-   ai-session create-feature "$SUB_DIR" \
-     --repo "<repo>" \
-     --branch "<numbered-name>" \
-     --work-dir "<work_dir>"
-   ```
+   Use the `run_shell_command` tool with the command: `ai-session create-feature "$SUB_DIR" --repo "<repo>" --branch "<numbered-name>" --work-dir "<work_dir>"`
 
-4. Write `description.md` into `$SUB_DIR` using the `write_file` tool. Each description must follow this structure:
+4. Use the `write_file` tool to write the `description.md` content into `$SUB_DIR`. Each description must follow this structure:
    ```markdown
    ### User Story
 
@@ -107,5 +99,4 @@ Sub-stories created under <FEATURE_BASE>:
   ...
 
 Run `/session:start <sub-story-id>` to begin work on the first one.
-```
 """

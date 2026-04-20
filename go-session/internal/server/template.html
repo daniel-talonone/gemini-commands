@@ -11,6 +11,15 @@
     select, button { padding: 0.3rem 0.6rem; font-family: monospace; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 3px; background: #fff; }
     button { cursor: pointer; background: #f0f0f0; }
     button:hover { background: #e0e0e0; }
+    .reset-button {
+      background-color: #dc3545; /* A shade of red for a "danger" action */
+      color: #fff; /* White text for contrast */
+      border-color: #dc3545;
+    }
+    .reset-button:hover {
+      background-color: #c82333; /* Darker red on hover */
+      border-color: #bd2130;
+    }
     table { border-collapse: collapse; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 3px; }
     th {
       text-align: left;
@@ -220,6 +229,11 @@
       {{.Description}}
     </div>
   </details>
+  {{end}}
+  {{if .Plan}}
+  <form method="POST" action="/feature/{{.ID}}/reset" style="margin-top: 1rem;">
+    <button type="submit" class="reset-button" onclick="return confirm('Reset all task statuses to todo?');">Reset</button>
+  </form>
   {{end}}
   {{if .Plan}}
   <details open>

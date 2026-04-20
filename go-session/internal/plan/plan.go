@@ -242,6 +242,24 @@ func updatePlanStatus(featureDir, id, status string, isTask bool) error {
 	return os.Rename(tmpPath, planPath(featureDir))
 }
 
+// ResetPlan resets all slice and task statuses to "todo" in plan.yml.
+func ResetPlan(featureDir string) error {
+	p, err := LoadPlan(featureDir)
+	if err != nil {
+		return err
+	}
+	for i := range p {
+		p[i].Status = "todo"
+		for j := range p[i].Tasks {
+			p[i].Tasks[j].Status = "todo"
+		}
+	}
+	yaml, err := p.ToString()
+	if err != nil {
+		return err
+	}
+	return WritePlan(featureDir, []byte(yaml))
+}
 // planPath returns the full path to plan.yml for a given feature directory.
 func planPath(featureDir string) string {
 	return filepath.Join(featureDir, "plan.yml")

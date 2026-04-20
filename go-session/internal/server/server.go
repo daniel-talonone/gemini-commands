@@ -102,7 +102,14 @@ func (s *Server) Start() error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.MakeListHandler(tmpl))
-	mux.HandleFunc("/feature/", s.MakeFeatureDetailHandler(tmpl))
+	mux.HandleFunc("/feature/", func(w http.ResponseWriter, r *http.Request) {
+		pathSuffix := strings.TrimPrefix(r.URL.Path, "/feature/")
+		if strings.HasSuffix(pathSuffix, "/reset") && r.Method == http.MethodPost {
+			s.MakeResetHandler()(w, r)
+		} else {
+			s.MakeFeatureDetailHandler(tmpl)(w, r)
+		}
+	})
 	mux.HandleFunc("/action/terminal", TerminalHandler)
 	mux.HandleFunc("/action/finder", FinderHandler)
 
@@ -164,6 +171,74 @@ func FinderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+
+func (s *Server) MakeResetHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Only handle POST requests to paths ending with /reset
+		pathSuffix := strings.TrimPrefix(r.URL.Path, "/feature/")
+		if r.Method != http.MethodPost || !strings.HasSuffix(pathSuffix, "/reset") {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Extract feature ID by removing /reset suffix
+		id := strings.TrimSuffix(pathSuffix, "/reset")
+		if id == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Scan all features to find the one with matching ID
+		features, err := s.ScanAllFunc()
+		if err != nil {
+			http.Error(w, "scan error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var found *dashboard.FeatureState
+		for i := range features {
+			if features[i].StoryID == id {
+				found = &features[i]
+				break
+			}
+		}
+		if found == nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Resolve feature directory
+		remoteURL := "https://github.com/" + found.Repo
+		dir, err := feature.ResolveFeatureDir(id, ".", remoteURL)
+		if err != nil {
+			http.Error(w, "resolve error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Load and validate plan is not empty
+		pln, err := plan.LoadPlan(dir)
+		if err != nil || len(pln) == 0 {
+			http.Error(w, "plan is empty or missing", http.StatusInternalServerError)
+			return
+		}
+
+		// Reset all task and slice statuses to "todo"
+		if err := plan.ResetPlan(dir); err != nil {
+			http.Error(w, "failed to reset plan: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Clear pipeline_step in status.yaml
+		if err := status.Write(dir, "", "", ""); err != nil {
+			http.Error(w, "failed to clear pipeline_step: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Redirect to feature detail page
+		http.Redirect(w, r, "/feature/"+id, http.StatusSeeOther)
+	}
 }
 
 func (s *Server) MakeListHandler(tmpl *template.Template) http.HandlerFunc {

@@ -4,7 +4,9 @@ Especially for the solution, use bullet points and short declarative sentences o
 Explicitly extract and include any PR URLs referenced in the description content below.
 
 Write ONLY the PR description as plain markdown — no commentary, no explanations, no code fences.
-when you have finished, EXECUTE a shell command like this:
+
+You cannot write the description directly to the file, thus when you have finished, you need to pipe the description into the command `ai-session pr write-description`. Take into consideration the multi-lines strings. 
+Shell command to execute:
 ```
 DESCRIPTION="$(cat <<'EOM'
 <PR description here>
