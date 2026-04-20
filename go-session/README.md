@@ -145,7 +145,7 @@ On macOS, the server also exposes `/action/terminal?path=<dir>`, `/action/finder
 ## Package structure
 
 ```
-cmd/ai-session/         CLI entry point (cobra); one file per subcommand
+`cmd/ai-session/         CLI entry point (cobra); one file per subcommand
 internal/
   commands/             Core business logic
     plan/               Plan YAML parsing, validation, format-preserving updates

@@ -27,23 +27,6 @@ func TestLoadDescription_NotFound(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestLoadArchitecture(t *testing.T) {
-	dir := t.TempDir()
-	archPath := filepath.Join(dir, "architecture.md")
-	require.NoError(t, os.WriteFile(archPath, []byte("Test Architecture"), 0644))
-
-	arch, err := description.LoadArchitecture(dir)
-	require.NoError(t, err)
-	assert.Equal(t, "Test Architecture", arch)
-}
-
-func TestLoadArchitecture_NotFound(t *testing.T) {
-	dir := t.TempDir()
-	arch, err := description.LoadArchitecture(dir)
-	require.NoError(t, err)
-	assert.Equal(t, "", arch)
-}
-
 func TestRenderMarkdown_ValidMarkdown(t *testing.T) {
 	input := "# Heading\n**bold** _italic_\n- list item\n`code`"
 	output := description.RenderMarkdown(input)

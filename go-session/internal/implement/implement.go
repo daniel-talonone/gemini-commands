@@ -346,7 +346,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	}
 
 	// Load architecture if present — gives the LLM design constraints and pattern refs.
-	architectureDescription, err := description.LoadArchitecture(featureDir)
+	architectureDescription, err := plan.LoadArchitecture(featureDir)
 	if err != nil {
 		return fmt.Errorf("loading architecture: %w", err)
 	}

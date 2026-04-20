@@ -48,6 +48,7 @@ type Slice struct {
 	DependsOn   []string `yaml:"depends_on,omitempty"`
 	Tasks       []Task   `yaml:"tasks"`
 }
+
 // Task represents a single task within a slice.
 type Task struct {
 	ID     string `yaml:"id"`
@@ -260,6 +261,7 @@ func ResetPlan(featureDir string) error {
 	}
 	return WritePlan(featureDir, []byte(yaml))
 }
+
 // planPath returns the full path to plan.yml for a given feature directory.
 func planPath(featureDir string) string {
 	return filepath.Join(featureDir, "plan.yml")
