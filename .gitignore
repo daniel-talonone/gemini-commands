@@ -1,1 +1,6 @@
 .DS_Store
+/features/
+/.features/
+
+# Go build output
+/go-session/bin/

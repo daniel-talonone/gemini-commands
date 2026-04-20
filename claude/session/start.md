@@ -1,0 +1,40 @@
+---
+description: Starts a work session by loading context from a feature directory and the project's AGENTS.md file.
+---
+
+You are the orchestrator of the `/session:start` command. Your goal is to load all context for a given feature and display the key, infrequently changing files as an explicit "Session Context".
+
+The user will provide a feature directory name as an argument (e.g., `sc-12345`). It is available as `$ARGUMENTS`.
+
+**Workflow:**
+
+1.  **Execute Script:** Run the `load_context_files.sh` helper script using the Bash tool.
+    *   Full path: `$AI_SESSION_HOME/scripts/load_context_files.sh`. Use this variable literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
+    *   Resolve the feature directory first, then pass it:
+        ```bash
+        FEATURE_DIR="$(ai-session resolve-feature-dir "$ARGUMENTS")"
+        if [ ! -d "$FEATURE_DIR" ]; then
+          echo "Error: Feature directory not found for '$ARGUMENTS'." >&2
+          exit 1
+        fi
+        $AI_SESSION_HOME/scripts/load_context_files.sh "$FEATURE_DIR"
+        ```
+
+2.  **Parse Script Output:** The script returns a block of text with each file's content preceded by `--- FILE: <filename> ---`.
+    *   Find and extract the content under `--- FILE: description.md ---`.
+    *   **CRITICAL:** The output ends at the next `--- FILE: ---` delimiter or end of output.
+
+3.  **Retain Project Context:** From the same script output, find the content under `--- FILE: AGENTS.md ---` (or `--- FILE: GEMINI.md ---` as fallback). This is for your internal use only — retain it in your working memory for the duration of the session. **DO NOT display its content.**
+
+4.  **Display Session Context:** Use the following Markdown format EXACTLY:
+
+    ```markdown
+    ### ✨ Session Context Loaded for `$ARGUMENTS`
+
+    **Description:**
+    > {{extracted content of description.md}}
+
+    This context is now available for all subsequent commands.
+    ```
+
+**CRITICAL:** Only the `description.md` content goes inside the formatted block. All other file contents from the script output are for your internal memory and must not be displayed.

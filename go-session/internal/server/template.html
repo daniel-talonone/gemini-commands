@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ai-session dashboard</title>
+  <style>
+    body { font-family: monospace; padding: 1rem 2rem; background: #fafafa; color: #222; }
+    h1 { margin-bottom: 0.5rem; font-size: 1.4rem; }
+    form { margin-bottom: 1.2rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    select, button { padding: 0.3rem 0.6rem; font-family: monospace; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 3px; background: #fff; }
+    button { cursor: pointer; background: #f0f0f0; }
+    button:hover { background: #e0e0e0; }
+    .reset-button {
+      background-color: #dc3545; /* A shade of red for a "danger" action */
+      color: #fff; /* White text for contrast */
+      border-color: #dc3545;
+    }
+    .reset-button:hover {
+      background-color: #c82333; /* Darker red on hover */
+      border-color: #bd2130;
+    }
+    table { border-collapse: collapse; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 3px; }
+    th {
+      text-align: left;
+      padding: 0.5rem 0.8rem;
+      background: #f0f0f0;
+      border-bottom: 2px solid #ddd;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    th a {
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    td { text-align: left; padding: 0.45rem 0.8rem; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+    .timestamp-col {
+      text-align: center;
+      padding: 0.45rem 0.8rem;
+      min-width: 120px; /* Adjust as needed */
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9f9f9; }
+    .running { color: #2a7a2a; font-weight: bold; }
+    .done    { color: #0055aa; }
+    .idle    { color: #888; }
+    .todo    { color: #999; }
+    .in-progress { color: #2a7a2a; font-weight: bold; }
+    .empty   { color: #aaa; font-style: italic; }
+    .actions a { text-decoration: none; margin-right: 0.4rem; font-size: 1rem; }
+    .actions a:hover { opacity: 0.7; }
+    footer   { margin-top: 1rem; color: #999; font-size: 0.8rem; }
+    details { margin: 1rem 0; border: 1px solid #ddd; border-radius: 3px; padding: 0.8rem; background: #fafafa; }
+    summary { cursor: pointer; font-weight: bold; user-select: none; padding: 0.3rem; margin: -0.3rem; }
+    summary:hover { background: #f0f0f0; border-radius: 2px; }
+    .description-content { margin-top: 0.8rem; line-height: 1.6; }
+    .description-content h1, .description-content h2, .description-content h3 { margin: 1rem 0 0.5rem 0; font-size: 1rem; }
+    .description-content ul, .description-content ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .description-content code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 2px; font-family: monospace; }
+    .description-content pre { background: #f5f5f5; padding: 0.8rem; border-radius: 3px; overflow-x: auto; margin: 0.5rem 0; }
+    .description-content pre code { background: none; padding: 0; }
+    .status-badge { padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.85rem; font-weight: bold; }
+    .status-badge.todo { background: #fff3cd; color: #856404; }
+    .status-badge.in-progress { background: #d1ecf1; color: #0c5460; }
+    .status-badge.done { background: #d4edda; color: #155724; }
+    .plan-content { margin-top: 0.8rem; }
+    .slice { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+    .slice h3 { margin: 0.5rem 0; font-size: 1rem; }
+    .slice ul { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .slice li { margin: 0.3rem 0; }
+
+  </style>
+</head>
+<body>
+  <h1>ai-session dashboard</h1>
+
+  <form method="GET">
+    <label for="repo">Repo:</label>
+    <select id="repo" name="repo">
+      <option value="">All repos</option>
+      {{range .AllRepos}}
+      <option value="{{.}}"{{if eq . $.RepoFilter}} selected{{end}}>{{.}}</option>
+      {{end}}
+    </select>
+
+    <label for="status">Status:</label>
+    <select id="status" name="status">
+      <option value=""{{if eq .StatusFilter ""}} selected{{end}}>All statuses</option>
+      <option value="running"{{if eq .StatusFilter "running"}} selected{{end}}>● Running</option>
+      <option value="idle"{{if eq .StatusFilter "idle"}} selected{{end}}>○ Idle</option>
+      <option value="done"{{if eq .StatusFilter "done"}} selected{{end}}>✓ Done</option>
+    </select>
+
+    <button type="submit">Filter</button>
+    {{if or .RepoFilter .StatusFilter}}<a href="/">Clear</a>{{end}}
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Actions</th>
+        <th>Story</th>
+        <th>Repo</th>
+        <th>Mode</th>
+        <th>Step</th>
+        <th>Status</th>
+        <th>{{if and (eq .SortBy "started") (eq .SortOrder "asc")}}<a href="?{{if .RepoFilter}}repo={{.RepoFilter}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}{{else if .StatusFilter}}status={{.StatusFilter}}{{end}}">Created &#x25B2;</a>{{else if eq .SortBy "started"}}<a href="?sort=started&order=asc{{if .RepoFilter}}&repo={{.RepoFilter}}{{end}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">Created &#x25BC;</a>{{else}}<a href="?sort=started&order=desc{{if .RepoFilter}}&repo={{.RepoFilter}}{{end}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">Created</a>{{end}}</th>
+        <th>{{if and (eq .SortBy "updated") (eq .SortOrder "asc")}}<a href="?{{if .RepoFilter}}repo={{.RepoFilter}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}{{else if .StatusFilter}}status={{.StatusFilter}}{{end}}">Updated &#x25B2;</a>{{else if eq .SortBy "updated"}}<a href="?sort=updated&order=asc{{if .RepoFilter}}&repo={{.RepoFilter}}{{end}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">Updated &#x25BC;</a>{{else}}<a href="?sort=updated&order=desc{{if .RepoFilter}}&repo={{.RepoFilter}}{{end}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}">Updated</a>{{end}}</th>
+        <th>Last Done Task</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Features}}
+      <tr>
+        <td class="actions">
+          {{if .WorkDir -}}
+          <a href="/action/finder?path={{.WorkDir | urlquery}}" title="Open in Finder">📁</a>
+          <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode">VSCode</a>
+          <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
+          {{- else}}<span class="empty">—</span>{{end}}
+        </td>
+        <td><a href="/feature/{{.StoryID}}">{{.StoryID}}</a></td>
+        <td>{{if .Repo}}<a href="https://github.com/{{.Repo}}" target="_blank">{{.Repo}}</a>{{else}}<span class="empty">—</span>{{end}}</td>
+        <td>{{if .Mode}}{{.Mode}}{{else}}<span class="empty">—</span>{{end}}</td>
+        <td>{{if .PipelineStep}}{{.PipelineStep}}{{else}}<span class="empty">—</span>{{end}}</td>
+        <td>
+          {{if .IsRunning}}<span class="running">● running</span>
+          {{else if .AllDone}}<span class="done">✓ done</span>
+          {{else}}<span class="idle">○ idle</span>{{end}}
+        </td>
+        <td>{{if .FormattedStartedAt}}{{.FormattedStartedAt}}{{else}}<span class="empty">—</span>{{end}}</td>
+        <td>{{if .FormattedUpdatedAt}}{{.FormattedUpdatedAt}}{{else}}<span class="empty">—</span>{{end}}</td>
+        <td>{{if .LastDoneTask}}{{.LastDoneTask}}{{else}}<span class="empty">—</span>{{end}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="9" style="text-align:center; padding: 1.5rem; color:#aaa;">No features found.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  <footer>{{len .Features}} feature(s) shown &mdash; refresh to update</footer>
+
+  {{define "feature_detail"}}
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ai-session — {{.ID}}</title>
+    <style>
+      body { font-family: monospace; padding: 1rem 2rem; background: #fafafa; color: #222; }
+      h1 { margin-bottom: 0.5rem; font-size: 1.4rem; }
+      a { color: #0055aa; }
+      .running { color: #2a7a2a; font-weight: bold; }
+      .done    { color: #0055aa; }
+      .idle    { color: #888; }
+      .todo    { color: #999; }
+      .in-progress { color: #2a7a2a; font-weight: bold; }
+      details { margin: 1rem 0; border: 1px solid #ddd; border-radius: 3px; padding: 0.8rem; background: #fafafa; }
+      summary { cursor: pointer; font-weight: bold; user-select: none; padding: 0.3rem; margin: -0.3rem; }
+      summary:hover { background: #f0f0f0; border-radius: 2px; }
+      .description-content { margin-top: 0.8rem; line-height: 1.6; }
+      .description-content h1, .description-content h2, .description-content h3 { margin: 1rem 0 0.5rem 0; font-size: 1rem; }
+      .description-content ul, .description-content ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+      .description-content code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 2px; font-family: monospace; }
+      .description-content pre { background: #f5f5f5; padding: 0.8rem; border-radius: 3px; overflow-x: auto; margin: 0.5rem 0; }
+      .description-content pre code { background: none; padding: 0; }
+      .status-badge { padding: 0.2rem 0.5rem; border-radius: 3px; font-size: 0.85rem; font-weight: bold; }
+      .status-badge.todo { background: #fff3cd; color: #856404; }
+      .status-badge.in-progress { background: #d1ecf1; color: #0c5460; }
+      .status-badge.done { background: #d4edda; color: #155724; }
+      .plan-content { margin-top: 0.8rem; }
+      .slice { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #eee; }
+      .slice h3 { margin: 0.5rem 0; font-size: 1rem; }
+      .slice ul { margin: 0.5rem 0; padding-left: 1.5rem; }
+      .slice li { margin: 0.3rem 0; }
+
+      /* Review Section Styles */
+      .review-section-content { margin-top: 0.8rem; }
+      .review-file-selector { margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+      .review-card {
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        padding: 0.8rem;
+        margin-bottom: 0.5rem;
+        background: #fff;
+      }
+      .review-card.open { border-left: 5px solid #d9534f; } /* Red for open */
+      .review-card.resolved { border-left: 5px solid #5cb85c; } /* Green for resolved */
+      .review-card.skipped { border-left: 5px solid #c0c851; } /* Yellow for skipped */
+      .review-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+      }
+      .review-card-feedback { margin: 0; line-height: 1.5; font-size: 0.9rem; }
+      </style>
+      </head>
+      <body>
+  <a href="/">← Back</a>
+  <h1>{{.ID}}</h1>
+  <p>
+    {{if .Repo}}<strong>Repo:</strong> <a href="https://github.com/{{.Repo}}" target="_blank">{{.Repo}}</a>{{end}}
+    {{if .Branch}} | <strong>Branch:</strong> {{.Branch}}{{end}}
+    {{if .StoryURL}} | <a href="{{.StoryURL}}" target="_blank">Story</a>{{end}}
+    {{if .PRURL}} | <a href="{{.PRURL}}" target="_blank">Pull Request</a>{{end}}
+  </p>
+  {{if .WorkDir}}
+  <p>
+    <strong>Quick Launch:</strong>
+    <a href="/action/finder?path={{.WorkDir | urlquery}}" title="Open in Finder">📁</a>
+    <a href="{{printf "vscode://file%s" .WorkDir | safeURL}}" title="Open in VSCode">VSCode</a>
+    <a href="/action/terminal?path={{.WorkDir | urlquery}}" title="Open Terminal">⬛</a>
+  </p>
+  {{end}}
+  {{if .Description}}
+  <details open>
+    <summary>Description</summary>
+    <div class="description-content">
+      {{.Description}}
+    </div>
+  </details>
+  {{end}}
+  {{if .Plan}}
+  <form method="POST" action="/feature/{{.ID}}/reset" style="margin-top: 1rem;">
+    <button type="submit" class="reset-button" onclick="return confirm('Reset all task statuses to todo?');">Reset</button>
+  </form>
+  {{end}}
+  {{if .Plan}}
+  <details open>
+    <summary>Plan</summary>
+    <div class="plan-content">
+      {{range .Plan}}
+      <div class="slice">
+        <h3>{{.ID}} — {{.Description}}</h3>
+        <span class="status-badge {{.Status}}">{{.Status}}</span>
+        <ul>
+          {{range .Tasks}}
+          <li>
+            <strong>{{.ID}}</strong>: {{.Task}}
+            <span class="status-badge {{.Status}}">{{.Status}}</span>
+          </li>
+          {{end}}
+        </ul>
+      </div>
+      {{end}}
+    </div>
+  </details>
+  {{end}}
+
+  {{if .ReviewFiles}}
+  <details {{if .HasOpenFindings}}open{{end}}>
+    <summary>Review Findings</summary>
+    <div class="review-section-content">
+      <div class="review-file-selector">
+        <label for="review-type">Select Review File:</label>
+        <select id="review-type" onchange="window.location.href = '?review=' + this.value;">
+          {{range .ReviewFiles}}
+            <option value="{{.}}" {{if eq . $.SelectedReview}}selected{{end}}>
+              {{if eq . ""}}review{{else}}review-{{.}}{{end}}
+            </option>
+          {{end}}
+        </select>
+      </div>
+      {{if .Reviews}}
+        {{range .Reviews}}
+        <div class="review-card {{.Status}}">
+          <div class="review-card-header">
+            <strong>{{.File}}:{{.Line}}</strong>
+            <span class="status-badge {{.Status}}">{{.Status}}</span>
+          </div>
+          <p class="review-card-feedback">{{.Feedback}}</p>
+        </div>
+        {{end}}
+      {{else}}
+        <p class="empty">No findings for this review file.</p>
+      {{end}}
+    </div>
+  </details>
+  {{end}}
+
+  {{if .Log}}
+  <details>
+    <summary>Log</summary>
+    <div class="description-content">
+      {{.Log}}
+    </div>
+  </details>
+  {{end}}
+
+  </body>
+  </html>
+  {{end}}
+</body>
+</html>

@@ -1,0 +1,147 @@
+# plan.yml Schema
+#
+# A plan is a list of slices. Each slice is a self-contained unit of work that
+# leaves the repository in a fully valid state (build + tests + lint pass) when
+# complete. Slices enable "safe stop" points and parallel/sequential execution.
+#
+# Field definitions:
+#
+# SLICE fields:
+#   id          (string, required) — kebab-case, unique across the file.
+#                 Describes the outcome, not the action. E.g. "backend-foundation",
+#                 not "add-backend-stuff".
+#   description (string, required) — One sentence: what is true after this slice
+#                 completes. E.g. "Endpoint exists and backend tests pass."
+#   status      (string, required) — One of: todo | in-progress | done
+#   depends_on  (list, optional)  — List of slice IDs that must be done first.
+#                 Omit or leave empty if there are no dependencies.
+#   tasks       (list, required)  — Ordered list of task objects within this slice.
+#
+# TASK fields:
+#   id          (string, required) — kebab-case, unique across the ENTIRE file
+#                 (not just within the slice).
+#   task        (string, required) — Fully self-contained description. Must include:
+#                 - FILE: path to the file being changed
+#                 - FUNCTION: name of the function/component being changed (if applicable)
+#                 - What to change and why
+#                 - CURRENT CODE / ADD / CHANGE / REMOVE blocks for non-trivial edits
+#                 A developer must be able to implement this task by reading ONLY
+#                 this description — no prior conversation context required.
+#   status      (string, required) — One of: todo | in-progress | done
+
+# --- Example (remove this block when using this schema as a reference) ---
+- id: backend-foundation
+  description: 'Endpoint exists, service function is tested, mock is registered.'
+  status: todo
+  depends_on: []
+  tasks:
+    - id: add-membership-service-fn
+      task: >
+        FILE: src/user-service/membership.ts FUNCTION: getMembershipStatus
+
+        Create a new exported async function `getMembershipStatus(userId: string)`
+        that calls the External API at `GET /memberships/{userId}` and returns the
+        membership object or null if the user is not a member (404 → null).
+
+        FILE DOES NOT EXIST YET — create it.
+
+        ADD:
+          export async function getMembershipStatus(userId: string) {
+            const res = await externalApi.get(`/memberships/${userId}`)
+            if (res.status === 404) return null
+            return res.data
+          }
+      status: todo
+
+    - id: add-membership-endpoint
+      task: >
+        FILE: src/user-service/routes/membership.ts
+
+        Create a new router file following the pattern in
+        src/user-service/routes/user-preferences.ts. Register a GET route at
+        `/api/users/:id/membership` that calls `getMembershipStatus` and returns
+        `{ data, error }`. 404 from the service → `{ data: null, error: null }`
+        (not-a-member is not an error). Unexpected errors → `{ data: null, error: message }`.
+
+        FILE DOES NOT EXIST YET — create it.
+      status: todo
+
+    - id: register-membership-mock
+      task: >
+        FILE: mocks/handlers/membership.ts
+
+        Register a new MSW handler following the pattern in mocks/handlers/billing.ts.
+        Mock GET /memberships/:userId — return a fixture for known user IDs,
+        return 404 for unknown IDs.
+
+        FILE DOES NOT EXIST YET — create it.
+      status: todo
+
+- id: frontend-component
+  description: 'MembershipStatus component renders correctly in isolation with prop-driven data.'
+  status: todo
+  depends_on: []
+  tasks:
+    - id: create-membership-status-component
+      task: >
+        FILE: src/components/profile/MembershipStatus.tsx
+
+        Create a new React component `<MembershipStatus>` that accepts a
+        `membership` prop (the membership object or null). Renders membership
+        details when present; renders "Not a member" when null. Must NOT make
+        any API calls — all data is prop-driven.
+
+        Follow the structure of src/components/profile/BillingSection.tsx.
+
+        FILE DOES NOT EXIST YET — create it.
+      status: todo
+
+- id: frontend-wiring
+  description: 'MembershipStatus fetches live data via useProfileSection and handles all states.'
+  status: todo
+  depends_on:
+    - backend-foundation
+    - frontend-component
+  tasks:
+    - id: wire-membership-hook
+      task: >
+        FILE: src/components/profile/MembershipStatus.tsx FUNCTION: MembershipStatus
+
+        Replace the prop-driven data with a `useProfileSection('/api/users/{id}/membership')`
+        hook call (pattern: src/components/profile/BillingSection.tsx).
+        Handle loading, error, and not-a-member (null data) states explicitly.
+      status: todo
+
+    - id: add-membership-to-profile-page
+      task: >
+        FILE: src/pages/ProfilePage.tsx
+
+        Import and render `<MembershipStatus>` below `<ProfileHeader>`. Do NOT
+        place it inside `<ProfileHeader>`. It must be a sibling so it can fail
+        independently.
+      status: todo
+
+- id: cleanup
+  description: 'No hardcoded values remain; edge-case tests are in place.'
+  status: todo
+  depends_on:
+    - frontend-wiring
+  tasks:
+    - id: add-backend-tests
+      task: >
+        FILE: src/user-service/membership.test.ts
+
+        Write unit tests for `getMembershipStatus`: happy path (member found),
+        not-a-member (404 → null), unexpected error (throws).
+        FILE DOES NOT EXIST YET — create it.
+      status: todo
+
+    - id: add-frontend-tests
+      task: >
+        FILE: src/components/profile/MembershipStatus.test.tsx
+
+        Write component tests for `<MembershipStatus>`:
+        renders membership details, renders "Not a member" for null,
+        renders loading state, renders error state.
+        FILE DOES NOT EXIST YET — create it.
+      status: todo
