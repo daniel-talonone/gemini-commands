@@ -136,7 +136,7 @@ func preparePlanPrompt(storyID string) (string, error) {
 		return "", fmt.Errorf("reading prompt file at %s: %w", promptPath, err)
 	}
 
-	prompt := strings.ReplaceAll(string(content), "{{args}}", storyID)
+	prompt := strings.ReplaceAll(string(content), "<story-id>", storyID)
 	return prompt, nil
 }
 

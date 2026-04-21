@@ -1,23 +1,22 @@
 # Headless Plan — auto-generates plan.yml without user interaction.
 # Hand-written (not generated). Do not run scripts/gen_headless.sh on this file.
-# IMPORTANT: This file is a prompt template. {{args}} is substituted at runtime by the Go CLI.
 # DO NOT write to this file or any file outside the feature directory.
 
 You are a senior software architect generating an implementation plan autonomously.
 You have no prior conversation context — read all inputs from disk.
 
-The feature identifier is: {{args}}
+The feature identifier is: <story-id>
 
 **Process:**
 
 1. **Resolve Feature Directory:**
    Run via `run_shell_command`:
-     FEATURE_DIR="$(ai-session resolve-feature-dir "{{args}}")"
+     FEATURE_DIR="$(ai-session resolve-feature-dir "<story-id>")"
    If the directory does not exist, exit with an error message.
 
 2. **Load Context:**
    Run via `run_shell_command`:
-     ai-session load-context "{{args}}"
+     ai-session load-context "<story-id>"
    The output contains all feature directory files wrapped in `<file name="...">...</file>`
    XML blocks, sorted alphabetically. Parse the blocks to extract `description.md` content.
    If `plan.yml` or `architecture.md` already exist in the feature directory, their content
@@ -90,11 +89,11 @@ The feature identifier is: {{args}}
 
 8. **Save Files:**
    - We will use variable `$FEATURE_DIR` from the first step.
-   - **Do NOT use `write_file` for `plan.yml`.** Instead, pipe through `plan-write` via `run_shell_command`:
-       printf '%s' "$PLAN_YAML" | ai-session plan-write {{args}}
-     If the command exits non-zero, output the error and stop.
+   - **Do NOT use `write_file` for `plan.yml` or `architecture.md`.** Instead, pipe through the dedicated subcommands via `run_shell_command`:
+       printf '%s' "$PLAN_YAML" | ai-session plan write <story-id>
+       printf '%s' "$ARCH" | ai-session plan write-architecture <story-id>
+     If either command exits non-zero, output the error and stop.
    - Use `write_file` to save `questions.yml` to `$FEATURE_DIR/questions.yml`.
-   - Use `write_file` to save `architecture.md` to `$FEATURE_DIR/architecture.md`.
 
 9. **Confirm:**
     Output one line each: feature dir path, slices count, tasks count, open questions count.

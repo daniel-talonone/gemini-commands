@@ -165,13 +165,28 @@ This section provides a breakdown of individual session commands, their dependen
 -   **Outputs:**
     -   Generates and writes `.features/<feature-dir>/plan.yml` via `ai-session plan-write` — schema-validated, atomic. If validation fails the error is shown and nothing is written.
     -   Generates and writes `.features/<feature-dir>/questions.yml`
-    -   Optionally generates `.features/<feature-dir>/architecture.md` (strategy, pattern refs, constraints, slice hints)
-    -   Triggers `scripts/enrich_tasks.sh` as a detached background process — iterates todo tasks one at a time, pipes LLM output through `ai-session plan-enrich-task` (field-level write, injection guard, status protection)
+    - Optionally generates `.features/<feature-dir>/architecture.md` (strategy, pattern refs, constraints, slice hints)
+     -   Triggers `scripts/enrich_tasks.sh` as a detached background process — iterates todo tasks one at a time, pipes LLM output through `ai-session plan-enrich-task` (field-level write, injection guard, status protection)
 
-## `/session:pr`
+    ### `ai-session plan write-architecture`
 
--   **Description:** Generates a pull request description, creates or updates the PR on GitHub, and saves the PR link to the feature directory.
--   **Orchestration Pattern:** Subagent Pattern
+    -   **Description:** Atomically writes the architecture documentation from standard input to `architecture.md` within the specified feature directory.
+    -   **Orchestration Pattern:** Helper Script
+    -   **Dependencies:**
+     -   **Go package:** `go-session/internal/architecture`
+    -   **Inputs:**
+     -   `<story-id>`: The identifier for the feature, used to resolve the feature directory.
+     -   Standard input: The content to be written to `architecture.md`.
+    -   **Outputs:**
+     -   Creates or overwrites `.features/<feature-dir>/architecture.md`.
+    -   **Exit Conditions:**
+     -   **Exit Code 0:** Success. The file was written.
+     -   **Exit Code > 0:** Failure. An error message is printed to stderr. This can happen if the feature directory does not exist, or if there are file system permission issues.
+
+    ## `/session:pr`
+
+    -   **Description:** Generates a pull request description, creates or updates the PR on GitHub, and saves the PR link to the feature directory.
+    -   **Orchestration Pattern:** Subagent Pattern
 -   **Dependencies:**
     -   **Scripts:** `scripts/get_git_context.sh`
     -   **Tools:** `run_shell_command`, `search_pull_requests`, `read_file`, `create_pull_request`, `update_pull_request`, `write_file`, `ask_user`, `generalist`
