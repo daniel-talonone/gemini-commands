@@ -42,6 +42,7 @@ Feature directories contain:
 - `/session:migration` — Migrates a legacy single-file feature document to the directory structure.
 - `/session:new` — Creates a feature directory from a Shortcut story ID or Notion URL.
 - `/session:plan` — Analyzes codebase and requirements to create a TDD-ready implementation plan.
+- `ai-session plan get <story-id> [--architecture|--questions]` — Retrieves feature plan artifacts. Use `--architecture` to get `architecture.md` content and `--questions` for `questions.yml` content. These flags are mutually exclusive.
 - `/session:create-pr-description` — Generates a PR description from feature context and saves to `pr.md`.
 - `/session:pr` — Generates a PR description AND creates/updates the PR on GitHub; saves the PR link to `pr.md`.
 - `/session:review` — Critical code review of the current branch using a sub-agent.
@@ -94,7 +95,7 @@ terminal. Both tools use the same `/session:` prefix.
   - `plan.yml` writes are gated through `ai-session plan-write` — validates schema before writing,
     rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs. **Side-effect:** sets
     `pipeline_step: plan-done` in `status.yaml` after every successful write.
-  - `plan.Plan`, `plan.Slice`, `plan.Task` Go types are exported from `go-session/internal/plan/plan.go` — use `plan.LoadPlan(featureDir)` to read plan.yml into a typed struct from other packages.
+  - `plan.Plan`, `plan.Slice`, `plan.Task` Go types are exported from `go-session/internal/plan/plan.go`. Use `plan.LoadPlan(featureDir)` to read `plan.yml`, `plan.LoadArchitecture(featureDir)` for `architecture.md`, and `plan.LoadQuestions(featureDir)` for `questions.yml` into typed structs or strings. The latter two are optional and will return an empty string if the corresponding file is not found.
   - Per-task enrichment uses `ai-session plan-enrich-task --slice <id> --task <id>` — updates only
     the `task:` field of a single todo task, protected by an injection guard and status lock.
   - Context loading uses `ai-session load-context <story-id>` — outputs all feature dir files as

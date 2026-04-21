@@ -136,6 +136,7 @@ ai-session update-slice sc-1234 slice-id --status in-progress
 ai-session plan-list sc-1234
 ai-session plan-get sc-1234 --slice s --task t
 ai-session plan-write sc-1234       # validate + atomically write plan.yml (stdin)
+ai-session plan-write-architecture sc-1234  # atomically write architecture.md (stdin)
 ai-session plan-enrich-task sc-1234 --slice s --task t
 ai-session plan-split-task sc-1234 --slice s --task t
 ai-session implement sc-1234        # headless LLM implementation loop (gemini --yolo per task)
