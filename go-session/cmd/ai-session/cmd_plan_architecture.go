@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
+	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +22,12 @@ var planArtifactsCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		storyID := args[0]
 
-		featureDir, err := feature.ResolveFeatureDir(storyID, "", "")
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("getting current working directory: %w", err)
+		}
+		remoteURL := git.RemoteURL()
+		featureDir, err := feature.ResolveFeatureDir(storyID, cwd, remoteURL)
 		if err != nil {
 			return fmt.Errorf("failed to resolve feature directory for story ID %s: %w", storyID, err)
 		}
