@@ -92,9 +92,10 @@ terminal. Both tools use the same `/session:` prefix.
   - Structured: `plan.yml`, `questions.yml`, `review.yml` (YAML, modified via `ai-session` CLI).
   - All YAML modifications use `ai-session update-task` or `ai-session update-slice` for deterministic,
     atomic updates.
-  - `plan.yml` writes are gated through `ai-session plan-write` — validates schema before writing,
-    rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs. **Side-effect:** sets
-    `pipeline_step: plan-done` in `status.yaml` after every successful write.
+  - Writes are gated through `ai-session plan write` which validates plan.yml, `architecture.md`, or `questions.yml` depending on flags (`--architecture` or via `ai-session plan questions`).
+    Validation rejects invalid YAML, missing fields, bad statuses, or non-kebab-case IDs.
+    Schema validation is command-specific: `plan.yml` requires status ∈ {todo, in-progress, done}; `questions.yml` requires status ∈ {open, resolved, skipped}.
+    **Side-effect:** sets `pipeline_step: plan-done` in `status.yaml` after every successful write.
   - `plan.Plan`, `plan.Slice`, `plan.Task` Go types are exported from `go-session/internal/plan/plan.go`. Use `plan.LoadPlan(featureDir)` to read `plan.yml`, `plan.LoadArchitecture(featureDir)` for `architecture.md`, and `plan.LoadQuestions(featureDir)` for `questions.yml` into typed structs or strings. The latter two are optional and will return an empty string if the corresponding file is not found.
   - Per-task enrichment uses `ai-session plan-enrich-task --slice <id> --task <id>` — updates only
     the `task:` field of a single todo task, protected by an injection guard and status lock.

@@ -89,11 +89,11 @@ The feature identifier is: <story-id>
 
 8. **Save Files:**
    - We will use variable `$FEATURE_DIR` from the first step.
-   - **Do NOT use `write_file` for `plan.yml` or `architecture.md`.** Instead, pipe through the dedicated subcommands via `run_shell_command`:
+   - **Do NOT use `write_file` for `plan.yml`, `architecture.md`, or `questions.yml`.** Instead, pipe through the dedicated subcommands via `run_shell_command`:
        printf '%s' "$PLAN_YAML" | ai-session plan write <story-id>
-       printf '%s' "$ARCH" | ai-session plan write-architecture <story-id>
-     If either command exits non-zero, output the error and stop.
-   - Use `write_file` to save `questions.yml` to `$FEATURE_DIR/questions.yml`.
+       printf '%s' "$ARCH" | ai-session plan write --architecture <story-id>
+       printf '%s' "$QUESTIONS_YAML" | ai-session plan write --questions <story-id>
+     If any command exits non-zero, output the error, then correct and retry.
 
 9. **Confirm:**
     Output one line each: feature dir path, slices count, tasks count, open questions count.

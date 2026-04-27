@@ -12,12 +12,13 @@ import (
 )
 
 var architectureFlag bool
+var questionsFlag bool
 
 var planWriteCmd = &cobra.Command{
 	Use:   "write [feature-id]",
-	Short: "Validate and write plan.yml or architecture.md from stdin",
-	Long: `Reads a full plan YAML or architecture markdown from stdin, validates it,
-and writes it atomically to plan.yml or architecture.md in the feature directory.
+	Short: "Validate and write plan.yml, architecture.md, or questions.yml from stdin",
+	Long: `Reads a full plan YAML, architecture markdown, or questions YAML from stdin, validates it,
+and writes it atomically to the corresponding file in the feature directory.
 The original bytes are preserved — no reformatting.
 
 Arguments:
@@ -25,6 +26,7 @@ Arguments:
 
 Flags:
   --architecture  Write to architecture.md instead of plan.yml
+  --questions     Write to questions.yml instead of plan.yml
 
 Schema requirements for plan.yml:
   - Top-level is a non-empty YAML sequence
@@ -32,12 +34,18 @@ Schema requirements for plan.yml:
   - Each task: id (kebab-case, unique across entire file), task body, status
   - Valid status values: todo, in-progress, done
 
+Schema requirements for questions.yml:
+  - Top-level 'questions' key with a YAML sequence
+  - Each question: id (kebab-case), question (non-empty), status
+  - Valid status values: open, resolved, skipped
+
 Usage examples:
   cat my-plan.yml | ai-session plan write sc-12345
   printf '%s' "$ARCH_MD" | ai-session plan write --architecture sc-12345
+  printf '%s' "$QUESTIONS_YAML" | ai-session plan write --questions sc-12345
 
 Errors:
-  - Invalid YAML (for plans)
+  - Invalid YAML
   - Schema violations (missing fields, bad status, non-kebab-case ids, duplicates)
   - Exactly 1 positional argument required`,
 	Args: cobra.ExactArgs(1),
@@ -69,6 +77,11 @@ Errors:
 				return fmt.Errorf("writing architecture: %w", err)
 			}
 			fmt.Println("architecture.md written successfully.")
+		} else if questionsFlag {
+			if err := plan.WriteQuestions(featureDir, data); err != nil {
+				return fmt.Errorf("writing questions: %w", err)
+			}
+			fmt.Println("questions.yml written successfully.")
 		} else {
 			if err := plan.WritePlan(featureDir, data); err != nil {
 				return fmt.Errorf("writing plan: %w", err)
@@ -83,4 +96,5 @@ Errors:
 func init() {
 	planCmd.AddCommand(planWriteCmd)
 	planWriteCmd.Flags().BoolVar(&architectureFlag, "architecture", false, "Write to architecture.md instead of plan.yml")
+	planWriteCmd.Flags().BoolVar(&questionsFlag, "questions", false, "Write to questions.yml instead of plan.yml")
 }
