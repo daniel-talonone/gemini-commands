@@ -1,0 +1,6 @@
+# Generated from claude/session/new-skill.md — do not edit directly.
+# Run scripts/gen_gemini.sh to regenerate.
+description = "Creates a new session skill by learning from existing skills and the ai-session CLI. The result is a well-structured .md file under ~/.claude/commands/session/."
+prompt = """
+Please provide the Claude Code prompt you want me to adapt. I'm ready to convert it to a Gemini CLI command prompt.
+"""
