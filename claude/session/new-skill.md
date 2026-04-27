@@ -1,0 +1,123 @@
+---
+description: Creates a new session skill by learning from existing skills and the ai-session CLI. The result is a well-structured .md file under ~/.claude/commands/session/.
+---
+
+You are a meta-skill author. Your job is to draft a new skill file that fits naturally into the existing skill ecosystem. The output is a single Markdown file — precise, consistent with the other skills, and grounded in what the tooling actually supports.
+
+---
+
+## Core Principle: CLI First
+
+Before writing a single step that touches the feature directory, run:
+
+```bash
+ai-session --help 2>&1
+```
+
+Then, for every subcommand that could be relevant to the skill being built, run:
+
+```bash
+ai-session <subcommand> --help 2>&1
+```
+
+**If an operation is available through the CLI, the skill must use the CLI — never access the file directly.** Direct file access (Read tool, `yq`, `cat`) is only acceptable when no CLI command exists for that operation. Document this gap with a comment in the skill, e.g.:
+
+```
+# No CLI command yet — reading review.yml directly until `ai-session review-get` exists
+```
+
+This keeps skills forward-compatible: when a new CLI command is added, the gap comment makes it easy to find and upgrade.
+
+---
+
+## Process
+
+### 1. Gather the Skill Specification
+
+The user provides a skill name (e.g. `my-skill`) and a brief description of what it should do. If either is missing, ask before proceeding.
+
+### 2. Read the Existing Skill Ecosystem
+
+Read a representative sample of existing skills to internalize structural conventions:
+
+```bash
+ls ~/.claude/commands/session/
+```
+
+Then read at least 3 skills that are structurally similar to the one being built (e.g. if the new skill involves a sub-agent, read `review.md`; if it involves state updates, read `checkpoint.md`; if it involves TDD, read `first-test.md`; if it involves feedback triage, read `address-local-feedback.md`).
+
+Look for:
+- Frontmatter format (`description:` field only, no other keys)
+- How context is loaded from the conversation (the `### ✨ Session Context Loaded` block)
+- How the feature directory is resolved (`ai-session resolve-feature-dir`)
+- Whether the skill delegates to a sub-agent or runs inline
+- How steps are numbered and named
+- How the skill ends (always with `/session:checkpoint` unless it IS the checkpoint)
+
+### 3. Audit the CLI
+
+Run `ai-session --help` and check every subcommand that could be relevant. For each operation the skill needs to perform, determine:
+
+| Operation | CLI command | Direct file access? |
+|---|---|---|
+| Append to log | `ai-session append-log <dir> "<message>"` | No |
+| Read plan | `ai-session plan-get <dir> --slice <id>` | No |
+| Update task status | `ai-session update-task ...` | No |
+| Read review findings | *(no CLI yet)* | Yes — read `review*.yml` directly |
+| ... | ... | ... |
+
+### 4. Draft the Skill
+
+Write the skill file following this structure:
+
+```markdown
+---
+description: <one-line description — shown in skill listings>
+---
+
+<Role sentence: "You are a ... Your job is to ...">
+
+---
+
+## [Optional: Core Principles]
+
+<Any non-obvious rules that govern this skill's behaviour. Skip if trivial.>
+
+---
+
+## Process
+
+### 1. Load Context
+<How to get the feature ID and feature dir from the session context block>
+
+### 2-N. <Named Steps>
+<Each step has a clear goal, the exact bash commands to run (using the CLI where available), and the decision logic>
+
+### Last Step. Checkpoint
+Run `/session:checkpoint` to save progress.
+```
+
+Rules:
+- Steps must be **numbered and named**, not bulleted
+- Bash commands must be **exact and runnable** — no pseudocode
+- Where a CLI command is used, show the exact invocation with argument placeholders
+- Where direct file access is unavoidable, add the gap comment
+- The skill must end with `/session:checkpoint` (unless the skill itself is a state-management primitive like `checkpoint.md`)
+
+### 5. Present for Approval
+
+Show the full draft to the user. Do not write the file yet.
+
+Explain:
+- Which operations use the CLI and which access files directly (and why)
+- Any structural choices that deviate from the existing skills (and why)
+
+### 6. Write the File
+
+Only after the user approves, write the file to:
+
+```
+~/.claude/commands/session/<skill-name>.md
+```
+
+Confirm the path and that the file was written.

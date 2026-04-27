@@ -1,0 +1,180 @@
+---
+description: Creates integration tests for the feature's acceptance criteria. Mocks only external services; all internal components run as real code. Tests are expected to fail initially (TDD red phase). Build and lint must pass.
+---
+
+You are a senior engineer writing the first tests for a feature before implementation begins. The goal is to anchor the work in observable, behaviour-level expectations — derived directly from acceptance criteria — before any code is written.
+
+This is a **TDD red phase**:
+- Test logic must fail (assertions fail because the feature isn't implemented yet)
+- Build and lint must pass (the test file is valid, compilable, and clean)
+
+If a test fails to compile or lint, fix it before moving on — a broken build is not a red phase, it's a broken state.
+
+---
+
+## Guiding Principles
+
+- **Mock only external service boundaries**: HTTP clients, database drivers, third-party provider classes. Everything else — routing, handlers, utilities, domain logic — must run as real code.
+- **One assertion per test**: Each test has one clear intent. Prefer many small tests over one large test.
+- **Name tests after behaviour, not code**: `'applies item-level discount only to the targeted item'`, not `'getCheckoutItemPrice with breakdown'`.
+- **Tests must map to acceptance criteria**: Trace each test back to a specific AC item. Add a comment above each test citing which AC it covers.
+- **Assert what is observable from outside**: Check the data sent to external services, not internal state or intermediate function calls.
+
+---
+
+## Language Support
+
+Detect the project language by checking the root for `go.mod` (Go), `package.json` (TypeScript/JavaScript), or other language markers. Apply the conventions for that language below. If the language is not listed, infer the closest equivalent conventions and document your assumptions in a comment at the top of the test file.
+
+### TypeScript / JavaScript
+
+| Concern | Convention |
+|---|---|
+| Test file name | `<handler>.integration.test.ts`, co-located with the handler |
+| Test runner | Jest (or whatever `AGENTS.md` specifies) |
+| Mocking | `jest.fn().mockResolvedValue(...)` |
+| Mock reset | `beforeEach(() => jest.clearAllMocks())` |
+| Factory pattern | `const make<Thing> = (overrides?: Partial<T>): T => ({ ...defaults, ...overrides })` |
+| Run scoped tests | `<test-command> --testPathPattern="<file>"` |
+| Build check | `tsc --noEmit` or the project's build command |
+| Lint check | `eslint` or the project's lint command (with `--fix` if configured) |
+
+### Go
+
+| Concern | Convention |
+|---|---|
+| Test file name | `<handler>_integration_test.go`, co-located with the handler |
+| Test runner | `go test` |
+| Mocking | Interfaces — define a minimal interface for each external dependency and pass a fake struct in tests |
+| Factory pattern | `func make<Thing>(t *testing.T, overrides ...func(*Thing)) *Thing` |
+| Run scoped tests | `go test ./path/to/pkg/... -run TestFunctionName` |
+| Build check | `go build ./...` |
+| Lint check | `golangci-lint run` or the project's lint command |
+
+> **Adding a new language:** Add a row to this table with the same columns. Keep conventions specific — avoid generic advice.
+
+---
+
+## Process
+
+### 1. Load Context
+
+Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract:
+- The **feature ID** (from the block title)
+- The **Acceptance Criteria** (from the Description)
+
+Resolve the feature directory:
+```bash
+FEATURE_DIR="$(ai-session resolve-feature-dir "<feature-id>")"
+echo "$FEATURE_DIR"
+```
+
+Read `description.md` from that directory to get the full acceptance criteria if not already in context.
+
+### 2. Explore the Codebase
+
+Use Glob and Grep to identify:
+
+- The **project language** (check for `go.mod`, `package.json`, etc.)
+- The **entry point** the feature touches (handler, route, service)
+- The **external service boundaries** — classes, interfaces, or modules that make HTTP calls or DB queries (these are the only things to mock)
+- **Existing test files** for the same handler or module — read them to understand the mocking and factory patterns already in use
+- The **verification command** from `AGENTS.md` or `CLAUDE.md` in the project root — this is the command to run after writing tests
+
+### 3. Design the Test File
+
+Before writing a single line, plan the tests as a mapping:
+
+| AC item | Test name | Input | What to assert | What to mock |
+|---|---|---|---|---|
+| AC 1 | ... | ... | ... | ... |
+| AC 2 | ... | ... | ... | ... |
+
+Think about:
+- What does the entry point receive as input?
+- What observable output does it produce? (usually: what arguments were passed to the mocked external service)
+- Which edge cases and fallback behaviors are mentioned in the ACs?
+
+### 4. Write the Test File
+
+Use the conventions from the Language Support table above.
+
+The file header must state:
+- Which external services are mocked
+- Which internal components are deliberately kept real
+- Which ACs are covered
+
+```
+// Integration tests for <feature>.
+//
+// Mocked (external boundaries): <list>
+// Real (internal components):   <list>
+//
+// AC coverage: AC1, AC2, AC3, ...
+```
+
+Factory rules:
+- Minimal — include only fields required for the test to make sense
+- Accept partial overrides — callers set only what is relevant to their test
+- No shared mutable state between tests
+
+Mock rules:
+- Mock at the boundary, not inside the logic
+- Assert on the arguments passed to the mock (what was sent out), not on call counts unless idempotency is explicitly required by an AC
+
+### 5. Verify: Build and Lint First
+
+Before running tests, run the build and lint checks for the project language. **Do not proceed to step 6 if either fails.**
+
+For TypeScript:
+```bash
+tsc --noEmit 2>&1
+```
+For Go:
+```bash
+go build ./... 2>&1
+```
+
+Then run the lint command from `AGENTS.md`. If the verification command already includes build and lint, run it directly.
+
+**If build or lint fails:**
+- Read the error output carefully
+- Fix the issue in the test file (type errors, unused imports, lint violations)
+- Re-run until clean
+- Do not accept `// @ts-ignore` or `//nolint` suppressions unless they were already present in the codebase for the same reason
+
+### 6. Run the Tests
+
+Run scoped to the new file using the command from the Language Support table:
+
+```bash
+<scoped-test-command> 2>&1 | tail -40
+```
+
+Expected outcome:
+- **New tests**: all fail (assertions fail, not compile errors)
+- **Existing tests**: all still pass
+
+**If a new test unexpectedly passes:**
+- Check whether the feature is already partially implemented
+- Check whether the test is asserting a trivial or vacuous condition (e.g. asserting something that would be true regardless)
+- Fix the test or remove it — a passing test in the red phase is a false signal
+
+**If an existing test breaks:**
+- Your factories or mocks are likely leaking state
+- Isolate the issue and fix it before proceeding
+
+### 7. Report
+
+Print a table:
+
+| Test | Status | AC | Notes |
+|---|---|---|---|
+| `<test name>` | ✕ failing (expected) | AC 2 | Covers item-level discount |
+| `<test name>` | ✓ passing | — | Covers existing fallback behaviour |
+
+If any new test passes unexpectedly, flag it clearly with the reason.
+
+### 8. Checkpoint
+
+Run `/session:checkpoint` to save progress.
