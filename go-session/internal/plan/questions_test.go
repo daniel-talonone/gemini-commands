@@ -118,3 +118,35 @@ questions:
 		})
 	}
 }
+
+
+
+func TestLoadQuestions(t *testing.T) {
+	t.Run("returns content as string when questions.yml exists", func(t *testing.T) {
+		tempDir := t.TempDir()
+		expectedContent := `questions:
+  - id: test-q
+    question: "Test Question"
+    status: open
+`
+		err := os.WriteFile(filepath.Join(tempDir, "questions.yml"), []byte(expectedContent), 0644)
+		require.NoError(t, err)
+
+		content, err := plan.LoadQuestions(tempDir)
+		require.NoError(t, err)
+		assert.Equal(t, expectedContent, content)
+	})
+
+	t.Run("returns empty string when file doesn't exist", func(t *testing.T) {
+		tempDir := t.TempDir()
+		content, err := plan.LoadQuestions(tempDir)
+		require.NoError(t, err)
+		assert.Equal(t, "", content)
+	})
+
+	t.Run("returns error when feature directory doesn't exist", func(t *testing.T) {
+		_, err := plan.LoadQuestions("/non-existent-feature-dir")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "feature directory does not exist")
+	})
+}

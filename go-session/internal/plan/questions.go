@@ -22,17 +22,42 @@ type Questions struct {
 	Questions []Question `yaml:"questions"`
 }
 
+
+
 // LoadQuestions reads questions.yml from featureDir. Returns an empty string
 // without error if the file does not exist — questions are optional.
+// Returns an error if the feature directory does not exist.
 func LoadQuestions(featureDir string) (string, error) {
+	if _, err := os.Stat(featureDir); os.IsNotExist(err) {
+		return "", fmt.Errorf("feature directory does not exist: %s", featureDir)
+	}
+
 	data, err := os.ReadFile(filepath.Join(featureDir, "questions.yml"))
 	if os.IsNotExist(err) {
-		return "", nil
+		return "", nil // Return an empty string instead of nil
 	}
 	if err != nil {
 		return "", fmt.Errorf("reading questions.yml: %w", err)
 	}
 	return string(data), nil
+}
+
+// Read reads questions.yml from featureDir. Returns an empty byte slice
+// without error if the file does not exist — questions are optional.
+// Returns an error if the feature directory does not exist.
+func Read(featureDir string) ([]byte, error) {
+	if _, err := os.Stat(featureDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("feature directory does not exist: %s", featureDir)
+	}
+
+	data, err := os.ReadFile(filepath.Join(featureDir, "questions.yml"))
+	if os.IsNotExist(err) {
+		return []byte{}, nil // Return an empty byte slice instead of nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading questions.yml: %w", err)
+	}
+	return data, nil
 }
 
 var kebabCase = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
