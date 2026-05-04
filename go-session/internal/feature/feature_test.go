@@ -57,23 +57,47 @@ func TestResolveFeatureDir_LocalFeaturesDir(t *testing.T) {
 }
 
 func TestResolveFeatureDir_HTTPSRemote(t *testing.T) {
-	dir := t.TempDir()
+	tempDir := t.TempDir()
+	featuresDir := filepath.Join(tempDir, ".features")
+	require.NoError(t, os.Setenv("FEATURES_DIR", featuresDir))
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("FEATURES_DIR"))
+	})
+
+	featureID := "sc-1234"
+	orgRepo := "myorg/myrepo"
+	expectedDir := filepath.Join(featuresDir, orgRepo, featureID)
+	require.NoError(t, os.MkdirAll(expectedDir, 0755))
+	// Create a dummy status.yaml, as FeaturesDir requires it for valid feature directories.
+	require.NoError(t, os.WriteFile(filepath.Join(expectedDir, "status.yaml"), []byte("repo: myorg/myrepo"), 0644))
+
 	result, err := feature.ResolveFeatureDir(
-		"sc-1234", dir, "https://github.com/myorg/myrepo.git",
+		featureID, tempDir, "https://github.com/myorg/myrepo.git",
 	)
 	require.NoError(t, err)
-	assert.True(t, strings.HasSuffix(result, filepath.Join("myorg", "myrepo", "sc-1234")))
-	assert.Contains(t, result, ".features/")
+	assert.Equal(t, expectedDir, result)
 }
 
 func TestResolveFeatureDir_SSHRemote(t *testing.T) {
-	dir := t.TempDir()
+	tempDir := t.TempDir()
+	featuresDir := filepath.Join(tempDir, ".features")
+	require.NoError(t, os.Setenv("FEATURES_DIR", featuresDir))
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("FEATURES_DIR"))
+	})
+
+	featureID := "sc-1234"
+	orgRepo := "myorg/myrepo"
+	expectedDir := filepath.Join(featuresDir, orgRepo, featureID)
+	require.NoError(t, os.MkdirAll(expectedDir, 0755))
+	// Create a dummy status.yaml, as FeaturesDir requires it for valid feature directories.
+	require.NoError(t, os.WriteFile(filepath.Join(expectedDir, "status.yaml"), []byte("repo: myorg/myrepo"), 0644))
+
 	result, err := feature.ResolveFeatureDir(
-		"sc-1234", dir, "git@github.com:myorg/myrepo.git",
+		featureID, tempDir, "git@github.com:myorg/myrepo.git",
 	)
 	require.NoError(t, err)
-	assert.True(t, strings.HasSuffix(result, filepath.Join("myorg", "myrepo", "sc-1234")))
-	assert.Contains(t, result, ".features/")
+	assert.Equal(t, expectedDir, result)
 }
 
 func TestResolveFeatureDir_NoRemoteNoLocal(t *testing.T) {

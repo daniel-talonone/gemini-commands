@@ -150,3 +150,198 @@ func TestLoadQuestions(t *testing.T) {
 		assert.Contains(t, err.Error(), "feature directory does not exist")
 	})
 }
+
+func TestUpdateAnswers(t *testing.T) {
+	initialYAML := `
+questions:
+  - id: q1
+    question: "What is the capital of France?"
+    status: open
+  - id: q2
+    question: "What is the highest mountain?"
+    status: open
+  - id: q3
+    question: "Who painted the Mona Lisa?"
+    status: resolved
+    answer: "Leonardo da Vinci"
+`
+
+	t.Run("successfully updates matching question IDs and sets status to resolved", func(t *testing.T) {
+		tempDir := t.TempDir()
+		questionsPath := filepath.Join(tempDir, "questions.yml")
+		err := os.WriteFile(questionsPath, []byte(initialYAML), 0644)
+		require.NoError(t, err)
+
+		patches := []plan.AnswerPatch{
+			{ID: "q1", Answer: "Paris"},
+			{ID: "q2", Answer: "Mount Everest"},
+		}
+
+		err = plan.UpdateAnswers(tempDir, patches)
+		require.NoError(t, err)
+
+		updatedContent, err := os.ReadFile(questionsPath)
+		require.NoError(t, err)
+
+		expectedYAML := `questions:
+    - id: q1
+      question: What is the capital of France?
+      status: resolved
+      answer: Paris
+    - id: q2
+      question: What is the highest mountain?
+      status: resolved
+      answer: Mount Everest
+    - id: q3
+      question: Who painted the Mona Lisa?
+      status: resolved
+      answer: Leonardo da Vinci
+`
+		assert.Equal(t, strings.TrimSpace(expectedYAML), strings.TrimSpace(string(updatedContent)))
+	})
+
+	t.Run("returns error when a question ID is not found", func(t *testing.T) {
+		tempDir := t.TempDir()
+		questionsPath := filepath.Join(tempDir, "questions.yml")
+		err := os.WriteFile(questionsPath, []byte(initialYAML), 0644)
+		require.NoError(t, err)
+
+		patches := []plan.AnswerPatch{
+			{ID: "q1", Answer: "Paris"},
+			{ID: "missing-id", Answer: "Some answer"},
+		}
+
+		err = plan.UpdateAnswers(tempDir, patches)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `question with id "missing-id" not found in questions.yml`)
+
+		// Verify file content remains unchanged
+		contentAfterError, err := os.ReadFile(questionsPath)
+		require.NoError(t, err)
+		assert.Equal(t, strings.TrimSpace(initialYAML), strings.TrimSpace(string(contentAfterError)))
+	})
+
+	t.Run("preserves unmodified questions when some IDs match", func(t *testing.T) {
+		tempDir := t.TempDir()
+		questionsPath := filepath.Join(tempDir, "questions.yml")
+		err := os.WriteFile(questionsPath, []byte(initialYAML), 0644)
+		require.NoError(t, err)
+
+		patches := []plan.AnswerPatch{
+			{ID: "q1", Answer: "Paris"},
+		}
+
+		err = plan.UpdateAnswers(tempDir, patches)
+		require.NoError(t, err)
+
+		updatedContent, err := os.ReadFile(questionsPath)
+		require.NoError(t, err)
+
+		expectedYAML := `questions:
+    - id: q1
+      question: What is the capital of France?
+      status: resolved
+      answer: Paris
+    - id: q2
+      question: What is the highest mountain?
+      status: open
+    - id: q3
+      question: Who painted the Mona Lisa?
+      status: resolved
+      answer: Leonardo da Vinci
+`
+		assert.Equal(t, strings.TrimSpace(expectedYAML), strings.TrimSpace(string(updatedContent)))
+	})
+
+	t.Run("returns error when feature directory does not exist", func(t *testing.T) {
+		patches := []plan.AnswerPatch{
+			{ID: "q1", Answer: "Paris"},
+		}
+		err := plan.UpdateAnswers("/non-existent-feature-dir", patches)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "feature directory does not exist")
+	})
+
+	t.Run("atomic write: ensures temp file cleanup on error during write", func(t *testing.T) {
+		tempDir := t.TempDir()
+		questionsPath := filepath.Join(tempDir, "questions.yml")
+
+		// Create a valid questions.yml initially
+		err := os.WriteFile(questionsPath, []byte(initialYAML), 0644)
+		require.NoError(t, err)
+
+		// Introduce a malformed patch that would cause an unmarshal error on re-read in WriteQuestions
+		// This won't happen with the current validation, but simulates a failure during the atomic write phase
+		// to ensure temp files are cleaned up.
+		// Mocking WriteQuestions to fail, but it's called internally by UpdateAnswers
+		// For this test, we'll ensure that if UpdateAnswers fails due to an issue
+		// that might leave a temp file (e.g., if marshalling produces invalid yaml, though
+		// our current marshal will always produce valid yaml from struct),
+		// the temp files are cleaned.
+		// A simpler way is to check for temp files directly after UpdateAnswers returns an error.
+
+		// Manually create a situation where unmarshalling fails within WriteQuestions when it's called
+		// This is a bit tricky since UpdateAnswers calls WriteQuestions with valid YAML.
+		// Let's test by checking for any leftover .questions.tmp.* files if UpdateAnswers fails for
+		// any reason (e.g., reading initial file fails, or parsing initial file fails).
+
+		// Test case for unmarshalling error:
+		invalidQuestionsYAML := `questions:
+  - id: q1
+    question: "What is the capital of France?"
+    status: open
+  - - invalid-indentation
+`
+		err = os.WriteFile(questionsPath, []byte(invalidQuestionsYAML), 0644)
+		require.NoError(t, err)
+
+		patches := []plan.AnswerPatch{
+			{ID: "q1", Answer: "Paris"},
+		}
+
+		err = plan.UpdateAnswers(tempDir, patches)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "parsing questions.yml")
+
+		// Verify no temp files are left
+		files, err := os.ReadDir(tempDir)
+		require.NoError(t, err)
+		for _, f := range files {
+			assert.NotContains(t, f.Name(), ".questions.tmp.", "Temporary file was not cleaned up")
+		}
+	})
+	
+	t.Run("handles multiple patches for the same ID, last one wins", func(t *testing.T) {
+		tempDir := t.TempDir()
+		questionsPath := filepath.Join(tempDir, "questions.yml")
+		err := os.WriteFile(questionsPath, []byte(initialYAML), 0644)
+		require.NoError(t, err)
+
+		patches := []plan.AnswerPatch{
+			{ID: "q1", Answer: "First Answer"},
+			{ID: "q1", Answer: "Second Answer"},
+		}
+
+		err = plan.UpdateAnswers(tempDir, patches)
+		require.NoError(t, err)
+
+		updatedContent, err := os.ReadFile(questionsPath)
+		require.NoError(t, err)
+
+		expectedYAML := `questions:
+    - id: q1
+      question: What is the capital of France?
+      status: resolved
+      answer: Second Answer
+    - id: q2
+      question: What is the highest mountain?
+      status: open
+    - id: q3
+      question: Who painted the Mona Lisa?
+      status: resolved
+      answer: Leonardo da Vinci
+`
+		assert.Equal(t, strings.TrimSpace(expectedYAML), strings.TrimSpace(string(updatedContent)))
+	})
+}
+

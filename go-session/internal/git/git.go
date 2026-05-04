@@ -8,13 +8,21 @@ import (
 )
 
 // RemoteURL returns the git remote origin URL, or "" if not in a git repo.
-// exec.Command is intentionally kept in the CLI layer, not in internal/commands.
-func RemoteURL() string {
+// This is a variable to allow mocking in tests.
+var RemoteURL = defaultRemoteURL
+
+// defaultRemoteURL is the original implementation of RemoteURL.
+func defaultRemoteURL() string {
 	out, err := exec.Command("git", "remote", "get-url", "origin").Output()
 	if err != nil {
 		return ""
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// ResetRemoteURL resets the RemoteURL variable to its default implementation.
+func ResetRemoteURL() {
+	RemoteURL = defaultRemoteURL
 }
 
 // OrgRepo returns "org/repo" derived from git remote origin, or "" if unavailable.

@@ -22,6 +22,12 @@ type Questions struct {
 	Questions []Question `yaml:"questions"`
 }
 
+// AnswerPatch represents a single answer update payload.
+type AnswerPatch struct {
+	ID     string `json:"id"`
+	Answer string `json:"answer"`
+}
+
 
 
 // LoadQuestions reads questions.yml from featureDir. Returns an empty string
@@ -118,4 +124,51 @@ func WriteQuestions(featureDir string, data []byte) error {
 		return fmt.Errorf("renaming temp file: %w", err)
 	}
 	return nil
+}
+
+// UpdateAnswers applies patches to questions in questions.yml.
+func UpdateAnswers(featureDir string, patches []AnswerPatch) error {
+	if _, err := os.Stat(featureDir); os.IsNotExist(err) {
+		return fmt.Errorf("feature directory does not exist: %s", featureDir)
+	}
+
+	questionsPath := filepath.Join(featureDir, "questions.yml")
+	data, err := os.ReadFile(questionsPath)
+	if err != nil {
+		return fmt.Errorf("reading questions.yml: %w", err)
+	}
+
+	var questions Questions
+	if err := yaml.Unmarshal(data, &questions); err != nil {
+		return fmt.Errorf("parsing questions.yml: %w", err)
+	}
+
+	existingIDs := make(map[string]bool)
+	for _, q := range questions.Questions {
+		existingIDs[q.ID] = true
+	}
+
+	for _, patch := range patches {
+		if !existingIDs[patch.ID] {
+			return fmt.Errorf("question with id %q not found in questions.yml", patch.ID)
+		}
+	}
+
+	for i := range questions.Questions {
+		for _, patch := range patches {
+			if questions.Questions[i].ID == patch.ID {
+				questions.Questions[i].Answer = patch.Answer
+				questions.Questions[i].Status = "resolved"
+				// No break here, as multiple patches for the same ID are allowed and the last one wins.
+			}
+		}
+	}
+
+	updatedData, err := yaml.Marshal(questions)
+	if err != nil {
+		return fmt.Errorf("marshalling updated questions: %w", err)
+	}
+
+	// Use WriteQuestions for atomic write and validation
+	return WriteQuestions(featureDir, updatedData)
 }

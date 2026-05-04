@@ -11,6 +11,7 @@ import (
 	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
+	"github.com/daniel-talonone/gemini-commands/internal/pr"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
 	"github.com/spf13/cobra"
 )
@@ -115,9 +116,26 @@ If pr.md already has content, the command overwrites it (re-generation is idempo
 			return fmt.Errorf("invalid --model flag: %w", err)
 		}
 
-		fmt.Fprintf(os.Stderr, "Generating PR description for feature %s...\n", featureName)
-		if err := runner.Run(strings.NewReader(promptContent), os.Stdout, os.Stderr); err != nil {
-			return fmt.Errorf("generating PR description: %w", err)
+		const maxRetries = 5
+		var filled bool
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			fmt.Fprintf(os.Stderr, "Generating PR description for feature %s (attempt %d/%d)...\n", featureName, attempt, maxRetries)
+			if err := runner.Run(strings.NewReader(promptContent), os.Stdout, os.Stderr); err != nil {
+				fmt.Fprintf(os.Stderr, "attempt %d failed: %v\n", attempt, err)
+				continue
+			}
+			var err error
+			filled, err = pr.IsFilled(featureDir)
+			if err != nil {
+				return fmt.Errorf("checking pr.md: %w", err)
+			}
+			if filled {
+				break
+			}
+			fmt.Fprintf(os.Stderr, "pr.md not filled after attempt %d, retrying...\n", attempt)
+		}
+		if !filled {
+			return fmt.Errorf("pr.md was not filled after %d attempts", maxRetries)
 		}
 
 		if err := status.Write(featureDir, "pr-description-done", repo, branch); err != nil {

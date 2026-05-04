@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const filename = "pr.md"
@@ -32,6 +33,16 @@ func Write(featureDir, content string) error {
 		return fmt.Errorf("failed to rename temporary PR file: %w", err)
 	}
 	return nil
+}
+
+// IsFilled reports whether pr.md contains meaningful content beyond the initial placeholder.
+func IsFilled(featureDir string) (bool, error) {
+	content, err := Read(featureDir)
+	if err != nil {
+		return false, err
+	}
+	trimmed := strings.TrimSpace(content)
+	return trimmed != "" && trimmed != "# Pull Request", nil
 }
 
 // Read reads the content of pr.md from the specified feature directory.

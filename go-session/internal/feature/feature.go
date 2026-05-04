@@ -27,7 +27,15 @@ func CreateFeature(featureDir, repo, branch, workDir string) error {
 	}
 
 	files := map[string]string{
-		"plan.yml":      "[]",
+		"plan.yml": `
+- id: example-slice
+  description: An example slice
+  status: todo
+  tasks:
+    - id: example-task
+      task: An example task
+      status: todo
+`,
 		"questions.yml": "[]",
 	}
 
@@ -87,12 +95,30 @@ func ResolveFeatureDir(storyID, cwd, remoteURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, orgRepo, storyID), nil
+	possibleDir := filepath.Join(base, orgRepo, storyID)
+	if _, err := os.Stat(possibleDir); err == nil {
+		return possibleDir, nil
+	}
+
+	// Finally, try to resolve from current working directory (e.g., if user cd'd into a feature dir)
+	// This should be the lowest priority to avoid accidental matches.
+	currentDirName := filepath.Base(cwd)
+	if currentDirName == storyID {
+		if _, err := os.Stat(cwd); err == nil {
+			return cwd, nil
+		}
+	}
+
+	return "", fmt.Errorf("feature directory does not exist: %s", storyID)
 }
 
 // FeaturesDir returns the root directory where all feature directories are stored.
 // This is the single source of truth for the features base path.
+// The FEATURES_DIR environment variable overrides the default (~/.features).
 func FeaturesDir() (string, error) {
+	if dir := os.Getenv("FEATURES_DIR"); dir != "" {
+		return dir, nil
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolving home directory: %w", err)

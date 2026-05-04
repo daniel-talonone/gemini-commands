@@ -313,7 +313,14 @@ func TestHandlerWithRealTemplate(t *testing.T) {
 	assert.Contains(t, rr.Body.String(), "just now")
 }
 
-func setupFeatureDetailHandlerTest(t *testing.T) (*server.Server, *template.Template, *mockScanner) {
+func setupFeatureDetailHandlerTest(t *testing.T) (*server.Server, *template.Template, *mockScanner, string) {
+	rootTempDir := t.TempDir()
+	require.NoError(t, os.Setenv("FEATURES_DIR", filepath.Join(rootTempDir, ".features")))
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("FEATURES_DIR"))
+		require.NoError(t, os.RemoveAll(rootTempDir)) // Ensure cleanup of the temp directory
+	})
+
 	tmplContent, err := os.ReadFile("template.html")
 	require.NoError(t, err)
 
@@ -326,17 +333,16 @@ func setupFeatureDetailHandlerTest(t *testing.T) (*server.Server, *template.Temp
 
 	mockS := &mockScanner{}
 	srv := server.New(8080, mockS)
-	return srv, tmpl, mockS
+	return srv, tmpl, mockS, rootTempDir
 }
 
 func TestFeatureDetailHandler(t *testing.T) {
-	srv, tmpl, mockS := setupFeatureDetailHandlerTest(t)
+	srv, tmpl, mockS, rootTempDir := setupFeatureDetailHandlerTest(t)
 
 	t.Run("no review files", func(t *testing.T) {
 		featureID := "sc-no-review"
 		repo := "org/repo"
-		home, _ := os.UserHomeDir()
-		featureDir := filepath.Join(home, ".features", repo, featureID)
+		featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 		defer func() { _ = os.RemoveAll(featureDir) }()
 		// Remove the default review file to simulate no review files existing
@@ -355,8 +361,7 @@ func TestFeatureDetailHandler(t *testing.T) {
 	t.Run("default selection", func(t *testing.T) {
 		featureID := "sc-review-default"
 		repo := "org/repo"
-		home, _ := os.UserHomeDir()
-		featureDir := filepath.Join(home, ".features", repo, featureID)
+		featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 		defer func() { _ = os.RemoveAll(featureDir) }()
 		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
@@ -386,8 +391,7 @@ func TestFeatureDetailHandler(t *testing.T) {
 	t.Run("query param selection", func(t *testing.T) {
 		featureID := "sc-review-query"
 		repo := "org/repo"
-		home, _ := os.UserHomeDir()
-		featureDir := filepath.Join(home, ".features", repo, featureID)
+		featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 		defer func() { _ = os.RemoveAll(featureDir) }()
 		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
@@ -427,8 +431,7 @@ func TestFeatureDetailHandler(t *testing.T) {
 	t.Run("details open with open findings", func(t *testing.T) {
 		featureID := "sc-review-open"
 		repo := "org/repo"
-		home, _ := os.UserHomeDir()
-		featureDir := filepath.Join(home, ".features", repo, featureID)
+		featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 		defer func() { _ = os.RemoveAll(featureDir) }()
 		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
@@ -456,8 +459,7 @@ func TestFeatureDetailHandler(t *testing.T) {
 	t.Run("non-existent type gracefully handled", func(t *testing.T) {
 		featureID := "sc-review-nonexistent"
 		repo := "org/repo"
-		home, _ := os.UserHomeDir()
-		featureDir := filepath.Join(home, ".features", repo, featureID)
+		featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 		require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 		defer func() { _ = os.RemoveAll(featureDir) }()
 		mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
@@ -481,12 +483,11 @@ func TestFeatureDetailHandler(t *testing.T) {
 
 
 func TestFeatureDetailHandler_ContentRendering(t *testing.T) {
-	srv, tmpl, mockS := setupFeatureDetailHandlerTest(t)
+	srv, tmpl, mockS, rootTempDir := setupFeatureDetailHandlerTest(t)
 
 	featureID := "sc-content-rendering"
 	repo := "org/repo"
-	home, _ := os.UserHomeDir()
-	featureDir := filepath.Join(home, ".features", repo, featureID)
+	featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 	defer func() { _ = os.RemoveAll(featureDir) }()
 	mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo}}
@@ -540,6 +541,7 @@ func TestFeatureDetailHandler_ContentRendering(t *testing.T) {
 }
 
 func TestFeatureDetailHandler_LogLoading(t *testing.T) {
+	srv, tmpl, mockS, rootTempDir := setupFeatureDetailHandlerTest(t)
 	// Template with Log section support
 	tmplContent := `{{define "feature_detail"}}
 <a href="/">← Back</a>
@@ -554,15 +556,8 @@ func TestFeatureDetailHandler_LogLoading(t *testing.T) {
 {{end}}
 {{end}}`
 
-	funcMap := template.FuncMap{
-		"safeURL":  func(s string) template.URL { return template.URL(s) },
-		"urlquery": func(s string) string { return url.QueryEscape(s) },
-	}
-	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+	tmpl, err := tmpl.Parse(tmplContent)
 	require.NoError(t, err)
-
-	mockS := &mockScanner{}
-	srv := server.New(8080, mockS)
 
 	tests := []struct {
 		name       string
@@ -636,9 +631,7 @@ See the code above.`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			home, err := os.UserHomeDir()
-			require.NoError(t, err)
-			featureDir := filepath.Join(home, ".features", tt.repo, tt.featureID)
+			featureDir := filepath.Join(rootTempDir, ".features", tt.repo, tt.featureID)
 			require.NoError(t, feature.CreateFeature(featureDir, tt.repo, "main", ""))
 			defer func() { _ = os.RemoveAll(featureDir) }()
 
@@ -665,12 +658,18 @@ See the code above.`,
 }
 
 func TestResetHandler_SuccessfulReset(t *testing.T) {
+	rootTempDir := t.TempDir()
+	require.NoError(t, os.Setenv("FEATURES_DIR", filepath.Join(rootTempDir, ".features")))
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("FEATURES_DIR"))
+		require.NoError(t, os.RemoveAll(rootTempDir))
+	})
+
 	srv := server.New(8080, &mockScanner{})
 
 	featureID := "sc-reset-success"
 	repo := "org/repo"
-	home, _ := os.UserHomeDir()
-	featureDir := filepath.Join(home, ".features", repo, featureID)
+	featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 	defer func() { _ = os.RemoveAll(featureDir) }()
 
@@ -729,10 +728,16 @@ func TestResetHandler_NonexistentFeature(t *testing.T) {
 }
 
 func TestResetHandler_EmptyPlan(t *testing.T) {
+	rootTempDir := t.TempDir()
+	require.NoError(t, os.Setenv("FEATURES_DIR", filepath.Join(rootTempDir, ".features")))
+	t.Cleanup(func() {
+		require.NoError(t, os.Unsetenv("FEATURES_DIR"))
+		require.NoError(t, os.RemoveAll(rootTempDir))
+	})
+
 	featureID := "sc-reset-empty-plan"
 	repo := "org/repo"
-	home, _ := os.UserHomeDir()
-	featureDir := filepath.Join(home, ".features", repo, featureID)
+	featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 	defer func() { _ = os.RemoveAll(featureDir) }()
 
@@ -776,12 +781,11 @@ func TestResetHandler_InvalidPath(t *testing.T) {
 }
 
 func TestResetButtonRendering_WithPlan(t *testing.T) {
-	srv, tmpl, mockS := setupFeatureDetailHandlerTest(t)
+	srv, tmpl, mockS, rootTempDir := setupFeatureDetailHandlerTest(t)
 
 	featureID := "sc-button-with-plan"
 	repo := "org/repo"
-	home, _ := os.UserHomeDir()
-	featureDir := filepath.Join(home, ".features", repo, featureID)
+	featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 	defer func() { _ = os.RemoveAll(featureDir) }()
 
@@ -814,12 +818,11 @@ func TestResetButtonRendering_WithPlan(t *testing.T) {
 }
 
 func TestResetButtonRendering_WithoutPlan(t *testing.T) {
-	srv, tmpl, mockS := setupFeatureDetailHandlerTest(t)
+	srv, tmpl, mockS, rootTempDir := setupFeatureDetailHandlerTest(t)
 
 	featureID := "sc-button-without-plan"
 	repo := "org/repo"
-	home, _ := os.UserHomeDir()
-	featureDir := filepath.Join(home, ".features", repo, featureID)
+	featureDir := filepath.Join(rootTempDir, ".features", repo, featureID)
 	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
 	defer func() { _ = os.RemoveAll(featureDir) }()
 

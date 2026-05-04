@@ -32,9 +32,21 @@ func getRunner() (llm.Runner, error) {
 	return llm.NewRunner(llm.Model(modelFlag))
 }
 
-func main() {
+var OsExit = os.Exit
+
+func ExecuteCobra() int {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
+	return 0
+}
+
+func main() {
+	OsExit(ExecuteCobra())
+}
+
+// GetRootCmd returns the root cobra command for testing purposes.
+func GetRootCmd() *cobra.Command {
+	return rootCmd
 }
