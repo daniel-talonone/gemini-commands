@@ -37,7 +37,7 @@ The user has provided a high-level goal: `$ARGUMENTS`.
 5.  **Create Artifacts (Upon Approval):**
     *   Once the user approves the draft:
         1.  Generate a suitable directory name from the user's initial goal (e.g., "Create user profile page" -> `create-user-profile-page`).
-        2.  Use the Bash tool to scaffold the directory: `ai-session create-feature "create-user-profile-page"`.
+        2.  Use the Bash tool to scaffold the directory: `ai-session create-feature "create-user-profile-page"`. Always use the bare `ai-session` command — never construct an absolute path.
         3.  Use the Bash tool to resolve the full path: `ai-session resolve-feature-dir "create-user-profile-page"`. Use the returned path for the next step.
         4.  Use the Write tool to create `description.md` inside the resolved directory path, populated with the approved user story draft.
 
