@@ -107,12 +107,24 @@ Please perform the following steps:
         ```
 
 8.  **Save Files:**
-    *   **Do NOT use the Write tool for `plan.yml`.** Instead, use the Bash tool to pipe the generated YAML through `plan-write` for schema validation:
+    *   **Do NOT use the Write tool for `plan.yml` or `questions.yml`.** Both must go through `ai-session plan write` for schema validation.
+    *   Save the plan:
         ```bash
-        printf '%s\n' "$PLAN_YAML" | ai-session plan-write "<feature-dir>"
+        printf '%s\n' "$PLAN_YAML" | ai-session plan write "<feature-id>"
         ```
-        If `plan-write` exits non-zero, display the error message to the user and stop — do not proceed to enrichment.
-    *   Use the Write tool to save the YAML-formatted questions to `questions.yml` in the target directory.
+    *   Save the questions. The YAML **must** have a top-level `questions:` key wrapping the list:
+        ```bash
+        printf '%s\n' "$QUESTIONS_YAML" | ai-session plan write --questions "<feature-id>"
+        ```
+        Example questions YAML shape:
+        ```yaml
+        questions:
+          - id: q1
+            question: "..."
+            status: resolved
+            answer: "..."
+        ```
+    *   If either command exits non-zero, display the error message to the user and stop — do not proceed to enrichment.
 
 9.  **Trigger Background Enrichment:** After saving, fire the enrichment script as a detached background process using the Bash tool:
     ```
