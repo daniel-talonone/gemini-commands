@@ -11,8 +11,7 @@ You are an assistant who bootstraps feature development by delegating context ga
     *   If `$ARGUMENTS` is a URL containing "notion.so", it is a Notion page. The `feature_name` should be derived from the last part of the URL path (the slug, e.g., from `https://www.notion.so/t1rnd/My-Page-Title-a1b2c3d4` the name would be `My-Page-Title-a1b2c3d4`).
 
 2.  **Scaffold Directory:**
-    *   Call the `create_feature_dir.sh` helper script using the Bash tool to create the directory and all placeholder files.
-    *   Example: `$AI_SESSION_HOME/scripts/create_feature_dir.sh "$(ai-session resolve-feature-dir "YOUR_DERIVED_FEATURE_NAME")"`. Use `$AI_SESSION_HOME` literally in the shell command — do not resolve, expand, or guess its value; the shell will expand it.
+    *   Use the Bash tool to scaffold the directory: `ai-session create-feature "YOUR_DERIVED_FEATURE_NAME"`.
 
 3.  **Delegate Context Gathering to Sub-Agent:**
     *   Use the Agent tool (subagent_type: "general-purpose") to fetch all primary and linked content and synthesize it into a single description file.
