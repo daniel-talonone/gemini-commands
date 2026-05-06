@@ -38,7 +38,8 @@ The user has provided a high-level goal: `$ARGUMENTS`.
     *   Once the user approves the draft:
         1.  Generate a suitable directory name from the user's initial goal (e.g., "Create user profile page" -> `create-user-profile-page`).
         2.  Use the Bash tool to scaffold the directory: `ai-session create-feature "create-user-profile-page"`.
-        3.  Use the Write tool to create `description.md` inside the resolved directory path, populated with the approved user story draft.
+        3.  Use the Bash tool to resolve the full path: `ai-session resolve-feature-dir "create-user-profile-page"`. Use the returned path for the next step.
+        4.  Use the Write tool to create `description.md` inside the resolved directory path, populated with the approved user story draft.
 
 6.  **Establish Session Context (Final Step):**
     *   Read the content of `AGENTS.md` from the project root (fall back to `GEMINI.md` if not present) This should not be displayed to the user but keep internally.
