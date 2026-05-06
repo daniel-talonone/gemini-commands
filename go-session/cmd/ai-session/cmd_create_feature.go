@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/daniel-talonone/gemini-commands/internal/feature"
+	"github.com/daniel-talonone/gemini-commands/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -15,12 +17,13 @@ func init() {
 }
 
 var createFeatureCmd = &cobra.Command{
-	Use:   "create-feature <feature-dir>",
+	Use:   "create-feature <story-id>",
 	Short: "Scaffold a feature directory with placeholder files",
 	Long: `Creates a feature directory and populates it with placeholder files.
 
 Arguments:
-  <feature-dir>  Full path to the feature directory (created if absent)
+  <story-id>  Story identifier (e.g. sc-1234) or an explicit path.
+              Resolved to ~/.features/<org>/<repo>/<story-id> using git remote origin.
 
 Files created (existing files are never overwritten):
   plan.yml       empty plan
@@ -44,6 +47,15 @@ Errors:
 		repo, _ := cmd.Flags().GetString("repo")
 		branch, _ := cmd.Flags().GetString("branch")
 		workDir, _ := cmd.Flags().GetString("work-dir")
-		return feature.CreateFeature(args[0], repo, branch, workDir)
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("getting working directory: %w", err)
+		}
+		featureDir, err := feature.ResolveFeatureDir(args[0], cwd, git.RemoteURL())
+		if err != nil {
+			return err
+		}
+		return feature.CreateFeature(featureDir, repo, branch, workDir)
 	},
 }
