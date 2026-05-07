@@ -72,6 +72,11 @@ Comment: %s
 // CreatePR creates a GitHub pull request and returns its URL.
 // It first checks if a PR already exists for the given branch and returns an error if so.
 func CreatePR(workDir, base, head, title, body string) (string, error) {
+	return CreatePRImpl(workDir, base, head, title, body)
+}
+
+// createPRImpl is the actual implementation of CreatePR, allowing it to be swapped out for testing.
+var CreatePRImpl = func(workDir, base, head, title, body string) (string, error) {
 	cmdView := execCommand("gh", "pr", "view", head, "--json", "url")
 	cmdView.Dir = workDir
 	var outView bytes.Buffer

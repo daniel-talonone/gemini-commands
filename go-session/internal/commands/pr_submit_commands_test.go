@@ -1,11 +1,18 @@
-package main
-
+package commands_test
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
+	commands "github.com/daniel-talonone/gemini-commands/internal/commands"
+	"github.com/daniel-talonone/gemini-commands/internal/git"
+	"github.com/daniel-talonone/gemini-commands/internal/github"
 	"github.com/daniel-talonone/gemini-commands/internal/pr"
 	"github.com/daniel-talonone/gemini-commands/internal/status"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -158,6 +165,23 @@ func TestPRSubmit_MultipleStateCycles(t *testing.T) {
 	assert.Equal(t, url2, s.PRURL, "WritePRURL would be called only once by the command, but verify it updates correctly")
 }
 
+// TestPRSubmit_DefaultContent tests that pr.md with default content can be detected.
+func TestPRSubmit_DefaultContent(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, status.Create(dir, "test/repo", "test-branch", dir, "", ""))
+	require.NoError(t, pr.Write(dir, "# Pull Request"))
+
+	prContent, err := pr.Read(dir)
+	require.NoError(t, err)
+
+	// The command should have a check like this
+	if strings.TrimSpace(prContent) == "# Pull Request" {
+		assert.Equal(t, "# Pull Request", strings.TrimSpace(prContent))
+	} else {
+		t.Fatalf("Expected default content to be detected")
+	}
+}
+
 // TestPRSubmit_ValidateErrorCondition_AlreadySubmitted tests the exact condition
 // the command checks: if s.PRURL != "" return error. This verifies the guard logic.
 func TestPRSubmit_ValidateErrorCondition_AlreadySubmitted(t *testing.T) {
@@ -179,4 +203,72 @@ func TestPRSubmit_ValidateErrorCondition_AlreadySubmitted(t *testing.T) {
 		// This is expected - the PR has already been submitted
 		assert.NotEmpty(t, s.PRURL, fmt.Sprintf("Expected PR URL to be set: %s", s.PRURL))
 	}
+}
+
+// Helper function to execute cobra command and capture output
+func executeCobraCommand(t *testing.T, root *cobra.Command, args ...string) (string, error) {
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf) // Capture stderr as well, as errors go there
+	root.SetArgs(args)
+
+	err := root.Execute() // Execute the root command with the arguments
+	if err != nil {
+		t.Logf("DEBUG: executeCobraCommand captured error: %v", err)
+	}
+	return buf.String(), err
+}
+
+// TestPRSubmit_FailsOnDefaultContent tests that `pr submit` fails if pr.md contains only the default content.
+func TestPRSubmit_FailsOnDefaultContent(t *testing.T) {
+	// Setup: Create a temporary directory for the feature
+	tmpDir := t.TempDir()
+	featureDir := filepath.Join(tmpDir, "sc-123") // Simplified path for mocking
+	require.NoError(t, os.MkdirAll(featureDir, 0755))
+
+	// Create status.yaml
+	require.NoError(t, status.Create(featureDir, "test-org/test-repo", "test-branch", featureDir, "", ""))
+
+	// Create pr.md with default content
+	require.NoError(t, pr.Write(featureDir, "# Pull Request"))
+
+	// Mock resolveFeatureDir to point to our temporary feature directory
+	oldResolveFeatureDir := commands.ResolveFeatureDir
+	defer func() { commands.ResolveFeatureDir = oldResolveFeatureDir }()
+	commands.ResolveFeatureDir = func(storyID, cwd, remoteURL string) (string, error) {
+		assert.Equal(t, "sc-123", storyID)
+		return featureDir, nil
+	}
+
+	// Mock git and github internal implementation functions
+	oldGitRemoteURLImpl := git.RemoteURLImpl
+	oldGitDefaultBranchImpl := git.DefaultBranchImpl
+	oldGitCurrentBranchImpl := git.CurrentBranchImpl
+	oldGithubCreatePRImpl := github.CreatePRImpl
+
+	defer func() {
+		git.RemoteURLImpl = oldGitRemoteURLImpl
+		git.DefaultBranchImpl = oldGitDefaultBranchImpl
+		git.CurrentBranchImpl = oldGitCurrentBranchImpl
+		github.CreatePRImpl = oldGithubCreatePRImpl
+	}()
+
+	git.RemoteURLImpl = func() string { return "https://github.com/test-org/test-repo.git" }
+	git.DefaultBranchImpl = func() string { return "main" }
+	git.CurrentBranchImpl = func() string { return "feature-branch" }
+	github.CreatePRImpl = func(workDir, base, head, title, body string) (string, error) {
+		return "https://github.com/test-org/test-repo/pull/1", nil
+	}
+
+	// Create a test root command to execute prSubmitCmd
+	testRootCmd := &cobra.Command{Use: "test"}
+	testRootCmd.AddCommand(commands.PrSubmitCmd) // Add the command we are testing
+
+	// Execute the command
+	// We pass the arguments including the command name "submit"
+	_, err := executeCobraCommand(t, testRootCmd, "submit", "sc-123")
+
+	// Assert that an error is returned and it contains the expected message
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "pr.md contains default content. Please provide a description for story sc-123")
 }
