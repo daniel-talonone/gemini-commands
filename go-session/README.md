@@ -104,7 +104,51 @@ ai-session address-feedback <story-id> [--regular] [--docs] [--devops] [--remote
 ```
 Reads open findings per review type via `internal/review.ReadFindings` and pipes each to `gemini --yolo` using `headless/session/address-feedback.md`. This command now uses the same retry and verification engine as `implement`, running the project's verification command after each attempt and retrying on failure. Resolved findings are filtered out before the prompt is built. No flags → all three types are addressed. Types with no open findings are skipped automatically. The `--remote` flag fetches and addresses unresolved inline PR review threads from GitHub. It is mutually exclusive with the other flags and requires the `gh` CLI to be installed and authenticated.
 
+```bash
+ai-session review-update <story-id> --json '<json-payload>' [--regular] [--docs] [--devops]
+```
+Atomically updates the status and optional notes of multiple review findings in a single operation. Accepts a JSON array of update objects, where each object must contain:
+- `id` (string, required, kebab-case) — the finding ID
+- `status` (string, required, one of `resolved` or `skipped`) — the new status
+- `notes` (string, optional) — optional additional notes to append to the finding
+
+The command locates the correct `review-*.yml` file based on the story ID and review type flag. If any finding ID does not exist in the review file, the command fails with a clear error message. The `--regular` flag (or no flag) updates `review.yml`; `--docs` updates `review-docs.yml`; `--devops` updates `review-devops.yml`.
+
+**Example:**
+```bash
+ai-session review-update sc-1234 --json '[{"id":"missing-error-handling","status":"resolved","notes":"Added error handling in main loop"},{"id":"unclear-variable-name","status":"skipped","notes":"Reviewed with team, naming is acceptable"}]'
+ai-session review-update sc-1234 --docs --json '[{"id":"unclear-docs","status":"resolved"}]'
+```
+
 #### Public API
+
+
+-   `UpdateStatuses(featureDir string, t Type, updates []UpdateRequest) error`
+    Atomically updates the status and optional notes of multiple findings by ID in a single write operation. Accepts a slice of `UpdateRequest` objects containing the finding ID, new status (`"resolved"` or `"skipped"`), and optional notes. Returns an error if any ID is not found, any status is invalid, or the write fails.
+
+-   `UpdateRequest` struct
+    Represents a single update to a finding:
+    ```go
+    type UpdateRequest struct {
+        ID     string `json:"id"`     // kebab-case finding ID (required)
+        Status string `json:"status"` // "resolved" or "skipped" (required)
+        Notes  string `json:"notes"`  // optional notes to append to the finding
+    }
+    ```
+
+-   `Finding.Notes` field
+    The `Finding` struct now includes an optional `Notes` field:
+    ```go
+    type Finding struct {
+        ID       string `yaml:"id"`
+        File     string `yaml:"file"`
+        Line     int    `yaml:"line"`
+        Feedback string `yaml:"feedback"`
+        Status   string `yaml:"status"`
+        Notes    string `yaml:"notes,omitempty"` // new field
+    }
+    ```
+    The `notes,omitempty` tag ensures the field is omitted from YAML if empty, maintaining backward compatibility.
 
 -   `DiscoverTypes(featureDir string) ([]string, error)`
     Scans the feature directory for review files (`review*.yml`, `review*.yaml`) and returns a sorted list of their type names. An empty string (`""`) represents `review.yml`, `"docs"` represents `review-docs.yml`, and so on. Returns an empty slice if no review files are found.

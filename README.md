@@ -142,6 +142,7 @@ ai-session plan-split-task sc-1234 --slice s --task t
 ai-session implement sc-1234        # headless LLM implementation loop (gemini --yolo per task)
 ai-session review sc-1234 [--regular] [--docs] [--devops] [--strategy=branch|last-commit]
 ai-session review-write sc-1234 --type regular   # write findings from stdin (YAML)
+ai-session review-update sc-1234 --json '[...]' [--regular] [--docs] [--devops]  # atomically update finding statuses
 ai-session address-feedback sc-1234 [--regular] [--docs] [--devops] [--remote] # Address findings with retry/verification
 ai-session create-pr-description <feature-name> # Generates a PR description from feature context and writes it to `pr.md`.
 ai-session submit-pr <feature-name>             # Creates a GitHub PR for the feature's branch. The PR title is `feat: <branch-name>`. The PR body is read from `pr.md`. The base branch is detected automatically. If a PR already exists for the branch, the command exits with an error. On success, the PR URL is written to `status.yaml` and the `pipeline_step` is set to `pr-submitted`.

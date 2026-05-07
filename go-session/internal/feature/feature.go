@@ -59,6 +59,10 @@ func CreateFeature(featureDir, repo, branch, workDir string) error {
 // cwd is used for the local .features/ backward-compat check.
 // remoteURL is the git remote origin URL (pass "" if not in a git repo).
 func ResolveFeatureDir(storyID, cwd, remoteURL string) (string, error) {
+	return ResolveFeatureDirImpl(storyID, cwd, remoteURL)
+}
+
+var ResolveFeatureDirImpl = func(storyID, cwd, remoteURL string) (string, error) {
 	if strings.Contains(storyID, "/") ||
 		strings.HasPrefix(storyID, ".") ||
 		strings.HasPrefix(storyID, "~") {

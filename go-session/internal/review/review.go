@@ -78,6 +78,7 @@ type Finding struct {
 	Line     int    `yaml:"line"`
 	Feedback string `yaml:"feedback"`
 	Status   string `yaml:"status"`
+	Notes    string `yaml:"notes,omitempty"`
 }
 
 // AllTypes returns all review types in declaration order: TypeDefault, TypeDocs, TypeDevOps.
@@ -271,8 +272,8 @@ func writeValidate(findings []Finding) error {
 		if f.Feedback == "" {
 			return fmt.Errorf("finding[%d].feedback: value is empty — must be a non-empty string describing the issue", i)
 		}
-		if f.Status != "open" && f.Status != "resolved" {
-			return fmt.Errorf("finding[%d].status: %q is not valid — must be \"open\" or \"resolved\"", i, f.Status)
+		if f.Status != "open" && f.Status != "resolved" && f.Status != "skipped" {
+			return fmt.Errorf("finding[%d].status: %q is not valid — must be \"open\", \"resolved\", or \"skipped\"", i, f.Status)
 		}
 	}
 	return nil
@@ -298,8 +299,8 @@ func Write(featureDir string, t Type, findings []Finding) error {
 // UpdateStatus updates the status of a single finding by ID (atomic write).
 // Returns an error if the ID is not found or the status is invalid.
 func UpdateStatus(featureDir string, t Type, id, status string) error {
-	if status != "open" && status != "resolved" {
-		return fmt.Errorf("status %q must be \"open\" or \"resolved\"", status)
+	if status != "open" && status != "resolved" && status != "skipped" {
+		return fmt.Errorf("status %q must be \"open\", \"resolved\", or \"skipped\"", status)
 	}
 	name, err := filename(t)
 	if err != nil {
@@ -322,5 +323,64 @@ func UpdateStatus(featureDir string, t Type, id, status string) error {
 	if !found {
 		return fmt.Errorf("finding with ID %q not found in %s", id, name)
 	}
+	return atomicWrite(path, findings)
+}
+
+// UpdateRequest defines a single update to a finding's status and/or notes.
+type UpdateRequest struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Notes  string `json:"notes"`
+}
+
+func validateUpdates(updates []UpdateRequest) error {
+	for i, u := range updates {
+		if u.ID == "" {
+			return fmt.Errorf("update[%d].id: value is empty - must be a non-empty kebab-case string", i)
+		}
+		if !kebabCase.MatchString(u.ID) {
+			return fmt.Errorf("update[%d].id: %q is not kebab-case", i, u.ID)
+		}
+		if u.Status != "resolved" && u.Status != "skipped" {
+			return fmt.Errorf("update[%d].status: %q is not valid - must be one of: \"resolved\", \"skipped\"", i, u.Status)
+		}
+	}
+	return nil
+}
+
+// UpdateStatuses updates the status and notes of multiple findings by ID in a single atomic write.
+// Returns an error if any ID is not found, any status is invalid, or the write fails.
+func UpdateStatuses(featureDir string, t Type, updates []UpdateRequest) error {
+	if err := validateUpdates(updates); err != nil {
+		return err
+	}
+
+	name, err := filename(t)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(featureDir, name)
+
+	findings, err := Load(featureDir, t)
+	if err != nil {
+		return fmt.Errorf("loading findings: %w", err)
+	}
+
+	findingsByID := make(map[string]*Finding)
+	for i := range findings {
+		findingsByID[findings[i].ID] = &findings[i]
+	}
+
+	for _, u := range updates {
+		f, ok := findingsByID[u.ID]
+		if !ok {
+			return fmt.Errorf("finding ID %q not found in %s", u.ID, name)
+		}
+		f.Status = u.Status
+		if u.Notes != "" {
+			f.Notes = u.Notes
+		}
+	}
+
 	return atomicWrite(path, findings)
 }

@@ -217,6 +217,15 @@ func TestUpdateStatus_InvalidStatus(t *testing.T) {
 	assert.Contains(t, err.Error(), "must be")
 }
 
+func TestUpdateStatus_AcceptsSkippedStatus(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Append(dir, TypeDefault, validFinding("find-1")))
+	require.NoError(t, UpdateStatus(dir, TypeDefault, "find-1", "skipped"))
+	findings, err := Load(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Equal(t, "skipped", findings[0].Status)
+}
+
 func TestUpdateStatus_UnknownType(t *testing.T) {
 	dir := t.TempDir()
 	err := UpdateStatus(dir, Type("unknown"), "find-1", "resolved")
@@ -368,6 +377,18 @@ func TestWrite_ValidationError_BadStatus(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "finding[0].status")
 	assertNoDefaultReviewFile(t, dir)
+}
+
+func TestWrite_AcceptsSkippedStatus(t *testing.T) {
+	dir := t.TempDir()
+	finding := validFinding("find-1")
+	finding.Status = "skipped"
+	err := Write(dir, TypeDefault, []Finding{finding})
+	require.NoError(t, err)
+	findings, err := Load(dir, TypeDefault)
+	require.NoError(t, err)
+	require.Len(t, findings, 1)
+	assert.Equal(t, "skipped", findings[0].Status)
 }
 
 func TestWrite_UnknownType(t *testing.T) {
@@ -551,4 +572,185 @@ func assertNoDefaultReviewFile(t *testing.T, dir string) {
 	t.Helper()
 	_, err := os.Stat(filepath.Join(dir, "review.yml"))
 	assert.True(t, os.IsNotExist(err), "review.yml must not exist after a rejected write")
+}
+
+func TestFinding_NotesField_Marshaling(t *testing.T) {
+	t.Run("marshals with notes when present", func(t *testing.T) {
+		f := Finding{ID: "f-1", Feedback: "feedback", Status: "open", Notes: "this is a note"}
+		data, err := yaml.Marshal(f)
+		require.NoError(t, err)
+		assert.Contains(t, string(data), "notes: this is a note")
+	})
+
+	t.Run("marshals without notes when empty", func(t *testing.T) {
+		f := Finding{ID: "f-1", Feedback: "feedback", Status: "open", Notes: ""}
+		data, err := yaml.Marshal(f)
+		require.NoError(t, err)
+		assert.NotContains(t, string(data), "notes:")
+	})
+
+	t.Run("unmarshals with notes when present", func(t *testing.T) {
+		yamlData := `
+id: f-1
+feedback: feedback
+status: open
+notes: this is a note
+`
+		var f Finding
+		err := yaml.Unmarshal([]byte(yamlData), &f)
+		require.NoError(t, err)
+		assert.Equal(t, "this is a note", f.Notes)
+	})
+
+	t.Run("unmarshals without notes when absent", func(t *testing.T) {
+		yamlData := `
+id: f-1
+feedback: feedback
+status: open
+`
+		var f Finding
+		err := yaml.Unmarshal([]byte(yamlData), &f)
+		require.NoError(t, err)
+		assert.Equal(t, "", f.Notes)
+	})
+}
+
+// --- UpdateStatuses ---
+
+func TestUpdateStatuses_HappyPath_SingleUpdate(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1"), validFinding("find-2")}))
+
+	updates := []UpdateRequest{
+		{ID: "find-1", Status: "resolved", Notes: "Fixed this."},
+	}
+	require.NoError(t, UpdateStatuses(dir, TypeDefault, updates))
+
+	findings, err := Load(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Len(t, findings, 2)
+	assert.Equal(t, "resolved", findings[0].Status)
+	assert.Equal(t, "Fixed this.", findings[0].Notes)
+	assert.Equal(t, "open", findings[1].Status) // Unchanged
+}
+
+func TestUpdateStatuses_HappyPath_MultiUpdate(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1"), validFinding("find-2"), validFinding("find-3")}))
+
+	updates := []UpdateRequest{
+		{ID: "find-1", Status: "resolved", Notes: "Done."},
+		{ID: "find-3", Status: "skipped", Notes: "Will do later."},
+	}
+	require.NoError(t, UpdateStatuses(dir, TypeDefault, updates))
+
+	findings, err := Load(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Len(t, findings, 3)
+	assert.Equal(t, "resolved", findings[0].Status)
+	assert.Equal(t, "Done.", findings[0].Notes)
+	assert.Equal(t, "open", findings[1].Status) // Unchanged
+	assert.Equal(t, "skipped", findings[2].Status)
+	assert.Equal(t, "Will do later.", findings[2].Notes)
+}
+
+func TestUpdateStatuses_Error_IDNotFound(t *testing.T) {
+	dir := t.TempDir()
+	originalContent, err := yaml.Marshal([]Finding{validFinding("find-1")})
+	require.NoError(t, err)
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+
+	updates := []UpdateRequest{
+		{ID: "find-nonexistent", Status: "resolved"},
+	}
+	err = UpdateStatuses(dir, TypeDefault, updates)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `finding ID "find-nonexistent" not found`)
+
+	// Verify file is untouched
+	currentContent, _ := os.ReadFile(filepath.Join(dir, "review.yml"))
+	assert.Equal(t, string(originalContent), string(currentContent))
+}
+
+func TestUpdateStatuses_Error_InvalidStatus(t *testing.T) {
+	dir := t.TempDir()
+	originalContent, err := yaml.Marshal([]Finding{validFinding("find-1")})
+	require.NoError(t, err)
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+
+	updates := []UpdateRequest{
+		{ID: "find-1", Status: "invalid-status"},
+	}
+	err = UpdateStatuses(dir, TypeDefault, updates)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `update[0].status: "invalid-status" is not valid`)
+
+	// Verify file is untouched
+	currentContent, _ := os.ReadFile(filepath.Join(dir, "review.yml"))
+	assert.Equal(t, string(originalContent), string(currentContent))
+}
+
+func TestUpdateStatuses_Error_InvalidKebabCaseID(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+
+	updates := []UpdateRequest{
+		{ID: "InvalidID", Status: "resolved"},
+	}
+	err := UpdateStatuses(dir, TypeDefault, updates)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `update[0].id: "InvalidID" is not kebab-case`)
+}
+
+func TestUpdateStatuses_Error_EmptyID(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+
+	updates := []UpdateRequest{
+		{ID: "", Status: "resolved"},
+	}
+	err := UpdateStatuses(dir, TypeDefault, updates)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `update[0].id: value is empty`)
+}
+
+func TestUpdateStatuses_EmptyUpdatesList(t *testing.T) {
+	dir := t.TempDir()
+	originalContent, err := yaml.Marshal([]Finding{validFinding("find-1")})
+	require.NoError(t, err)
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+
+	// Empty update list should be a no-op
+	require.NoError(t, UpdateStatuses(dir, TypeDefault, []UpdateRequest{}))
+
+	// Verify file is untouched
+	currentContent, _ := os.ReadFile(filepath.Join(dir, "review.yml"))
+	assert.Equal(t, string(originalContent), string(currentContent))
+}
+
+func TestUpdateStatuses_UpdateNotesOnly(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, Write(dir, TypeDefault, []Finding{validFinding("find-1")}))
+
+	updates := []UpdateRequest{
+		// Status is a required field in the update request validation, so we must provide one.
+		// We can "update" it to the same status.
+		{ID: "find-1", Status: "skipped", Notes: "Adding a note here."},
+	}
+	// First update to skipped with a note
+	require.NoError(t, UpdateStatuses(dir, TypeDefault, updates))
+	findings, err := Load(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Equal(t, "skipped", findings[0].Status)
+	assert.Equal(t, "Adding a note here.", findings[0].Notes)
+
+	// Second update to change the note on the same status
+	updates = []UpdateRequest{
+		{ID: "find-1", Status: "skipped", Notes: "Updated note."},
+	}
+	require.NoError(t, UpdateStatuses(dir, TypeDefault, updates))
+	findings, err = Load(dir, TypeDefault)
+	require.NoError(t, err)
+	assert.Equal(t, "skipped", findings[0].Status)
+	assert.Equal(t, "Updated note.", findings[0].Notes)
 }
