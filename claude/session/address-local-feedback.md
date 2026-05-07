@@ -24,20 +24,14 @@ Find the `### ✨ Session Context Loaded for...` block in the conversation histo
 - The **feature ID** (from the block title)
 - The **Description** and acceptance criteria
 
-Resolve the feature directory:
+Load all feature files (including all `review*.yml`) in one call:
 ```bash
-FEATURE_DIR="$(ai-session resolve-feature-dir "<feature-id>")"
-echo "$FEATURE_DIR"
+ai-session load-context "<feature-id>"
 ```
 
 ### 2. Discover Review Files
 
-Look for all `review*.yml` files in the feature directory:
-```bash
-ls "$FEATURE_DIR"/review*.yml 2>/dev/null
-```
-
-Load and parse each file. Collect all items with `status: open`. If none are found, inform the user and stop.
+Parse the `review*.yml` blocks from the `load-context` output above. Collect all items with `status: open`. If none are found, inform the user and stop.
 
 Report a summary table to the user:
 
@@ -104,9 +98,11 @@ For `resolved` items only — propose the minimal change, wait for user approval
 
 ### 6. Update Review Files
 
-After each item is triaged, update its status using `yq`:
+After each item is triaged, resolve the feature dir and update its status using `yq`:
 
 ```bash
+FEATURE_DIR=$(ai-session resolve-feature-dir "<feature-id>")
+
 # Mark resolved
 yq -i '(.[] | select(.id == "<id>")).status = "resolved"' "$FEATURE_DIR/<review-file>.yml"
 

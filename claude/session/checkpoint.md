@@ -19,7 +19,10 @@ You are an assistant that helps log work-in-progress and update the session stat
 
 3.  **Update Log (`log.md`):**
     *   Generate a concise Markdown summary of the work done.
-    *   Use `ai-session append-log` to append it. The command takes exactly 2 arguments: the feature directory path and the message.
-        Example: `ai-session append-log "$FEATURE_DIR" "Your generated summary text."`
+    *   Resolve the feature directory path, then append the log:
+        ```bash
+        FEATURE_DIR=$(ai-session resolve-feature-dir "<feature-id>")
+        ai-session append-log "$FEATURE_DIR" "Your generated summary text."
+        ```
 
 4.  **Confirm:** State that the checkpoint has been saved.

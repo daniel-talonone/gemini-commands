@@ -105,7 +105,6 @@ For each slice, in order:
    ai-session append-log "$FEATURE_DIR" "Slice <slice-id>: complete."
    ```
 
-
 **Completion**
 
 9. Once all slices are done:

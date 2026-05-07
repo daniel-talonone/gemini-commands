@@ -6,13 +6,13 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
 
 **Orchestration Process:**
 
-1.  **Identify Active Feature:** Determine the current feature directory from the session context.
+1.  **Identify Active Feature:** Determine the current feature directory from the session context. This will be passed as `{{args}}`.
 
 2.  **Gather Objective Context:**
     *   Find the `### ✨ Session Context Loaded for...` block in the conversation history. Extract the **Description** (from `description.md`) and **Project Conventions** (from `AGENTS.md`) from it.
 
 3.  **Fetch the Diff:**
-    *   Use the `run_shell_command` tool to fetch and decode the git diff:
+    *   Use `run_shell_command` to fetch and decode the git diff:
         ```bash
         DIFF_JSON=$($AI_SESSION_HOME/scripts/get_git_context.sh)
         DIFF=$(echo "$DIFF_JSON" | python3 -c "import sys,json,base64; d=json.load(sys.stdin); print(base64.b64decode(d['diff']).decode())")
@@ -40,7 +40,7 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
         {{extracted Description from session context}}
         ```
 
-    *   **Feature Directory:** `{{feature-dir}}`
+    *   **Feature Directory:** `{{args}}`
 
     *   **Git Diff (already fetched — do not run get_git_context.sh):**
         ```diff
@@ -56,16 +56,16 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
         *   `line`: The relevant line number.
         *   `feedback`: The critical feedback text.
         *   `status`: Always `'open'`.
-    3.  **Save Feedback:** Use the `run_shell_command` tool to pipe the YAML to `ai-session review-write`:
+    3.  **Save Feedback:** Use `run_shell_command` to pipe the YAML to `ai-session review-write`:
         ```bash
-        printf '%s' "$FINDINGS_YAML" | ai-session review-write "{{feature-dir}}" --type regular
+        printf '%s' "$FINDINGS_YAML" | ai-session review-write "{{args}}" --type regular
         ```
         If the command exits non-zero, the error message identifies exactly what to fix (e.g. `finding[2].id: "Bad Name" is not kebab-case`). Fix the identified field and retry. Maximum 3 attempts.
 
     ---
 
 5.  **Verify:**
-    *   After the sub-agent completes, use the `read_file` tool to read `{{feature-dir}}/review.yml` to confirm the write succeeded.
+    *   After the sub-agent completes, use `run_shell_command` to run `ai-session load-context {{args}} | grep -A 10 'review.yml'` and confirm the block is present and non-empty.
 
 **Begin.**
 """

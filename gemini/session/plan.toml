@@ -110,11 +110,11 @@ Please perform the following steps:
     *   **Do NOT use the `write_file` tool for `plan.yml` or `questions.yml`.** Both must go through `ai-session plan write` for schema validation.
     *   Save the plan:
         ```bash
-        printf '%s\n' "$PLAN_YAML" | ai-session plan write "<feature-id>"
+        printf '%s\n' "$PLAN_YAML" | ai-session plan write "{{args}}"
         ```
     *   Save the questions. The YAML **must** have a top-level `questions:` key wrapping the list:
         ```bash
-        printf '%s\n' "$QUESTIONS_YAML" | ai-session plan write --questions "<feature-id>"
+        printf '%s\n' "$QUESTIONS_YAML" | ai-session plan write --questions "{{args}}"
         ```
         Example questions YAML shape:
         ```yaml
