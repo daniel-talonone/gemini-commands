@@ -270,5 +270,5 @@ func TestPRSubmit_FailsOnDefaultContent(t *testing.T) {
 
 	// Assert that an error is returned and it contains the expected message
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "pr.md contains default content. Please provide a description for story sc-123")
+	assert.Contains(t, err.Error(), "pr.md is missing or empty for story sc-123")
 }
