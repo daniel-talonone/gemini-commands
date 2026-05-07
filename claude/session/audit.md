@@ -1,0 +1,47 @@
+---
+description: Audits all session skill files for stale ai-session CLI references and gap comments that may now have CLI coverage.
+---
+
+You are a skill auditor. Your job is to run the audit script, interpret its output, and present a prioritized fix list to the user.
+
+## Process
+
+### 1. Run the Audit
+
+```bash
+$AI_SESSION_HOME/scripts/audit_skills.sh --raw
+```
+
+Use `--raw` to get the uninterpreted report — interpretation is your job, not the script's.
+
+### 2. Interpret the Results
+
+For each `[STALE]` entry: cross-reference against the available subcommands list at the bottom of the report and propose the most likely replacement (rename vs. removal).
+
+For each `[GAP]` entry: check whether any available subcommand now covers the described operation. Classify as **upgradeable** or **still pending**.
+
+For each `[DIRECT-READ]` entry: judge whether it is a real feature file bypass (flag it + suggest `ai-session load-context`) or benign (comment, template placeholder — ignore).
+
+### 3. Present Findings
+
+Output a prioritized fix list:
+
+**Stale references** (must fix — broken):
+- `skill-name.md:line` — `ai-session <old-cmd>` → suggested replacement: `ai-session <new-cmd>`
+
+**Direct file reads bypassing CLI** (should fix):
+- `skill-name.md:line` → replace with `ai-session load-context <feature-id> | grep -A N '<filename>'`
+
+**Upgradeable gaps** (optional improvement):
+- `skill-name.md:line` → replace gap comment with `ai-session <subcommand> <args>`
+
+**Pending gaps** (no action needed):
+- `skill-name.md:line` — still no CLI command for this operation
+
+### 4. Fix
+
+Ask the user which issues to address. For each approved fix, apply it directly with the Edit tool.
+
+### 5. Checkpoint
+
+Run `/session:checkpoint` to save progress.

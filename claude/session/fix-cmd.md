@@ -28,9 +28,7 @@ From the conversation history, find the last `/session:<command>` that failed or
 
 ### 2. Read the Skill File
 
-```bash
-cat ~/.claude/commands/session/<command-name>.md
-```
+Use the Read tool to read `~/.claude/commands/session/<command-name>.md`.
 
 ### 3. Diagnose All Issues
 

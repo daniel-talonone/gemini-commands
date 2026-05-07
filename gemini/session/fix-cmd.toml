@@ -12,7 +12,7 @@ Never assume what the correct invocation is — verify it first. For every broke
 
 ## Example
 
-`/session:checkpoint` called `$AI_SESSION_HOME/scripts/append_to_log.sh "path/to/log.md" "message"` but that script no longer exists. Running `ai-session append-log --help` revealed the correct replacement: `ai-session append-log <feature-dir> "<message>"`. The skill was updated with a surgical `replace`.
+`/session:checkpoint` called `$AI_SESSION_HOME/scripts/append_to_log.sh "path/to/log.md" "message"` but that script no longer exists. Running `ai-session append-log --help` revealed the correct replacement: `ai-session append-log <feature-dir> "<message>"`. The skill was updated with a surgical replace.
 
 
 ## Process
@@ -25,17 +25,15 @@ From the conversation history, find the last `/session:<command>` that failed or
 
 ### 2. Read the Skill File
 
-```python
-read_file(file_path=f"gemini/session/{command_name}.toml")
-```
+Use the read_file tool to read `$AI_SESSION_HOME/gemini/session/{{command}}.toml`.
 
 ### 3. Diagnose All Issues
 
 For each shell invocation in the skill file, verify it against reality:
 
-- **`ai-session` CLI calls:** `run_shell_command(command=f"ai-session {subcommand} --help")` to confirm argument count, names, and format.
-- **Shell scripts (`*.sh`):** `run_shell_command(command=f"ls $AI_SESSION_HOME/scripts/")` to check the script still exists.
-- **External tools:** `run_shell_command(command=f"which {tool}")` or `run_shell_command(command=f"{tool} --help")` to confirm availability.
+- **`ai-session` CLI calls:** Run `ai-session <subcommand> --help` to confirm argument count, names, and format.
+- **Shell scripts (`*.sh`):** Run `ls $AI_SESSION_HOME/scripts/` to check the script still exists.
+- **External tools:** Run `which <tool>` or `<tool> --help` to confirm availability.
 - **Env variables and paths:** Check that referenced variables (`$AI_SESSION_HOME`, etc.) expand to what the skill expects.
 - **Any other pattern** that could cause the observed failure (wrong flags, hardcoded paths, outdated syntax).
 
@@ -50,5 +48,5 @@ Show the user a concise list:
 
 ### 5. Apply Fixes
 
-After presenting (no need to wait for approval unless the fix is ambiguous), apply the changes using the `replace` tool. Make surgical edits — do not rewrite the whole file.
+After presenting (no need to wait for approval unless the fix is ambiguous), apply the changes using the replace tool. Make surgical edits — do not rewrite the whole file.
 """

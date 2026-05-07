@@ -65,6 +65,6 @@ You are an orchestrator for conducting a code review. Your goal is to delegate t
     ---
 
 5.  **Verify:**
-    *   After the sub-agent completes, use the Read tool to read `{{feature-dir}}/review.yml` to confirm the write succeeded.
+    *   After the sub-agent completes, run `ai-session load-context <feature-id> | grep -A 10 'review.yml'` and confirm the block is present and non-empty.
 
 **Begin.**

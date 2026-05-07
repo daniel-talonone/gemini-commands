@@ -95,6 +95,11 @@ for md_file in "$CLAUDE_DIR"/*.md; do
     # stderr is suppressed to hide Gemini CLI startup noise (MCP loading, keychain, etc.)
     printf "  Adapting %s.md..." "$name"
     adapted_body="$(printf '%s' "$body" | gemini -p "$adapter_prompt" 2>/dev/null)"
+    gemini_exit=$?
+    if [ $gemini_exit -ne 0 ] || [ -z "$adapted_body" ]; then
+        printf " ✗ (gemini exited %d or returned empty — skipping %s)\n" "$gemini_exit" "$name" >&2
+        continue
+    fi
     printf " ✓\n"
 
     # Escape description for a TOML double-quoted string (backslash, then double-quote)

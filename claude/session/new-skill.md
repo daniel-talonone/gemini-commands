@@ -23,7 +23,7 @@ ai-session <subcommand> --help 2>&1
 **If an operation is available through the CLI, the skill must use the CLI — never access the file directly.** Direct file access (Read tool, `yq`, `cat`) is only acceptable when no CLI command exists for that operation. Document this gap with a comment in the skill, e.g.:
 
 ```
-# No CLI command yet — reading review.yml directly until `ai-session review-get` exists
+# No CLI command yet — use `ai-session load-context <feature-id>` to read all feature files including review.yml
 ```
 
 This keeps skills forward-compatible: when a new CLI command is added, the gap comment makes it easy to find and upgrade.
@@ -38,13 +38,9 @@ The user provides a skill name (e.g. `my-skill`) and a brief description of what
 
 ### 2. Read the Existing Skill Ecosystem
 
-Read a representative sample of existing skills to internalize structural conventions:
+Run the Glob tool with pattern `~/.claude/commands/session/*.md` to list existing skills.
 
-```bash
-ls ~/.claude/commands/session/
-```
-
-Then read at least 3 skills that are structurally similar to the one being built (e.g. if the new skill involves a sub-agent, read `review.md`; if it involves state updates, read `checkpoint.md`; if it involves TDD, read `first-test.md`; if it involves feedback triage, read `address-local-feedback.md`).
+Then use the Read tool to read at least 3 skills that are structurally similar to the one being built (e.g. if the new skill involves a sub-agent, pick a skill that delegates to one; if it involves state updates, pick one that calls `update-task`; if it involves TDD, pick one with a red-phase step).
 
 Look for:
 - Frontmatter format (`description:` field only, no other keys)
@@ -56,15 +52,7 @@ Look for:
 
 ### 3. Audit the CLI
 
-Run `ai-session --help` and check every subcommand that could be relevant. For each operation the skill needs to perform, determine:
-
-| Operation | CLI command | Direct file access? |
-|---|---|---|
-| Append to log | `ai-session append-log <dir> "<message>"` | No |
-| Read plan | `ai-session plan-get <dir> --slice <id>` | No |
-| Update task status | `ai-session update-task ...` | No |
-| Read review findings | *(no CLI yet)* | Yes — read `review*.yml` directly |
-| ... | ... | ... |
+Run `ai-session --help` to get all subcommands, then run `ai-session <subcommand> --help` for each one that could be relevant. For each operation the skill needs to perform, determine whether a CLI command covers it or whether direct file access is unavoidable. Build the table yourself from what you discover — do not rely on examples here.
 
 ### 4. Draft the Skill
 
