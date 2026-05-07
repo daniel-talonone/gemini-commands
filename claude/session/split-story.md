@@ -83,7 +83,13 @@ Once approved, for each sub-story in order:
      --work-dir "<work_dir>"
    ```
 
-4. Write `description.md` into `$SUB_DIR` using the Write tool. Each description must follow this structure:
+4. Save `description.md` into `$SUB_DIR` using the CLI:
+   ```bash
+   ai-session description create "$SUB_DIR" <<'EOF'
+   <generated description content>
+   EOF
+   ```
+   Each description must follow this structure:
    ```markdown
    ### User Story
 

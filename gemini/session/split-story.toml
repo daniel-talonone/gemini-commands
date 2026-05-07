@@ -16,15 +16,18 @@ This is a **conversational command**. Propose, iterate, and get approval before 
 
 ## 1. Load Context
 
-Find the `### ✨ Session Context Loaded for `<feature-id>`` block in the conversation history and extract:
+Find the `### ✨ Session Context Loaded for \`<feature-id>\`` block in the conversation history and extract:
 - The **feature ID** (e.g., `dashboard-feature-detail-page`).
 - The **description** (the full content under `**Description:**`).
 
 If no context block is present, stop and ask the user to run `/session:start <feature-id>` first.
 
-Use the `run_shell_command` tool with the command: `ai-session resolve-feature-dir "<feature-id>"` to resolve the feature directory path.
+Resolve the feature directory path by using the `run_shell_command` tool:
+```bash
+ai-session resolve-feature-dir "<feature-id>"
+```
 
-Read `status.yaml` from that path to extract `repo`, `branch`, and `work_dir` — you will need these when creating sub-story directories.
+Use the `read_file` tool to read `status.yaml` from that path to extract `repo`, `branch`, and `work_dir` — you will need these when creating sub-story directories.
 
 
 ## 2. Analyse the Story
@@ -61,17 +64,28 @@ Once approved, for each sub-story in order:
 
 1. Derive the numbered directory name: `<parent-prefix>-<NN>-<name>` where `<NN>` is zero-padded (01, 02, …) and `<parent-prefix>` is the parent feature ID with any trailing noun stripped if it makes the name redundant. Keep names concise. Example: parent `dashboard-feature-detail-page` → sub-stories `dashboard-detail-01-empty-shell`, `dashboard-detail-02-status-header`, etc.
 
-2. Compute the target path:
+2. Compute the target path using the `run_shell_command` tool:
    ```bash
    PARENT_DIR=$(ai-session resolve-feature-dir "<feature-id>")
    FEATURE_BASE=$(dirname "$PARENT_DIR")
    SUB_DIR="$FEATURE_BASE/<numbered-name>"
    ```
 
-3. Create the feature directory, inheriting `repo` and `work_dir` from the parent's `status.yaml`:
-   Use the `run_shell_command` tool with the command: `ai-session create-feature "$SUB_DIR" --repo "<repo>" --branch "<numbered-name>" --work-dir "<work_dir>"`
+3. Create the feature directory, inheriting `repo` and `work_dir` from the parent's `status.yaml`, using the `run_shell_command` tool:
+   ```bash
+   ai-session create-feature "$SUB_DIR" \
+     --repo "<repo>" \
+     --branch "<numbered-name>" \
+     --work-dir "<work_dir>"
+   ```
 
-4. Use the `write_file` tool to write the `description.md` content into `$SUB_DIR`. Each description must follow this structure:
+4. Save `description.md` into `$SUB_DIR` using the `run_shell_command` tool:
+   ```bash
+   ai-session description create "$SUB_DIR" <<'EOF'
+   <generated description content>
+   EOF
+   ```
+   Each description must follow this structure:
    ```markdown
    ### User Story
 
@@ -99,4 +113,5 @@ Sub-stories created under <FEATURE_BASE>:
   ...
 
 Run `/session:start <sub-story-id>` to begin work on the first one.
+```
 """
