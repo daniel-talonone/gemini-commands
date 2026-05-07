@@ -13,11 +13,10 @@ You are an assistant who bootstraps feature development by delegating context ga
 
 2.  **Scaffold Directory:**
     *   Use the Bash tool to scaffold the directory: `ai-session create-feature "YOUR_DERIVED_FEATURE_NAME"`.
-    *   Immediately after, resolve and store the absolute path: `ai-session resolve-feature-dir "YOUR_DERIVED_FEATURE_NAME"`. Call this `FEATURE_DIR`. The `description.md` target path is `FEATURE_DIR/description.md`.
 
 3.  **Delegate Context Gathering to Sub-Agent:**
     *   Use the Agent tool (subagent_type: "general-purpose") to fetch all primary and linked content and synthesize it into a single description file.
-    *   Construct and pass the following detailed prompt to the sub-agent, embedding the primary identifier, the supplementary context, and the **resolved absolute path** to `description.md` (never a shell expression).
+    *   Construct and pass the following detailed prompt to the sub-agent, embedding the primary identifier, the supplementary context, and the **feature name**.
 
     ---
     **Sub-Agent Prompt:**
@@ -27,9 +26,9 @@ You are an assistant who bootstraps feature development by delegating context ga
     **Inputs:**
     *   **Identifier:** `<primary identifier, e.g. sc-69838>`
     *   **Supplementary context:** `<any extra text the user provided after the identifier>`
-    *   **Target File:** `<absolute resolved path, e.g. /Users/.../.features/.../sc-69838/description.md>`
+    *   **Feature name:** `<derived feature name, e.g. sc-69838>`
 
-    > **Important:** The feature directory has already been created. Do NOT run `mkdir` or any directory-creation commands. Use the Write tool directly to save the file.
+    > **Important:** The feature directory has already been created. Do NOT run `mkdir` or any directory-creation commands. Use the Bash tool with `ai-session description create` to save the file.
 
     **Task:**
 
@@ -57,11 +56,17 @@ You are an assistant who bootstraps feature development by delegating context ga
         *   Create a "## Linked Resources" section with a sub-section per linked resource.
 
     5.  **Save the Output:**
-        *   Use the Write tool to save the synthesized Markdown to the **Target File**. Confirm without showing the content.
+        *   Use the Bash tool to save the synthesized Markdown via:
+            ```bash
+            ai-session description create "<feature_name>" <<'EOF'
+            <synthesized content>
+            EOF
+            ```
+            Confirm without showing the content.
     ---
 
 4.  **Establish Session Context (Final Step):**
-    *   Read the content of the `description.md` file the sub-agent just created.
+    *   Run `ai-session load-context "{{feature_name}}"` and extract the `description.md` block.
     *   Read the content of `AGENTS.md` from the project root (fall back to `GEMINI.md` if not present).
     *   Format and display using the following Markdown structure EXACTLY:
 

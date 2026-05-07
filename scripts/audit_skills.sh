@@ -167,18 +167,29 @@ if [ "$RAW" -eq 1 ]; then
     exit 0
 fi
 
+# Load CLI README as reference for what the CLI can do
+CLI_README="$REPO_DIR/go-session/README.md"
+CLI_README_CONTENT=""
+if [ -f "$CLI_README" ]; then
+    CLI_README_CONTENT="$(cat "$CLI_README")"
+fi
+
 # Pipe report through claude for interpretation and fix suggestions
 INTERPRETATION_PROMPT="You are a skill auditor for the ai-session ecosystem.
 
-## Context
+## Architecture
 
-ai-session is a session-based workflow framework for AI assistants. Its /session:* skill files (Markdown prompts) allow the author to interact with persistent feature state across sessions, LLMs, and environments — interactive or headless. The key architectural principle is separation of concerns:
+ai-session is a session-based workflow framework for AI assistants. Its /session:* skill files (Markdown prompts) manage persistent feature state across sessions. The key principle:
 
-- The \`ai-session\` CLI handles all deterministic, structured file operations (reads, writes, status updates). This keeps those operations reliable, testable, and LLM-agnostic.
-- The skill files handle creative, reasoning-heavy tasks (planning, reviewing, interpreting). They delegate all data mutations to the CLI — never touching files directly.
-- Gap comments (\`# No CLI command yet\`) mark places where a skill currently accesses files directly because no CLI command exists yet. As the CLI grows, these gaps close and the skill can be upgraded.
+- The \`ai-session\` CLI handles all deterministic file operations (reads, writes, mutations).
+- Skill files handle reasoning tasks and delegate all data mutations to the CLI — never touching files directly.
+- Gap comments (\`# No CLI command yet\`) mark known bypasses waiting for a CLI command.
 
-This separation is intentional: it decouples the storage layer from the prompts, so the author can evolve either side independently and trust that the deterministic parts behave consistently.
+## CLI Reference
+
+The following is the full CLI documentation. Use it as the authoritative source of what the CLI can do:
+
+$CLI_README_CONTENT
 
 ## Your Job
 
@@ -187,20 +198,24 @@ The report lists:
 - [GAP] entries: comments marking operations that had no CLI command when the skill was written.
 - [YQ-WRITE] entries: lines using \`yq\` in write mode — direct file mutations that should use the CLI instead.
 - [DIRECT-READ] entries: lines referencing feature files (review.yml, plan.yml, etc.) directly — potential bypasses of the CLI.
-- Available subcommands: the current list of valid subcommands.
 
-1. For each [STALE] entry: check the available subcommands list and propose the most likely replacement (rename vs. removal). Be concrete — show the exact invocation fix.
-2. For each [GAP] entry: check whether any available subcommand now covers the described operation. Consider semantic equivalence, not just name matching. If yes, mark as upgradeable and show the replacement. If no, mark as still pending.
-3. For each [YQ-WRITE] entry: identify which ai-session subcommand should replace it and show the exact fix.
-4. For each [DIRECT-READ] entry: judge whether the reference is an actual direct file read that bypasses the CLI, or benign (e.g. a comment, a CLI argument placeholder like \`{{feature-dir}}/review.yml\`). If it's a real bypass, flag it and suggest the correct CLI replacement (\`ai-session load-context <feature-id>\`).
-5. Output a prioritized fix list grouped as:
+For each finding, reason against the CLI Reference above:
+
+1. [STALE]: propose the correct replacement subcommand (or removal). Show the exact fix.
+2. [GAP]: check whether any CLI command now covers it (semantic match, not name match). Mark as upgradeable + show replacement, or still pending.
+3. [YQ-WRITE]: identify the CLI subcommand that should replace it. Show the exact fix.
+4. [DIRECT-READ]: judge whether it is a real file bypass (actual read/write that the CLI could handle) or benign (template placeholder, prose description, comment). For real bypasses — check the CLI Reference to see if a subcommand now covers that operation. If yes, flag as upgradeable and show the replacement. If no, flag as a pending gap.
+
+**Key instruction:** when evaluating [DIRECT-READ] entries, look beyond just reads — also check for instructions like \"Use the Write tool to create \`description.md\`\" or \"save to \`log.md\`\" that indicate a write bypass. Cross-reference those against the CLI Reference to see if a subcommand now handles that write.
+
+5. Output a prioritized fix list:
    - Stale references (must fix — broken)
-   - Direct yq writes (must fix — violates architectural principle)
-   - Direct file reads bypassing CLI (should fix — violates architectural principle)
+   - Write/yq bypasses now covered by CLI (must fix — violates architectural principle)
+   - Read bypasses now covered by CLI (should fix)
    - Upgradeable gaps (optional improvement)
    - Pending gaps (no action needed)
-6. For each fix, show the exact change: old line → new line.
 
+For each fix, show the exact change: old line → new line.
 Be concise and direct. No preamble."
 
 printf '%b' "$report" | claude -p --system-prompt "$INTERPRETATION_PROMPT" 2>/dev/null
