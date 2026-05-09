@@ -22,9 +22,7 @@ var (
 func init() {
 	implementCmd.Flags().IntVar(&implementMaxRetries, "max-retries", 5, "Maximum LLM+verification attempts per task")
 	implementCmd.Flags().DurationVar(&implementRetryDelay, "retry-delay", 10*time.Second, "Delay between retry attempts (helps avoid rate limits)")
-	implementCmd.Flags().Bool("tasks", false, "[deprecated] Execute one LLM call per task; use --strategy=task instead")
-	implementCmd.Flags().Bool("slices", false, "[deprecated] Execute one LLM call per slice; use --strategy=slice instead")
-	implementCmd.Flags().String("strategy", "", "Strategy to use: "+strings.Join(implement.KnownStrategies(), "|")+" (wins over --tasks/--slices)")
+	implementCmd.Flags().String("strategy", "", "Strategy to use: "+strings.Join(implement.KnownStrategyNames(), "|"))
 	rootCmd.AddCommand(implementCmd)
 }
 
@@ -51,17 +49,13 @@ This command replaces the 'orchestrate.sh --implement' script.`,
 		}
 
 		strategyFlag, _ := cmd.Flags().GetString("strategy")
-		useSlices, _ := cmd.Flags().GetBool("slices")
-		useTasks, _ := cmd.Flags().GetBool("tasks")
-
-		var strategy implement.Strategy
-		switch {
-		case strategyFlag == "slice" || (strategyFlag == "" && useSlices):
-			strategy = &implement.PerSliceStrategy{}
-		case strategyFlag == "task" || strategyFlag == "" || useTasks:
-			strategy = &implement.PerTaskStrategy{}
-		default:
-			return fmt.Errorf("unknown strategy %q: must be one of %s", strategyFlag, strings.Join(implement.KnownStrategies(), ", "))
+		if strategyFlag == "" {
+			strategyFlag = "task"
+		}
+		strats := implement.KnownStrategies()
+		strategy, ok := strats[strategyFlag]
+		if !ok {
+			return fmt.Errorf("unknown strategy %q: must be one of %s", strategyFlag, strings.Join(implement.KnownStrategyNames(), ", "))
 		}
 
 		runner, err := getRunner()

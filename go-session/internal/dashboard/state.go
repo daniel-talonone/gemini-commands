@@ -15,7 +15,7 @@ type FeatureStatus struct {
 	PipelineStep string `yaml:"pipeline_step"`
 	StartedAt    string `yaml:"started_at"`
 	UpdatedAt    string `yaml:"updated_at"`
-	Strategy     string `yaml:"strategy"`
+	ImplementationStrategy string `yaml:"strategy"`
 }
 
 // PlanTask is an unexported-friendly exported type for plan.yml task entries.
@@ -41,8 +41,8 @@ type FeatureState struct {
 	IsRunning          bool
 	LastDoneTask       string    // ID of last done task in document order
 	AllDone            bool      // true if every task in plan.yml is "done"
-	HasStatus          bool      // false if status.yaml was absent
-	Strategy           string
+	HasStatus              bool   // false if status.yaml was absent
+	ImplementationStrategy string
 	StartedAt          time.Time // Changed type
 	UpdatedAt          time.Time // Changed type
 	FormattedStartedAt string    // New field
@@ -64,7 +64,7 @@ func DeriveState(storyID string, repo string, status *FeatureStatus, plan []Plan
 		state.Mode = status.Mode
 		state.PipelineStep = status.PipelineStep
 		state.WorkDir = status.WorkDir
-		state.Strategy = status.Strategy
+		state.ImplementationStrategy = status.ImplementationStrategy
 		// A run is considered active if the PID is live OR if the pipeline_step
 		// indicates an in-flight operation. The pipeline_step check covers
 		// dashboard-triggered spawns where the PID is not written to status.yaml.

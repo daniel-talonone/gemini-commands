@@ -90,9 +90,18 @@ func runShellAndCaptureOutput(cmdStr string) (string, error) {
 	return output.String(), err
 }
 
-// KnownStrategies returns the canonical list of valid strategy names.
-// Used by the CLI --strategy flag validator and the server's PATCH /strategy handler.
-func KnownStrategies() []string {
+// KnownStrategies returns a map of strategy name → Strategy instance.
+// Use for O(1) validation and direct strategy instantiation.
+func KnownStrategies() map[string]Strategy {
+	return map[string]Strategy{
+		"task":  &PerTaskStrategy{},
+		"slice": &PerSliceStrategy{},
+	}
+}
+
+// KnownStrategyNames returns the sorted list of valid strategy names.
+// Use for flag help text, template dropdowns, and error messages.
+func KnownStrategyNames() []string {
 	return []string{"task", "slice"}
 }
 

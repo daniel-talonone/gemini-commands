@@ -203,7 +203,7 @@ ai-session review-update sc-1234 --docs --json '[{"id":"unclear-docs","status":"
 ```bash
 ai-session implement <story-id> [--max-retries 5] [--retry-delay 10s] [--strategy task|slice]
 ```
-Headless LLM implementation loop. Reads `AGENTS.md` from the target project for the verification command and context file patterns, then iterates plan slices in dependency order — invoking `gemini --yolo` for each task, running the verification gate after each attempt, and retrying up to `--max-retries` times on failure. Rate-limit errors (HTTP 429, "quota exceeded") are retried on a separate budget (max 20) without consuming the main retry count. Sets `pipeline_step: implement-done` on completion. The `--tasks` and `--slices` flags are deprecated; use `--strategy` instead.
+Headless LLM implementation loop. Reads `AGENTS.md` from the target project for the verification command and context file patterns, then iterates plan slices in dependency order — invoking `gemini --yolo` for each task, running the verification gate after each attempt, and retrying up to `--max-retries` times on failure. Rate-limit errors (HTTP 429, "quota exceeded") are retried on a separate budget (max 20) without consuming the main retry count. Sets `pipeline_step: implement-done` on completion.
 
 ```bash
 ai-session start-plan <story-id>

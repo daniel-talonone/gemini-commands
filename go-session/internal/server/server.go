@@ -573,7 +573,7 @@ func (s *Server) MakePlanSectionHandler() http.HandlerFunc {
 			data.Plan = pln
 			data.AllDone = plan.IsAllDone(pln)
 		}
-		data.KnownStrategies = implement.KnownStrategies()
+		data.KnownStrategies = implement.KnownStrategyNames()
 
 		var buf bytes.Buffer
 		if err := s.tmpl.ExecuteTemplate(&buf, "plan_section", data); err != nil {
@@ -632,7 +632,7 @@ func (s *Server) MakePlanAreaHandler() http.HandlerFunc {
 			data.Plan = pln
 			data.AllDone = plan.IsAllDone(pln)
 		}
-		data.KnownStrategies = implement.KnownStrategies()
+		data.KnownStrategies = implement.KnownStrategyNames()
 
 		var buf bytes.Buffer
 		if err := s.tmpl.ExecuteTemplate(&buf, "plan_area", data); err != nil {
@@ -855,7 +855,7 @@ func (s *Server) MakeImplementHandler() http.HandlerFunc {
 			ID:              id,
 			PipelineStep:    "implement",
 			IsRunning:       true,
-			KnownStrategies: implement.KnownStrategies(),
+			KnownStrategies: implement.KnownStrategyNames(),
 			Strategy:        strategyVal,
 		}
 		if pln, err := plan.LoadPlan(dir); err == nil {
@@ -889,14 +889,7 @@ func (s *Server) MakeStrategyHandler() http.HandlerFunc {
 			return
 		}
 		strategyVal := r.FormValue("strategy")
-		known := false
-		for _, s := range implement.KnownStrategies() {
-			if strategyVal == s {
-				known = true
-				break
-			}
-		}
-		if !known {
+		if _, known := implement.KnownStrategies()[strategyVal]; !known {
 			http.Error(w, "unknown strategy", http.StatusBadRequest)
 			return
 		}
@@ -1085,7 +1078,7 @@ func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerF
 			data.Plan = pln
 			data.AllDone = plan.IsAllDone(pln)
 		}
-		data.KnownStrategies = implement.KnownStrategies()
+		data.KnownStrategies = implement.KnownStrategyNames()
 
 		// Load review files
 		reviewTypes, err := review.DiscoverTypes(dir)
