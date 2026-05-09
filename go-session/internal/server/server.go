@@ -19,6 +19,7 @@ import (
 
 	"github.com/daniel-talonone/gemini-commands/internal/dashboard"
 	"github.com/daniel-talonone/gemini-commands/internal/description"
+	"github.com/daniel-talonone/gemini-commands/internal/pr"
 	"github.com/daniel-talonone/gemini-commands/internal/implement"
 	"github.com/daniel-talonone/gemini-commands/internal/llm"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
@@ -1056,6 +1057,12 @@ func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerF
 		// Load and render log
 		logContent, _ := log.LoadLog(dir)
 		data.Log = description.RenderMarkdown(logContent)
+
+		// Load and render PR description
+		prContent, _ := pr.Read(dir)
+		if prContent != "" && prContent != "# Pull Request\n" {
+			data.PRDescription = description.RenderMarkdown(prContent)
+		}
 
 		if st, err := status.LoadStatus(dir); err == nil {
 			data.Branch = st.Branch
