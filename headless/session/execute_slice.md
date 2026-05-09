@@ -61,13 +61,25 @@ You have full tool access.
     {{tasks_here}}
     </tasks>
 
-4.  **Update task status:** After successfully completing each task, immediately update its status to `done` using:
+4.  **Update task status and log:** After successfully completing each task:
 
+    a. Log what you did, why you made the choices you made, and any limitations or trade-offs:
+    ```
+    ai-session append-log "{{feature_dir_here}}" "Task <task-id>: <what was done>. Rationale: <why this approach>. Limitations/trade-offs: <any caveats, or 'none'>"
+    ```
+
+    b. Mark the task as done:
     ```
     ai-session update-task "{{feature_dir_here}}" "<task-id>" --status done
     ```
 
-    This is a critical step and *must* be done after each task is completed successfully.
+    Both calls are required after each task and *must* happen even when no code changes were needed (e.g. the task was already implemented). Verifying that the work is correct counts as completing the task.
+
+    Once **all tasks** in the slice are marked `done`, also mark the slice itself as done:
+
+    ```
+    ai-session update-slice "{{feature_dir_here}}" "{{slice_id_here}}" --status done
+    ```
 
 5.  **Run verification:** After *every individual file write* — not once per task, not at the end of the slice — run the verification command:
 
@@ -79,6 +91,11 @@ You have full tool access.
     ai-session append-log "{{feature_dir_here}}" "SLICE FAILED: verification did not pass after 3 attempts on task <task-id>. Last error: <paste error>"
     ```
     Then output a one-line failure summary and **stop making tool calls immediately**.
+
+    If at any point you encounter a problem you cannot resolve (ambiguous requirements, missing dependency, irreconcilable conflict), log it before stopping:
+    ```
+    ai-session append-log "{{feature_dir_here}}" "BLOCKED on task <task-id>: <description of the problem and what was tried>"
+    ```
 
     Do not proceed to the next task or mark any task as `done` until verification passes.
 

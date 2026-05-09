@@ -214,6 +214,7 @@ func (j *sliceJob) Prompt() (string, error) {
 	promptContent = strings.ReplaceAll(promptContent, "{{changes_so_far_here}}", changesSoFar)
 	promptContent = strings.ReplaceAll(promptContent, "{{verification_command_here}}", j.ctx.VerificationCmd)
 	promptContent = strings.ReplaceAll(promptContent, "{{feature_dir_here}}", j.ctx.FeatureDir)
+	promptContent = strings.ReplaceAll(promptContent, "{{slice_id_here}}", j.ctx.Slice.ID)
 
 	if j.lastError != "" {
 		promptContent = strings.ReplaceAll(promptContent, "{{error_message_here}}", j.lastError)
