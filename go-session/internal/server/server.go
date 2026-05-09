@@ -824,7 +824,7 @@ func (s *Server) MakeImplementHandler() http.HandlerFunc {
 		}
 		aiSessionHome := os.Getenv("AI_SESSION_HOME")
 
-		runner, err := llm.NewRunner(modelVal, llm.RunnerOptions{WorkDir: workDir})
+		runner, err := llm.NewRunner(modelVal, llm.RunnerOptions{WorkDir: workDir, Timeout: 10 * time.Minute})
 		if err != nil {
 			http.Error(w, "runner error: "+err.Error(), http.StatusInternalServerError)
 			return

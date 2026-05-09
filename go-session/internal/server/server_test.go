@@ -775,6 +775,158 @@ func TestResetHandler_InvalidPath(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
+func TestFeatureDetailHandler_MissingPR(t *testing.T) {
+	// Minimal template for testing PR description rendering.
+	tmplContent := `{{define "feature_detail"}}
+<a href="/">← Back</a>
+<h1>{{.ID}}</h1>
+{{if .PRDescription}}
+<details open>
+  <summary>Pull Request Description</summary>
+  <div class="pr-description-content">
+    {{.PRDescription}}
+  </div>
+</details>
+{{end}}
+{{end}}`
+
+	funcMap := template.FuncMap{
+		"safeURL":  func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+	require.NoError(t, err)
+
+	mockS := &mockScanner{}
+	srv := server.New(8080, mockS)
+
+	featureID := "sc-missing-pr"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	// Explicitly remove pr.md to simulate a missing file
+	prPath := filepath.Join(featureDir, "pr.md")
+	require.NoError(t, os.Remove(prPath))
+	_, err = os.Stat(prPath)
+	assert.True(t, os.IsNotExist(err), "pr.md should not exist after removal")
+
+	mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+	rr := httptest.NewRecorder()
+	srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
+
+	assert.NotContains(t, body, "<summary>Pull Request Description</summary>", "PR description section should not be rendered")
+	assert.NotContains(t, body, `<div class="pr-description-content">`, "PR description content div should not be rendered")
+}
+
+func TestFeatureDetailHandler_PlaceholderPR(t *testing.T) {
+	// Minimal template for testing PR description rendering.
+	tmplContent := `{{define "feature_detail"}}
+<a href="/">← Back</a>
+<h1>{{.ID}}</h1>
+{{if .PRDescription}}
+<details open>
+  <summary>Pull Request Description</summary>
+  <div class="pr-description-content">
+    {{.PRDescription}}
+  </div>
+</details>
+{{end}}
+{{end}}`
+
+	funcMap := template.FuncMap{
+		"safeURL":  func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+	require.NoError(t, err)
+
+	mockS := &mockScanner{}
+	srv := server.New(8080, mockS)
+
+	featureID := "sc-placeholder-pr"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	// Write placeholder content to pr.md
+	prPath := filepath.Join(featureDir, "pr.md")
+	require.NoError(t, os.WriteFile(prPath, []byte("# Pull Request\n"), 0644))
+
+	mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+	rr := httptest.NewRecorder()
+	srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
+
+	assert.NotContains(t, body, "<summary>Pull Request Description</summary>", "PR description section should not be rendered for placeholder content")
+	assert.NotContains(t, body, `<div class="pr-description-content">`, "PR description content div should not be rendered for placeholder content")
+}
+
+func TestFeatureDetailHandler_ValidPR(t *testing.T) {
+	// Minimal template for testing PR description rendering.
+	tmplContent := `{{define "feature_detail"}}
+<a href="/">← Back</a>
+<h1>{{.ID}}</h1>
+{{if .PRDescription}}
+<details open>
+  <summary>Pull Request Description</summary>
+  <div class="pr-description-content">
+    {{.PRDescription}}
+  </div>
+</details>
+{{end}}
+{{end}}`
+
+	funcMap := template.FuncMap{
+		"safeURL":  func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+	require.NoError(t, err)
+
+	mockS := &mockScanner{}
+	srv := server.New(8080, mockS)
+
+	featureID := "sc-valid-pr"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	// Write valid markdown content to pr.md
+	prPath := filepath.Join(featureDir, "pr.md")
+	validMarkdown := "# PR Title\n\nThis is **bold** and _italic_ content."
+	require.NoError(t, os.WriteFile(prPath, []byte(validMarkdown), 0644))
+
+	mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+	rr := httptest.NewRecorder()
+	srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
+
+	assert.Contains(t, body, "<summary>Pull Request Description</summary>", "PR description section should be rendered")
+	assert.Contains(t, body, `<div class="pr-description-content">`, "PR description content div should be rendered")
+	assert.Contains(t, body, `<h1>PR Title</h1>`, "should render markdown title")
+	assert.Contains(t, body, `This is <strong>bold</strong> and <em>italic</em> content.`, "should render markdown content")
+}
+
 func TestResetButtonRendering_WithPlan(t *testing.T) {
 	srv, tmpl, mockS := setupFeatureDetailHandlerTest(t)
 
