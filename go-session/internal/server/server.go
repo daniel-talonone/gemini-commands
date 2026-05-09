@@ -14,10 +14,12 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/daniel-talonone/gemini-commands/internal/dashboard"
 	"github.com/daniel-talonone/gemini-commands/internal/description"
+	"github.com/daniel-talonone/gemini-commands/internal/implement"
 	"github.com/daniel-talonone/gemini-commands/internal/llm"
 	"github.com/daniel-talonone/gemini-commands/internal/log"
 	"github.com/daniel-talonone/gemini-commands/internal/plan"
@@ -68,7 +70,17 @@ type FeatureDetailData struct {
 
 	// PipelineStep is the current pipeline_step from status.yaml.
 	// Used to render the correct button state on page load.
-	PipelineStep string
+	PipelineStep    string
+	IsRunning       bool
+	AllDone         bool
+	Strategy        string
+	KnownStrategies []string
+}
+
+// isRunningStep reports whether a pipeline_step indicates an in-flight operation
+// that should disable the Implement button.
+func isRunningStep(step string) bool {
+	return step == "plan" || step == "implement" || step == "implement-restarted"
 }
 
 // Server is the dashboard HTTP server.
@@ -164,8 +176,12 @@ func (s *Server) Start() error {
 			s.MakePlanAreaHandler()(w, r)
 		} else if strings.HasSuffix(pathSuffix, "/plan-stop") && r.Method == http.MethodPost {
 			s.MakePlanStopHandler()(w, r)
+		} else if strings.HasSuffix(pathSuffix, "/implement") && r.Method == http.MethodPost {
+			s.MakeImplementHandler()(w, r)
 		} else if strings.HasSuffix(pathSuffix, "/clear") && r.Method == http.MethodPost {
 			s.MakeClearHandler()(w, r)
+		} else if strings.HasSuffix(pathSuffix, "/strategy") && r.Method == http.MethodPatch {
+			s.MakeStrategyHandler()(w, r)
 		} else {
 			s.MakeFeatureDetailHandler(tmpl)(w, r)
 		}
@@ -547,10 +563,17 @@ func (s *Server) MakePlanSectionHandler() http.HandlerFunc {
 		data := FeatureDetailData{ID: id}
 		if st, err := status.LoadStatus(dir); err == nil {
 			data.PipelineStep = st.PipelineStep
+			data.IsRunning = isRunningStep(st.PipelineStep)
+			data.Strategy = st.Strategy
+			if data.Strategy == "" {
+				data.Strategy = "task"
+			}
 		}
 		if pln, err := plan.LoadPlan(dir); err == nil {
 			data.Plan = pln
+			data.AllDone = plan.IsAllDone(pln)
 		}
+		data.KnownStrategies = implement.KnownStrategies()
 
 		var buf bytes.Buffer
 		if err := s.tmpl.ExecuteTemplate(&buf, "plan_section", data); err != nil {
@@ -599,7 +622,17 @@ func (s *Server) MakePlanAreaHandler() http.HandlerFunc {
 		data := FeatureDetailData{ID: id}
 		if st, err := status.LoadStatus(dir); err == nil {
 			data.PipelineStep = st.PipelineStep
+			data.IsRunning = isRunningStep(st.PipelineStep)
+			data.Strategy = st.Strategy
+			if data.Strategy == "" {
+				data.Strategy = "task"
+			}
 		}
+		if pln, err := plan.LoadPlan(dir); err == nil {
+			data.Plan = pln
+			data.AllDone = plan.IsAllDone(pln)
+		}
+		data.KnownStrategies = implement.KnownStrategies()
 
 		var buf bytes.Buffer
 		if err := s.tmpl.ExecuteTemplate(&buf, "plan_area", data); err != nil {
@@ -697,6 +730,209 @@ func (s *Server) MakeClearHandler() http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+func (s *Server) MakeImplementHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		pathSuffix := strings.TrimPrefix(r.URL.Path, "/feature/")
+		if r.Method != http.MethodPost || !strings.HasSuffix(pathSuffix, "/implement") {
+			http.NotFound(w, r)
+			return
+		}
+		id := strings.TrimSuffix(pathSuffix, "/implement")
+		if id == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		features, err := s.ScanAllFunc()
+		if err != nil {
+			http.Error(w, "scan error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var found *dashboard.FeatureState
+		for i := range features {
+			if features[i].StoryID == id {
+				found = &features[i]
+				break
+			}
+		}
+		if found == nil {
+			http.NotFound(w, r)
+			return
+		}
+		dir := found.Dir
+		if dir == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		// 409 guard: already running
+		st, stErr := status.LoadStatus(dir)
+		if stErr != nil {
+			http.Error(w, "failed to read status: "+stErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		if isRunningStep(st.PipelineStep) {
+			http.Error(w, "implementation already running", http.StatusConflict)
+			return
+		}
+
+		// Defensively reload plan
+		pln, pErr := plan.LoadPlan(dir)
+		if pErr != nil || len(pln) == 0 {
+			http.Error(w, "plan is empty or missing", http.StatusBadRequest)
+			return
+		}
+
+		// 409 guard: all done
+		if plan.IsAllDone(pln) {
+			http.Error(w, "all tasks are already done", http.StatusConflict)
+			return
+		}
+
+		// Model: validate; fall back to gemini.
+		modelVal := llm.Model(r.FormValue("model"))
+		switch modelVal {
+		case llm.ModelGemini, llm.ModelGeminiFlash, llm.ModelClaude:
+			// valid
+		default:
+			modelVal = llm.ModelGemini
+		}
+
+		// Strategy: from status.yaml; default "task".
+		strategyVal := "task"
+		if st.Strategy != "" {
+			strategyVal = st.Strategy
+		}
+
+		// Resolve binary path — we are the ai-session binary.
+		binaryPath, err := os.Executable()
+		if err != nil {
+			http.Error(w, "failed to resolve binary path: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		cmd := exec.Command(binaryPath, "implement", id,
+			"--strategy="+strategyVal,
+			"--model="+string(modelVal),
+		)
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+		// Redirect subprocess stdout/stderr to the feature log file (AC#17).
+		logPath := filepath.Join(dir, "log.md")
+		logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			http.Error(w, "failed to open log file: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		cmd.Stdout = logFile
+		cmd.Stderr = logFile
+
+		if err := cmd.Start(); err != nil {
+			_ = logFile.Close()
+			_ = log.AppendLog(dir, fmt.Sprintf("Implement spawn failed: %v", err))
+			http.Error(w, "failed to spawn implement: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Close our copy of the log file — the subprocess has inherited the fd.
+		_ = logFile.Close()
+
+		pid := cmd.Process.Pid
+		_ = log.AppendLog(dir, fmt.Sprintf("Implement spawned via dashboard (strategy=%s, model=%s, pid=%d)", strategyVal, modelVal, pid))
+
+		// Write pipeline_step before returning so the UI reflects running state.
+		_ = status.Write(dir, "implement", "", "")
+
+		if r.Header.Get("HX-Request") != "true" {
+			http.Redirect(w, r, "/feature/"+id, http.StatusSeeOther)
+			return
+		}
+
+		data := FeatureDetailData{
+			ID:              id,
+			PipelineStep:    "implement",
+			IsRunning:       true,
+			KnownStrategies: implement.KnownStrategies(),
+			Strategy:        strategyVal,
+		}
+		if pln, err := plan.LoadPlan(dir); err == nil {
+			data.Plan = pln
+		}
+		var buf bytes.Buffer
+		if err := s.tmpl.ExecuteTemplate(&buf, "plan_area", data); err != nil {
+			http.Error(w, "template error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(buf.Bytes())
+	}
+}
+
+func (s *Server) MakeStrategyHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		pathSuffix := strings.TrimPrefix(r.URL.Path, "/feature/")
+		if r.Method != http.MethodPatch || !strings.HasSuffix(pathSuffix, "/strategy") {
+			http.NotFound(w, r)
+			return
+		}
+		id := strings.TrimSuffix(pathSuffix, "/strategy")
+		if id == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "invalid form", http.StatusBadRequest)
+			return
+		}
+		strategyVal := r.FormValue("strategy")
+		known := false
+		for _, s := range implement.KnownStrategies() {
+			if strategyVal == s {
+				known = true
+				break
+			}
+		}
+		if !known {
+			http.Error(w, "unknown strategy", http.StatusBadRequest)
+			return
+		}
+
+		features, err := s.ScanAllFunc()
+		if err != nil {
+			http.Error(w, "scan error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var found *dashboard.FeatureState
+		for i := range features {
+			if features[i].StoryID == id {
+				found = &features[i]
+				break
+			}
+		}
+		if found == nil {
+			http.NotFound(w, r)
+			return
+		}
+		dir := found.Dir
+		if dir == "" {
+			http.NotFound(w, r)
+			return
+		}
+
+		if st, err := status.LoadStatus(dir); err == nil && isRunningStep(st.PipelineStep) {
+			http.Error(w, "cannot change strategy while implementation is running", http.StatusConflict)
+			return
+		}
+
+		if err := status.WriteStrategy(dir, strategyVal); err != nil {
+			http.Error(w, "failed to write strategy: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
@@ -839,10 +1075,17 @@ func (s *Server) MakeFeatureDetailHandler(tmpl *template.Template) http.HandlerF
 			data.StoryURL = st.StoryURL
 			data.WorkDir = st.WorkDir
 			data.PipelineStep = st.PipelineStep
+			data.IsRunning = isRunningStep(st.PipelineStep)
+			data.Strategy = st.Strategy
+			if data.Strategy == "" {
+				data.Strategy = "task"
+			}
 		}
 		if pln, err := plan.LoadPlan(dir); err == nil {
 			data.Plan = pln
+			data.AllDone = plan.IsAllDone(pln)
 		}
+		data.KnownStrategies = implement.KnownStrategies()
 
 		// Load review files
 		reviewTypes, err := review.DiscoverTypes(dir)

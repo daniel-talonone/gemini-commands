@@ -90,6 +90,12 @@ func runShellAndCaptureOutput(cmdStr string) (string, error) {
 	return output.String(), err
 }
 
+// KnownStrategies returns the canonical list of valid strategy names.
+// Used by the CLI --strategy flag validator and the server's PATCH /strategy handler.
+func KnownStrategies() []string {
+	return []string{"task", "slice"}
+}
+
 type Strategy interface {
 	ExecuteSlice(ctx SliceContext) error
 }

@@ -262,6 +262,22 @@ func ResetPlan(featureDir string) error {
 	return WritePlan(featureDir, []byte(yaml))
 }
 
+// IsAllDone reports whether every task in the plan has status "done".
+// Returns false for an empty plan.
+func IsAllDone(p Plan) bool {
+	if len(p) == 0 {
+		return false
+	}
+	for _, s := range p {
+		for _, t := range s.Tasks {
+			if t.Status != "done" {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // planPath returns the full path to plan.yml for a given feature directory.
 func planPath(featureDir string) string {
 	return filepath.Join(featureDir, "plan.yml")

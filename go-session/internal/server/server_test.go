@@ -1005,3 +1005,183 @@ func TestPlanButtonRendering_WithPlan(t *testing.T) {
 	// Verify Plan split button is NOT present when plan exists
 	assert.NotContains(t, body, `Plan</button>`, "Plan button should not be present when plan is non-empty")
 }
+
+func TestStrategyHandler_ValidStrategy(t *testing.T) {
+	featureID := "sc-strategy-valid"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	body := strings.NewReader("strategy=slice")
+	req := httptest.NewRequest(http.MethodPatch, "/feature/"+featureID+"/strategy", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	require.Equal(t, http.StatusNoContent, rr.Code)
+
+	st, err := status.LoadStatus(featureDir)
+	require.NoError(t, err)
+	assert.Equal(t, "slice", st.Strategy)
+}
+
+func TestStrategyHandler_UnknownStrategy(t *testing.T) {
+	featureID := "sc-strategy-unknown"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	body := strings.NewReader("strategy=invalid")
+	req := httptest.NewRequest(http.MethodPatch, "/feature/"+featureID+"/strategy", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "unknown strategy")
+}
+
+func TestStrategyHandler_NonexistentFeature(t *testing.T) {
+	srv := server.New(8080, &mockScanner{features: []dashboard.FeatureState{}})
+
+	body := strings.NewReader("strategy=task")
+	req := httptest.NewRequest(http.MethodPatch, "/feature/nonexistent/strategy", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestStrategyHandler_RunningConflict(t *testing.T) {
+	featureID := "sc-strategy-running"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	// Simulate running state
+	require.NoError(t, status.Write(featureDir, "implement", "", ""))
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	body := strings.NewReader("strategy=slice")
+	req := httptest.NewRequest(http.MethodPatch, "/feature/"+featureID+"/strategy", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	assert.Equal(t, http.StatusConflict, rr.Code)
+}
+
+func TestStrategyHandler_MethodNotAllowed(t *testing.T) {
+	srv := server.New(8080, &mockScanner{})
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/sc-123/strategy", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestImplementHandler_NonexistentFeature(t *testing.T) {
+	srv := server.New(8080, &mockScanner{features: []dashboard.FeatureState{}})
+
+	req := httptest.NewRequest(http.MethodPost, "/feature/nonexistent/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestImplementHandler_EmptyPlan(t *testing.T) {
+	featureID := "sc-implement-empty-plan"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	require.NoError(t, os.WriteFile(filepath.Join(featureDir, "plan.yml"), []byte(""), 0644))
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	req := httptest.NewRequest(http.MethodPost, "/feature/"+featureID+"/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "plan is empty or missing")
+}
+
+func TestImplementHandler_AlreadyRunning(t *testing.T) {
+	featureID := "sc-implement-running"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	require.NoError(t, status.Write(featureDir, "implement", "", ""))
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	req := httptest.NewRequest(http.MethodPost, "/feature/"+featureID+"/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "already running")
+}
+
+func TestImplementHandler_AllDone(t *testing.T) {
+	featureID := "sc-implement-alldone"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	planContent := `- id: slice-1
+  description: Done slice
+  status: done
+  tasks:
+    - id: task-1
+      task: Done task
+      status: done`
+	require.NoError(t, os.WriteFile(filepath.Join(featureDir, "plan.yml"), []byte(planContent), 0644))
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	req := httptest.NewRequest(http.MethodPost, "/feature/"+featureID+"/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "all tasks are already done")
+}
+
+func TestImplementHandler_MethodNotAllowed(t *testing.T) {
+	srv := server.New(8080, &mockScanner{})
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/sc-123/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
