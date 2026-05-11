@@ -775,6 +775,158 @@ func TestResetHandler_InvalidPath(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rr.Code)
 }
 
+func TestFeatureDetailHandler_MissingPR(t *testing.T) {
+	// Minimal template for testing PR description rendering.
+	tmplContent := `{{define "feature_detail"}}
+<a href="/">← Back</a>
+<h1>{{.ID}}</h1>
+{{if .PRDescription}}
+<details open>
+  <summary>Pull Request Description</summary>
+  <div class="pr-description-content">
+    {{.PRDescription}}
+  </div>
+</details>
+{{end}}
+{{end}}`
+
+	funcMap := template.FuncMap{
+		"safeURL":  func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+	require.NoError(t, err)
+
+	mockS := &mockScanner{}
+	srv := server.New(8080, mockS)
+
+	featureID := "sc-missing-pr"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	// Explicitly remove pr.md to simulate a missing file
+	prPath := filepath.Join(featureDir, "pr.md")
+	require.NoError(t, os.Remove(prPath))
+	_, err = os.Stat(prPath)
+	assert.True(t, os.IsNotExist(err), "pr.md should not exist after removal")
+
+	mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+	rr := httptest.NewRecorder()
+	srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
+
+	assert.NotContains(t, body, "<summary>Pull Request Description</summary>", "PR description section should not be rendered")
+	assert.NotContains(t, body, `<div class="pr-description-content">`, "PR description content div should not be rendered")
+}
+
+func TestFeatureDetailHandler_PlaceholderPR(t *testing.T) {
+	// Minimal template for testing PR description rendering.
+	tmplContent := `{{define "feature_detail"}}
+<a href="/">← Back</a>
+<h1>{{.ID}}</h1>
+{{if .PRDescription}}
+<details open>
+  <summary>Pull Request Description</summary>
+  <div class="pr-description-content">
+    {{.PRDescription}}
+  </div>
+</details>
+{{end}}
+{{end}}`
+
+	funcMap := template.FuncMap{
+		"safeURL":  func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+	require.NoError(t, err)
+
+	mockS := &mockScanner{}
+	srv := server.New(8080, mockS)
+
+	featureID := "sc-placeholder-pr"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	// Write placeholder content to pr.md
+	prPath := filepath.Join(featureDir, "pr.md")
+	require.NoError(t, os.WriteFile(prPath, []byte("# Pull Request\n"), 0644))
+
+	mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+	rr := httptest.NewRecorder()
+	srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
+
+	assert.NotContains(t, body, "<summary>Pull Request Description</summary>", "PR description section should not be rendered for placeholder content")
+	assert.NotContains(t, body, `<div class="pr-description-content">`, "PR description content div should not be rendered for placeholder content")
+}
+
+func TestFeatureDetailHandler_ValidPR(t *testing.T) {
+	// Minimal template for testing PR description rendering.
+	tmplContent := `{{define "feature_detail"}}
+<a href="/">← Back</a>
+<h1>{{.ID}}</h1>
+{{if .PRDescription}}
+<details open>
+  <summary>Pull Request Description</summary>
+  <div class="pr-description-content">
+    {{.PRDescription}}
+  </div>
+</details>
+{{end}}
+{{end}}`
+
+	funcMap := template.FuncMap{
+		"safeURL":  func(s string) template.URL { return template.URL(s) },
+		"urlquery": func(s string) string { return url.QueryEscape(s) },
+	}
+	tmpl, err := template.New("dashboard").Funcs(funcMap).Parse(tmplContent)
+	require.NoError(t, err)
+
+	mockS := &mockScanner{}
+	srv := server.New(8080, mockS)
+
+	featureID := "sc-valid-pr"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	// Write valid markdown content to pr.md
+	prPath := filepath.Join(featureDir, "pr.md")
+	validMarkdown := "# PR Title\n\nThis is **bold** and _italic_ content."
+	require.NoError(t, os.WriteFile(prPath, []byte(validMarkdown), 0644))
+
+	mockS.features = []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/"+featureID, nil)
+	rr := httptest.NewRecorder()
+	srv.MakeFeatureDetailHandler(tmpl).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
+
+	assert.Contains(t, body, "<summary>Pull Request Description</summary>", "PR description section should be rendered")
+	assert.Contains(t, body, `<div class="pr-description-content">`, "PR description content div should be rendered")
+	assert.Contains(t, body, `<h1>PR Title</h1>`, "should render markdown title")
+	assert.Contains(t, body, `This is <strong>bold</strong> and <em>italic</em> content.`, "should render markdown content")
+}
+
 func TestResetButtonRendering_WithPlan(t *testing.T) {
 	srv, tmpl, mockS := setupFeatureDetailHandlerTest(t)
 
@@ -1004,4 +1156,184 @@ func TestPlanButtonRendering_WithPlan(t *testing.T) {
 
 	// Verify Plan split button is NOT present when plan exists
 	assert.NotContains(t, body, `Plan</button>`, "Plan button should not be present when plan is non-empty")
+}
+
+func TestStrategyHandler_ValidStrategy(t *testing.T) {
+	featureID := "sc-strategy-valid"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	body := strings.NewReader("strategy=slice")
+	req := httptest.NewRequest(http.MethodPatch, "/feature/"+featureID+"/strategy", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	require.Equal(t, http.StatusNoContent, rr.Code)
+
+	st, err := status.LoadStatus(featureDir)
+	require.NoError(t, err)
+	assert.Equal(t, "slice", st.ImplementationStrategy)
+}
+
+func TestStrategyHandler_UnknownStrategy(t *testing.T) {
+	featureID := "sc-strategy-unknown"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	body := strings.NewReader("strategy=invalid")
+	req := httptest.NewRequest(http.MethodPatch, "/feature/"+featureID+"/strategy", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "unknown strategy")
+}
+
+func TestStrategyHandler_NonexistentFeature(t *testing.T) {
+	srv := server.New(8080, &mockScanner{features: []dashboard.FeatureState{}})
+
+	body := strings.NewReader("strategy=task")
+	req := httptest.NewRequest(http.MethodPatch, "/feature/nonexistent/strategy", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestStrategyHandler_RunningConflict(t *testing.T) {
+	featureID := "sc-strategy-running"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	// Simulate running state
+	require.NoError(t, status.Write(featureDir, "implement", "", ""))
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	body := strings.NewReader("strategy=slice")
+	req := httptest.NewRequest(http.MethodPatch, "/feature/"+featureID+"/strategy", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	assert.Equal(t, http.StatusConflict, rr.Code)
+}
+
+func TestStrategyHandler_MethodNotAllowed(t *testing.T) {
+	srv := server.New(8080, &mockScanner{})
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/sc-123/strategy", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeStrategyHandler()(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestImplementHandler_NonexistentFeature(t *testing.T) {
+	srv := server.New(8080, &mockScanner{features: []dashboard.FeatureState{}})
+
+	req := httptest.NewRequest(http.MethodPost, "/feature/nonexistent/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestImplementHandler_EmptyPlan(t *testing.T) {
+	featureID := "sc-implement-empty-plan"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	require.NoError(t, os.WriteFile(filepath.Join(featureDir, "plan.yml"), []byte(""), 0644))
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	req := httptest.NewRequest(http.MethodPost, "/feature/"+featureID+"/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	assert.Contains(t, rr.Body.String(), "plan is empty or missing")
+}
+
+func TestImplementHandler_AlreadyRunning(t *testing.T) {
+	featureID := "sc-implement-running"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	require.NoError(t, status.Write(featureDir, "implement", "", ""))
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	req := httptest.NewRequest(http.MethodPost, "/feature/"+featureID+"/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "already running")
+}
+
+func TestImplementHandler_AllDone(t *testing.T) {
+	featureID := "sc-implement-alldone"
+	repo := "org/repo"
+	home, _ := os.UserHomeDir()
+	featureDir := filepath.Join(home, ".features", repo, featureID)
+	require.NoError(t, feature.CreateFeature(featureDir, repo, "main", ""))
+	defer func() { _ = os.RemoveAll(featureDir) }()
+
+	planContent := `- id: slice-1
+  description: Done slice
+  status: done
+  tasks:
+    - id: task-1
+      task: Done task
+      status: done`
+	require.NoError(t, os.WriteFile(filepath.Join(featureDir, "plan.yml"), []byte(planContent), 0644))
+
+	mockS := &mockScanner{features: []dashboard.FeatureState{{StoryID: featureID, Repo: repo, Dir: featureDir}}}
+	srv := server.New(8080, mockS)
+
+	req := httptest.NewRequest(http.MethodPost, "/feature/"+featureID+"/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusConflict, rr.Code)
+	assert.Contains(t, rr.Body.String(), "all tasks are already done")
+}
+
+func TestImplementHandler_MethodNotAllowed(t *testing.T) {
+	srv := server.New(8080, &mockScanner{})
+
+	req := httptest.NewRequest(http.MethodGet, "/feature/sc-123/implement", nil)
+	rr := httptest.NewRecorder()
+	srv.MakeImplementHandler()(rr, req)
+
+	assert.Equal(t, http.StatusNotFound, rr.Code)
 }

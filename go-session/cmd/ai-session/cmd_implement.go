@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -21,8 +22,7 @@ var (
 func init() {
 	implementCmd.Flags().IntVar(&implementMaxRetries, "max-retries", 5, "Maximum LLM+verification attempts per task")
 	implementCmd.Flags().DurationVar(&implementRetryDelay, "retry-delay", 10*time.Second, "Delay between retry attempts (helps avoid rate limits)")
-	implementCmd.Flags().Bool("tasks", false, "Execute one LLM call per task (default strategy)")
-	implementCmd.Flags().Bool("slices", false, "Execute one LLM call per slice")
+	implementCmd.Flags().String("strategy", "", "Strategy to use: "+strings.Join(implement.KnownStrategyNames(), "|"))
 	rootCmd.AddCommand(implementCmd)
 }
 
@@ -48,17 +48,14 @@ This command replaces the 'orchestrate.sh --implement' script.`,
 			return fmt.Errorf("failed to resolve feature directory for %q: %w", storyID, err)
 		}
 
-		useSlices, _ := cmd.Flags().GetBool("slices")
-		useTasks, _ := cmd.Flags().GetBool("tasks")
-		if useSlices && useTasks {
-			return fmt.Errorf("--tasks and --slices are mutually exclusive")
+		strategyFlag, _ := cmd.Flags().GetString("strategy")
+		if strategyFlag == "" {
+			strategyFlag = "task"
 		}
-
-		var strategy implement.Strategy
-		if useSlices {
-			strategy = &implement.PerSliceStrategy{}
-		} else {
-			strategy = &implement.PerTaskStrategy{}
+		strats := implement.KnownStrategies()
+		strategy, ok := strats[strategyFlag]
+		if !ok {
+			return fmt.Errorf("unknown strategy %q: must be one of %s", strategyFlag, strings.Join(implement.KnownStrategyNames(), ", "))
 		}
 
 		runner, err := getRunner()

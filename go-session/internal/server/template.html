@@ -94,10 +94,10 @@
     .slice li { margin: 0.3rem 0; }
 
   </style>
-</head>
-<body>
+  </head>
+  <body>
   <h1>ai-session dashboard</h1>
-
+  ...
   <form method="GET">
     <label for="repo">Repo:</label>
     <select id="repo" name="repo">
@@ -163,6 +163,8 @@
   </table>
 
   <footer>{{len .Features}} feature(s) shown &mdash; refresh to update</footer>
+  </body>
+  </html>
 
   {{define "feature_detail"}}
   <!DOCTYPE html>
@@ -224,6 +226,66 @@
       .split-btn details { margin: 0; border: none; border-radius: 0; padding: 0; background: transparent; display: inline-flex; }
       .split-btn summary { margin: 0; font-weight: normal; }
 
+      /* Strategy dropdown */
+      .strategy { display: inline-flex; align-items: center; gap: 0.4rem; position: relative; }
+      .strategy .lbl { color: #555; font-size: 0.85rem; }
+      .strategy details { display: inline-block; }
+      .strategy summary {
+        list-style: none; cursor: pointer;
+        padding: 0.28rem 0.55rem 0.28rem 0.65rem;
+        border: 1px solid #ccc; border-radius: 3px; background: #fff;
+        min-width: 4.5rem; display: inline-flex; justify-content: space-between;
+        align-items: center; gap: 0.5rem; font-size: 0.88rem; font-family: inherit;
+      }
+      .strategy summary::-webkit-details-marker { display: none; }
+      .strategy summary:hover { background: #f6f6f6; }
+      .strategy details[open] summary { background: #f0f0f0; border-color: #999; }
+      .strategy[data-disabled="true"] summary { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+      .strategy .split-menu { position: absolute; top: calc(100% + 4px); left: 3rem; z-index: 20;
+        background: #fff; border: 1px solid #ccc; border-radius: 3px; min-width: 13rem;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.10); padding: 0.25rem 0; }
+      .strategy .split-menu button {
+        display: flex; align-items: baseline; gap: 0.5rem;
+        width: 100%; text-align: left; border: none; background: transparent;
+        border-radius: 0; padding: 0.45rem 0.75rem; font-size: 0.88rem; font-family: inherit;
+      }
+      .strategy .split-menu button:hover { background: #f0f0f0; }
+      .strategy .split-menu .opt-desc { color: #777; font-size: 0.78rem; margin-left: auto; padding-left: 1rem; }
+
+      /* Implement split button */
+      .implement-split { display: inline-flex; position: relative; }
+      .impl-primary {
+        background: #0a7c2f; color: #fff; border: 1px solid #0a7c2f;
+        border-right: 1px solid #084d1f; border-radius: 3px 0 0 3px;
+        font-weight: 600; padding: 0.3rem 0.8rem; font-family: inherit; font-size: 0.88rem;
+        cursor: pointer;
+      }
+      .impl-primary:hover:not(:disabled) { background: #086822; }
+      .impl-primary:disabled { background: #9ca3af; border-color: #9ca3af; color: #fff; cursor: not-allowed; opacity: 1; }
+      .implement-split details { margin: 0; }
+      .implement-split summary {
+        list-style: none; cursor: pointer;
+        padding: 0.3rem 0.5rem; border-radius: 0 3px 3px 0;
+        background: #0a7c2f; color: #fff; border: 1px solid #0a7c2f;
+        font-size: 0.8rem; font-family: inherit;
+      }
+      .implement-split summary::-webkit-details-marker { display: none; }
+      .implement-split summary:hover { background: #086822; }
+      .implement-split[data-disabled="true"] summary { background: #9ca3af; border-color: #9ca3af; cursor: not-allowed; pointer-events: none; }
+      .implement-split .split-menu { position: absolute; top: calc(100% + 4px); right: 0; z-index: 20;
+        background: #fff; border: 1px solid #ccc; border-radius: 3px; min-width: 11rem;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.10); padding: 0.25rem 0; }
+
+      /* Action bar layout and status messages */
+      .impl-action-bar { display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; }
+      .impl-spacer { flex: 1; min-width: 0.5rem; }
+      .impl-running-msg { color: #555; font-style: italic; font-size: 0.85rem; }
+      .impl-running-dot { display: inline-block; width: 0.45rem; height: 0.45rem;
+        background: #0a7c2f; border-radius: 50%;
+        animation: impl-pulse 1.2s ease-in-out infinite; vertical-align: middle; margin-right: 0.35rem; }
+      @keyframes impl-pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+      .impl-done-msg { color: #0055aa; font-size: 0.85rem; }
+
       /* Review Section Styles */
       .review-section-content { margin-top: 0.8rem; }
       .review-file-selector { margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
@@ -256,6 +318,15 @@
     {{if .StoryURL}} | <a href="{{.StoryURL}}" target="_blank">Story</a>{{end}}
     {{if .PRURL}} | <a href="{{.PRURL}}" target="_blank">Pull Request</a>{{end}}
   </p>
+  {{if .PRDescription}}
+  <details open>
+    <summary>Pull Request Description</summary>
+    <div class="description-content">
+      {{.PRDescription}}
+    </div>
+  </details>
+  {{end}}
+
   {{if .WorkDir}}
   <p>
     <strong>Quick Launch:</strong>
@@ -272,9 +343,8 @@
     </div>
   </details>
   {{end}}
-  <div id="plan-section">
-    {{template "plan_section" .}}
-  </div>
+
+  {{template "plan_section" .}}
 
   {{if .ReviewFiles}}
   <details {{if .HasOpenFindings}}open{{end}}>
@@ -323,16 +393,137 @@
 {{define "plan_area"}}
 {{if .Plan}}
 <div id="plan-area" style="margin-top: 1rem;">
-  <button class="reset-button"
-          hx-post="/feature/{{.ID}}/reset"
-          hx-confirm="Reset all task statuses to todo?"
-          hx-target="#plan-section"
-          hx-swap="innerHTML">Reset</button>
-  <button hx-post="/feature/{{.ID}}/clear"
-          hx-confirm="Remove plan.yml, architecture.md and questions.yml? This cannot be undone."
-          hx-target="#plan-section"
-          hx-swap="innerHTML"
-          style="margin-left: 0.5rem;">Clear</button>
+  <div class="impl-action-bar">
+
+    {{/* Strategy dropdown */}}
+    <div class="strategy" id="strategy-ctrl-{{.ID}}"
+         data-disabled="{{.IsRunning}}"
+         data-feature="{{.ID}}">
+      <span class="lbl">Strategy:</span>
+      <details>
+        <summary id="strategy-label-{{.ID}}"><span id="strategy-val-{{.ID}}">{{.Strategy}}</span><span style="color:#888;font-size:0.7rem;margin-left:0.4rem;">▾</span></summary>
+        <div class="split-menu" role="menu" onclick="this.closest('details').removeAttribute('open')">
+          {{range .KnownStrategies}}
+          <button data-strategy="{{.}}"
+                  onclick="implStrategySelect(this)"
+                  title="{{if eq . "task"}}one LLM call per task{{else if eq . "slice"}}one LLM call per slice{{end}}">
+            <span class="model-check">{{if eq . $.Strategy}}✓{{end}}</span>
+            {{.}}
+            <span class="opt-desc">{{if eq . "task"}}one LLM call per task{{else if eq . "slice"}}one LLM call per slice{{end}}</span>
+          </button>
+          {{end}}
+        </div>
+      </details>
+    </div>
+
+    {{/* Implement split button */}}
+    <div class="implement-split" id="impl-split-{{.ID}}"
+         data-disabled="{{or .IsRunning .AllDone}}">
+      <button class="impl-primary"
+              id="impl-primary-{{.ID}}"
+              {{if or .IsRunning .AllDone}}disabled{{end}}
+              {{if .IsRunning}}title="Implementation already running — wait for it to finish"{{else if .AllDone}}title="All tasks are already done — Reset to re-run"{{end}}
+              hx-post="/feature/{{.ID}}/implement"
+              hx-target="#plan-area"
+              hx-swap="outerHTML"
+              hx-vals='{"model":"gemini"}'>{{if .IsRunning}}Running…{{else}}Implement{{end}}</button>
+      <details {{if or .IsRunning .AllDone}}style="pointer-events:none"{{end}}>
+        <summary title="Select model">▾</summary>
+        <div class="split-menu" role="menu" onclick="this.closest('details').removeAttribute('open')">
+          <button data-model="gemini" onclick="implModelSelect(this)"><span class="model-check">✓</span>gemini (default)</button>
+          <button data-model="gemini-flash" onclick="implModelSelect(this)"><span class="model-check"></span>gemini-flash</button>
+          <button data-model="claude" onclick="implModelSelect(this)"><span class="model-check"></span>claude</button>
+        </div>
+      </details>
+    </div>
+
+    {{/* Running / done status messages */}}
+    {{if .IsRunning}}
+    <span class="impl-running-msg">
+      <span class="impl-running-dot"></span>running implementation —
+      <a href="#" onclick="htmx.ajax('GET','/feature/{{.ID}}/plan-section',{target:'#plan-section',swap:'innerHTML'});return false;">Refresh status</a>
+    </span>
+    {{else if .AllDone}}
+    <span class="impl-done-msg">✓ all tasks done</span>
+    {{end}}
+
+    <span class="impl-spacer"></span>
+
+    <button class="reset-button"
+            hx-post="/feature/{{.ID}}/reset"
+            hx-confirm="Reset all task statuses to todo?"
+            hx-target="#plan-section"
+            hx-swap="innerHTML">Reset</button>
+    <button hx-post="/feature/{{.ID}}/clear"
+            hx-confirm="Remove plan.yml, architecture.md and questions.yml? This cannot be undone."
+            hx-target="#plan-section"
+            hx-swap="innerHTML">Clear</button>
+  </div>
+
+  <script>
+  // Guard against duplicate listener registration on HTMX outerHTML swaps.
+  if (!window._implListenersRegistered) {
+    window._implListenersRegistered = true;
+    // Close open <details> when clicking outside them.
+    document.addEventListener('click', function(e) {
+      document.querySelectorAll('details[open]').forEach(function(d) {
+        if (!d.contains(e.target)) d.removeAttribute('open');
+      });
+    });
+    // Close open <details> on Escape, return focus to their <summary>.
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+      document.querySelectorAll('details[open]').forEach(function(d) {
+        d.removeAttribute('open');
+        var s = d.querySelector('summary');
+        if (s) s.focus();
+      });
+    });
+  }
+
+  // Strategy dropdown: optimistic UI + PATCH to server.
+  function implStrategySelect(btn) {
+    // Guard: do not fire while the dropdown is disabled (e.g. running state).
+    if (btn.closest('[data-disabled="true"]')) return;
+    var featureID = btn.closest('[data-feature]').dataset.feature;
+    var val = btn.dataset.strategy;
+    // Snapshot previous state for rollback on server error.
+    var menu = btn.closest('.split-menu');
+    var prevChecked = menu.querySelector('.model-check[data-prev]') || menu.querySelector('.model-check:not(:empty)');
+    var prevVal = document.getElementById('strategy-val-' + featureID);
+    var prevText = prevVal ? prevVal.textContent : '';
+    // Optimistic update.
+    menu.querySelectorAll('.model-check').forEach(function(el) { el.textContent = ''; });
+    btn.querySelector('.model-check').textContent = '✓';
+    if (prevVal) { prevVal.textContent = val; }
+    btn.closest('details').removeAttribute('open');
+    var body = new URLSearchParams({ strategy: val });
+    fetch('/feature/' + featureID + '/strategy', { method: 'PATCH', body: body })
+      .then(function(resp) {
+        if (!resp.ok) {
+          // Revert optimistic update on server error.
+          menu.querySelectorAll('.model-check').forEach(function(el) { el.textContent = ''; });
+          menu.querySelectorAll('button').forEach(function(b) {
+            if (b.dataset.strategy === prevText) { b.querySelector('.model-check').textContent = '✓'; }
+          });
+          if (prevVal) { prevVal.textContent = prevText; }
+          console.error('strategy update failed', resp.status);
+        }
+      })
+      .catch(function(err) { console.error('strategy update failed', err); });
+  }
+
+  // Implement model dropdown: updates primary button hx-vals; does not fire implement.
+  function implModelSelect(btn) {
+    var splitBtn = btn.closest('.implement-split');
+    splitBtn.querySelectorAll('.model-check').forEach(function(el) { el.textContent = ''; });
+    btn.querySelector('.model-check').textContent = '✓';
+    var primary = splitBtn.querySelector('.impl-primary');
+    primary.setAttribute('hx-vals', '{"model":"' + btn.dataset.model + '"}');
+    htmx.process(primary);
+    btn.closest('details').removeAttribute('open');
+  }
+  </script>
 </div>
 {{else if eq .PipelineStep "plan"}}
 <div id="plan-area" style="margin-top: 1rem;">
@@ -348,7 +539,7 @@
     var msgEl = document.getElementById('plan-msg');
     var es = new EventSource('/feature/{{.ID}}/events');
     es.onmessage = function(e) {
-      var ev = JSON.parse(e.data);
+      var ev = JSON.JSON.parse(e.data);
       if (ev.type === 'done' || (ev.type === 'status' && ev.step === 'plan-done')) {
         es.close();
         htmx.ajax('GET', '/feature/{{.ID}}/plan-section', {target: '#plan-section', swap: 'innerHTML'});

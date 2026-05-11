@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -80,14 +81,37 @@ func RunJob(featureDir string, maxRetries int, retryDelay time.Duration, logger 
 	return fmt.Errorf("job failed after %d attempts", maxRetries)
 }
 
-// runShellAndCaptureOutput executes a shell command and captures its stdout/stderr.
-func runShellAndCaptureOutput(cmdStr string) (string, error) {
+// runShellAndCaptureOutput executes a shell command in dir and captures its stdout/stderr.
+// dir must be the project working directory (same value as SliceContext.WorkDir).
+func runShellAndCaptureOutput(cmdStr, dir string) (string, error) {
 	var output bytes.Buffer
 	cmd := exec.Command("sh", "-c", cmdStr)
+	cmd.Dir = dir
 	cmd.Stdout = &output
 	cmd.Stderr = &output
 	err := cmd.Run()
 	return output.String(), err
+}
+
+// KnownStrategies returns a map of strategy name → Strategy instance.
+// Use for O(1) validation and direct strategy instantiation.
+func KnownStrategies() map[string]Strategy {
+	return map[string]Strategy{
+		"task":  &PerTaskStrategy{},
+		"slice": &PerSliceStrategy{},
+	}
+}
+
+// KnownStrategyNames returns the sorted list of valid strategy names derived from KnownStrategies().
+// Use for flag help text, template dropdowns, and error messages.
+func KnownStrategyNames() []string {
+	m := KnownStrategies()
+	names := make([]string, 0, len(m))
+	for k := range m {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	return names
 }
 
 type Strategy interface {
@@ -192,6 +216,8 @@ func (j *sliceJob) Prompt() (string, error) {
 	promptContent = strings.ReplaceAll(promptContent, "{{changes_so_far_here}}", changesSoFar)
 	promptContent = strings.ReplaceAll(promptContent, "{{verification_command_here}}", j.ctx.VerificationCmd)
 	promptContent = strings.ReplaceAll(promptContent, "{{feature_dir_here}}", j.ctx.FeatureDir)
+	promptContent = strings.ReplaceAll(promptContent, "{{user_story_id}}", j.ctx.Story)
+	promptContent = strings.ReplaceAll(promptContent, "{{slice_id_here}}", j.ctx.Slice.ID)
 
 	if j.lastError != "" {
 		promptContent = strings.ReplaceAll(promptContent, "{{error_message_here}}", j.lastError)
@@ -227,9 +253,14 @@ func (j *sliceJob) checkGates(attempt int) error {
 		return errors.New(j.lastError)
 	}
 
-	verificationOutput, verifyErr := runShellAndCaptureOutput(j.ctx.VerificationCmd)
+	verificationOutput, verifyErr := runShellAndCaptureOutput(j.ctx.VerificationCmd, j.ctx.WorkDir)
 	if verifyErr != nil {
-		j.lastError = fmt.Sprintf("verification failed: %v\nOutput:\n%s", verifyErr, verificationOutput)
+		out := verificationOutput
+		const maxOut = 2000
+		if len(out) > maxOut {
+			out = out[:maxOut] + "\n...(truncated)"
+		}
+		j.lastError = fmt.Sprintf("verification failed: %v\nOutput:\n%s", verifyErr, out)
 		appendLog(j.ctx.Logger, j.ctx.FeatureDir, fmt.Sprintf("Gate 2 failed for slice %s (attempt %d): %v", j.ctx.Slice.ID, attempt, verifyErr))
 		return errors.New(j.lastError)
 	}
@@ -331,7 +362,7 @@ func Run(logger *slog.Logger, featureID, featureDir, workDir, aiSessionHome stri
 	// Initial verification gate — codebase must be passing before we start.
 	appendLog(logger, featureDir, "Running initial verification gate...")
 	logger.Info("Running initial verification gate")
-	if err := runShell(verificationCmd); err != nil {
+	if err := runShell(verificationCmd, workDir); err != nil {
 		msg := fmt.Sprintf("Initial verification failed — codebase must be in a passing state to begin: %v", err)
 		appendLog(logger, featureDir, msg)
 		return errors.New(msg)
@@ -609,6 +640,7 @@ func executeTaskWithRetry(logger *slog.Logger, featureDir, aiSessionHome, workDi
 		// Gemini exited non-zero (e.g. due to a rate-limit or transient API error).
 		var verificationOutput bytes.Buffer
 		verifyCmd := exec.Command("sh", "-c", verificationCmd)
+		verifyCmd.Dir = workDir
 		verifyCmd.Stdout = &verificationOutput
 		verifyCmd.Stderr = &verificationOutput
 		verifyErr := verifyCmd.Run()
@@ -685,9 +717,10 @@ func ExtractVerificationCommand(dir string) (string, error) {
 	return strings.TrimSpace(string(matches[1])), nil
 }
 
-// runShell executes a shell command, streaming output to stdout/stderr.
-func runShell(shellCmd string) error {
+// runShell executes a shell command in the given directory, streaming output to stdout/stderr.
+func runShell(shellCmd, dir string) error {
 	cmd := exec.Command("sh", "-c", shellCmd)
+	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
